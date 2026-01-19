@@ -32,6 +32,11 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# Google Cloud credentials
+*-*.json
+genoun-web-*.json
+api/src/config/*.json
+
 # Vercel
 .vercel
 
@@ -52,7 +57,19 @@ Thumbs.db
 # Uploads
 uploads/
 public/uploads/
+api/uploads/
+web/public/uploads/
 
 # Logs
 logs/
 *.log
+
+# Large media files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.zip
+*.tar
+*.gz
+*.rar
