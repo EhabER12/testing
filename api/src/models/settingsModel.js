@@ -1,0 +1,522 @@
+import mongoose from "mongoose";
+
+const socialLinkSchema = new mongoose.Schema({
+  platform: {
+    type: String,
+    required: [true, "Platform is required"],
+  },
+  url: {
+    type: String,
+    required: [true, "URL is required"],
+  },
+});
+
+// Marketing Banner Individual Item Schema
+const marketingBannerItemSchema = new mongoose.Schema({
+  text: {
+    ar: { type: String, required: true },
+    en: { type: String, required: true },
+  },
+  linkUrl: {
+    type: String,
+    default: "",
+  },
+  linkText: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  icon: {
+    type: String, // Icon name from lucide-react (e.g., "Sparkles", "Tag", "Gift")
+    default: "",
+  },
+  isEnabled: {
+    type: Boolean,
+    default: true,
+  },
+  order: {
+    type: Number,
+    default: 0,
+  },
+  backgroundColor: {
+    type: String,
+    default: "#1a472a", // Dark green matching brand
+  },
+  textColor: {
+    type: String,
+    default: "#ffffff",
+  },
+});
+
+// Marketing Banners Settings Schema
+const marketingBannersSettingsSchema = new mongoose.Schema({
+  enabled: {
+    type: Boolean,
+    default: false,
+  },
+  autoSlideInterval: {
+    type: Number,
+    default: 5000, // 5 seconds
+    min: 2000,
+    max: 15000,
+  },
+  banners: [marketingBannerItemSchema],
+});
+
+// Navbar Link Schema
+const navbarLinkSchema = new mongoose.Schema({
+  title: {
+    ar: { type: String, required: true },
+    en: { type: String, required: true },
+  },
+  url: {
+    type: String,
+    required: true,
+  },
+  order: {
+    type: Number,
+    default: 0,
+  },
+  isEnabled: {
+    type: Boolean,
+    default: true,
+  },
+  isExternal: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+// Homepage Section Schema
+const sectionConfigSchema = new mongoose.Schema({
+  title: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  subtitle: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  content: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  buttonText: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  buttonLink: {
+    type: String,
+    default: "",
+  },
+  isEnabled: {
+    type: Boolean,
+    default: true,
+  },
+  backgroundImage: {
+    type: String,
+    default: "",
+  },
+});
+
+// Promo Modal Schema
+const promoModalSchema = new mongoose.Schema({
+  isEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  title: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  content: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  imageUrl: {
+    type: String,
+    default: "",
+  },
+  buttonText: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  buttonLink: {
+    type: String,
+    default: "",
+  },
+  displayDelay: {
+    type: Number,
+    default: 3000, // 3 seconds
+  },
+  showOnce: {
+    type: Boolean,
+    default: true,
+  },
+});
+
+// Homepage Banner Schema
+const homepageBannerSchema = new mongoose.Schema({
+  isEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  imageUrl: {
+    type: String,
+    default: "",
+  },
+  title: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  subtitle: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  buttonText: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  buttonLink: {
+    type: String,
+    default: "",
+  },
+});
+
+// Homepage Courses Settings Schema
+const homepageCoursesSchema = new mongoose.Schema({
+  isEnabled: {
+    type: Boolean,
+    default: true,
+  },
+  displayCount: {
+    type: Number,
+    default: 6,
+    min: 1,
+    max: 20,
+  },
+  title: {
+    ar: { type: String, default: "الدورات المتاحة" },
+    en: { type: String, default: "Available Courses" },
+  },
+  subtitle: {
+    ar: { type: String, default: "تصفح أحدث دوراتنا" },
+    en: { type: String, default: "Browse our latest courses" },
+  },
+  buttonText: {
+    ar: { type: String, default: "عرض جميع الدورات" },
+    en: { type: String, default: "View All Courses" },
+  },
+});
+
+const emailSettingsSchema = new mongoose.Schema({
+  enabled: {
+    type: Boolean,
+    default: false,
+  },
+  host: {
+    type: String,
+    default: "",
+  },
+  port: {
+    type: Number,
+    default: 587,
+  },
+  secure: {
+    type: Boolean,
+    default: false,
+  },
+  user: {
+    type: String,
+    default: "",
+  },
+  pass: {
+    type: String,
+    default: "",
+  },
+  fromName: {
+    type: String,
+    default: "Genoun",
+  },
+  fromEmail: {
+    type: String,
+    default: "",
+  },
+});
+
+const headerDisplaySchema = new mongoose.Schema({
+  showLogo: {
+    type: Boolean,
+    default: true,
+  },
+  showTitle: {
+    type: Boolean,
+    default: true,
+  },
+  logoWidth: {
+    type: Number,
+    default: 40,
+    min: 20,
+    max: 200,
+  },
+});
+
+const notificationSchema = new mongoose.Schema({
+  email: {
+    enabled: {
+      type: Boolean,
+      default: true,
+    },
+    recipients: [
+      {
+        type: String,
+        match: [/^\S+@\S+\.\S+$/, "Please enter a valid email"],
+      },
+    ],
+    templates: {
+      newForm: {
+        subject: {
+          type: String,
+          default: "New Form Submission",
+        },
+        body: {
+          type: String,
+          default:
+            "Hello, a new form has been submitted. Details: {{formDetails}}",
+        },
+      },
+      newPurchase: {
+        subject: {
+          type: String,
+          default: "New Purchase",
+        },
+        body: {
+          type: String,
+          default:
+            "Hello, a new purchase has been made. Details: {{purchaseDetails}}",
+        },
+      },
+      newMessage: {
+        subject: {
+          type: String,
+          default: "New Message",
+        },
+        body: {
+          type: String,
+          default:
+            "Hello, you have received a new message. Details: {{messageDetails}}",
+        },
+      },
+    },
+  },
+});
+
+const manualPaymentMethodSchema = new mongoose.Schema({
+  title: {
+    ar: { type: String, required: true },
+    en: { type: String, required: true },
+  },
+  description: {
+    ar: { type: String, required: true },
+    en: { type: String, required: true },
+  },
+  imageUrl: {
+    type: String,
+    default: "",
+  },
+  isEnabled: {
+    type: Boolean,
+    default: true,
+  },
+  requiresAttachment: {
+    type: Boolean,
+    default: true,
+  },
+  instructions: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  order: {
+    type: Number,
+    default: 0,
+  },
+});
+
+const paymentGatewaySchema = new mongoose.Schema({
+  manualMethods: [manualPaymentMethodSchema],
+});
+
+const themeSchema = new mongoose.Schema({
+  primary: {
+    type: String,
+    default: "#1a472a", // Genoun Green
+  },
+  secondary: {
+    type: String,
+    default: "#f97316", // Orange
+  },
+  accent: {
+    type: String,
+    default: "#22c55e", // Lighter Green
+  },
+  background: {
+    type: String,
+    default: "#ffffff",
+  },
+  text: {
+    type: String,
+    default: "#0f172a",
+  },
+  adminPrimary: {
+    type: String,
+    default: "#1a472a",
+  },
+});
+
+const settingsSchema = new mongoose.Schema(
+  {
+    siteName: {
+      type: String,
+      required: [true, "Site name is required"],
+    },
+    siteName_ar: {
+      type: String,
+      default: "",
+    },
+    siteDescription: {
+      type: String,
+      required: [true, "Site description is required"],
+    },
+    siteDescription_ar: {
+      type: String,
+      default: "",
+    },
+    logo: {
+      type: String,
+    },
+    logo_ar: {
+      type: String,
+      default: "",
+    },
+    favicon: {
+      type: String,
+    },
+    socialLinks: [socialLinkSchema],
+    contactEmail: {
+      type: String,
+      required: [true, "Contact email is required"],
+      match: [/^\S+@\S+\.\S+$/, "Please enter a valid email"],
+    },
+    contactPhone: {
+      type: String,
+      required: [true, "Contact phone is required"],
+    },
+    whatsappNumber: {
+      type: String,
+      default: "",
+    },
+    address: {
+      type: String,
+      required: [true, "Address is required"],
+    },
+    address_ar: {
+      type: String,
+      default: "",
+    },
+    theme: {
+      type: themeSchema,
+      default: () => ({}),
+    },
+    notifications: {
+      type: notificationSchema,
+      default: () => ({}),
+    },
+    paymentGateways: {
+      type: paymentGatewaySchema,
+      default: () => ({}),
+    },
+    whatsappConnected: {
+      type: Boolean,
+      default: false,
+    },
+    whatsappQrCode: {
+      type: String,
+    },
+    headerDisplay: {
+      type: headerDisplaySchema,
+      default: () => ({}),
+    },
+    marketingBanners: {
+      type: marketingBannersSettingsSchema,
+      default: () => ({}),
+    },
+    navbarLinks: [navbarLinkSchema],
+    homepageSections: {
+      hero: sectionConfigSchema,
+      features: sectionConfigSchema,
+      services: sectionConfigSchema,
+      stats: sectionConfigSchema,
+      about: sectionConfigSchema,
+      cta: sectionConfigSchema,
+      testimonials: sectionConfigSchema,
+    },
+    promoModal: {
+      type: promoModalSchema,
+      default: () => ({}),
+    },
+    homepageBanner: {
+      type: homepageBannerSchema,
+      default: () => ({}),
+    },
+    homepageCourses: {
+      type: homepageCoursesSchema,
+      default: () => ({}),
+    },
+    emailSettings: {
+      type: emailSettingsSchema,
+      default: () => ({}),
+    },
+    financeSettings: {
+      baseCurrency: {
+        type: String,
+        enum: ["SAR", "EGP", "USD"],
+        default: "SAR",
+      },
+      exchangeRates: {
+        USD: { type: Number, default: 1 },
+        SAR: { type: Number, default: 3.75 },
+        EGP: { type: Number, default: 50.0 },
+      },
+      lastRatesUpdate: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+// Ensure only one settings document exists
+settingsSchema.statics.findOneOrCreate = async function () {
+  const settings = await this.findOne();
+  if (settings) {
+    return settings;
+  }
+
+  return this.create({
+    siteName: "Genoun LLC",
+    siteDescription: "We Build Your Future",
+    contactEmail: "info@genoun.com",
+    contactPhone: "+1234567890",
+    address: "123 Street, Riyadh, Saudi Arabia",
+  });
+};
+
+const Settings = mongoose.model("Settings", settingsSchema);
+
+export default Settings;

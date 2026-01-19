@@ -1,0 +1,77 @@
+import express from "express";
+import {
+  getSettings,
+  updateSettings,
+  testEmailConnection,
+  testEmailNotification,
+  getPublicSettings,
+  getAllTemplates,
+  getTemplateByName,
+  saveTemplate,
+} from "../controllers/settingsController.js";
+import { protect, authorize } from "../middlewares/authMiddleware.js";
+import {
+  upload,
+  ensureUploadDirectories,
+} from "../middlewares/uploadMiddleware.js";
+import { imagePathMiddleware } from "../middlewares/imagePathMiddleware.js";
+
+const router = express.Router();
+
+router.use(imagePathMiddleware);
+
+router.get("/", getSettings);
+router.get("/public", getPublicSettings);
+
+router.put(
+  "/",
+  protect,
+  authorize("admin"),
+  ensureUploadDirectories,
+  upload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "logo_ar", maxCount: 1 },
+    { name: "favicon", maxCount: 1 },
+    { name: "heroBackground", maxCount: 1 },
+  ]),
+  updateSettings
+);
+
+
+// Email routes
+router.post(
+  "/email/test-connection",
+  protect,
+  authorize("admin", "moderator"),
+  testEmailConnection
+);
+router.post(
+  "/email/test-notification",
+  protect,
+  authorize("admin", "moderator"),
+  testEmailNotification
+);
+
+// Email Templates
+router.get(
+  "/email/templates",
+  protect,
+  authorize("admin"),
+  getAllTemplates
+);
+
+router.get(
+  "/email/templates/:name",
+  protect,
+  authorize("admin"),
+  getTemplateByName
+);
+
+router.post(
+  "/email/templates",
+  protect,
+  authorize("admin"),
+  saveTemplate
+);
+
+export default router;

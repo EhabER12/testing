@@ -1,0 +1,144 @@
+"use client";
+
+import { useRef } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+import { Search, Map, Rocket, TrendingUp } from "lucide-react";
+import { useTranslations } from "next-intl";
+
+gsap.registerPlugin(ScrollTrigger);
+
+const stepIcons = [Search, Map, Rocket, TrendingUp];
+
+export function MethodologySection({ locale }: { locale: string }) {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("landing.methodology");
+  const isRtl = locale === "ar";
+
+  const steps = [
+    {
+      number: "01",
+      icon: Search,
+      title: t("step1Title"),
+      titleEn: t("step1Subtitle"),
+      description: t("step1Desc"),
+    },
+    {
+      number: "02",
+      icon: Map,
+      title: t("step2Title"),
+      titleEn: t("step2Subtitle"),
+      description: t("step2Desc"),
+    },
+    {
+      number: "03",
+      icon: Rocket,
+      title: t("step3Title"),
+      titleEn: t("step3Subtitle"),
+      description: t("step3Desc"),
+    },
+    {
+      number: "04",
+      icon: TrendingUp,
+      title: t("step4Title"),
+      titleEn: t("step4Subtitle"),
+      description: t("step4Desc"),
+    },
+  ];
+
+  useGSAP(() => {
+    if (!sectionRef.current) return;
+
+    gsap.from(".methodology-step", {
+      x: isRtl ? 50 : -50,
+      opacity: 0,
+      duration: 0.6,
+      stagger: 0.2,
+      ease: "power3.out",
+      scrollTrigger: {
+        trigger: sectionRef.current,
+        start: "top 70%",
+        toggleActions: "play none none reverse",
+      },
+    });
+
+    // Refresh ScrollTrigger after a short delay to ensure proper triggering
+    setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 100);
+  }, [isRtl]);
+
+  return (
+    <section
+      ref={sectionRef}
+      className="py-20 sm:py-28 bg-gray-50 relative overflow-hidden"
+    >
+      {/* Decorative elements */}
+      <div
+        className={`absolute top-1/2 ${
+          isRtl ? "right-0" : "left-0"
+        } w-96 h-96 bg-genoun-green/5 rounded-full blur-3xl ${
+          isRtl ? "translate-x-1/2" : "-translate-x-1/2"
+        } -translate-y-1/2`}
+      />
+
+      <div className="container px-4 sm:px-6 relative z-10">
+        {/* Section Header */}
+        <div className="text-center mb-16" dir={isRtl ? "rtl" : "ltr"}>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            {t("title")}{" "}
+            <span className="text-genoun-green">{t("titleHighlight")}</span>
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            {t("subtitle")}
+          </p>
+        </div>
+
+        {/* Timeline */}
+        <div className="max-w-3xl mx-auto" dir={isRtl ? "rtl" : "ltr"}>
+          {steps.map((step, index) => (
+            <div key={index} className="methodology-step timeline-step">
+              <div
+                className={`flex items-start gap-6 ${
+                  isRtl ? "flex-row-reverse" : ""
+                }`}
+              >
+                {/* Icon */}
+                <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-white shadow-lg flex items-center justify-center border border-genoun-gold/20">
+                  <step.icon className="w-8 h-8 text-genoun-green" />
+                </div>
+
+                {/* Content */}
+                <div
+                  className={`flex-1 pb-8 ${
+                    isRtl ? "text-right" : "text-left"
+                  }`}
+                >
+                  <div
+                    className={`flex items-center gap-3 mb-2 ${
+                      isRtl ? "flex-row-reverse justify-end" : ""
+                    }`}
+                  >
+                    <span className="text-sm font-bold text-genoun-gold">
+                      {step.number}
+                    </span>
+                    <span className="text-xs uppercase tracking-wider text-gray-400">
+                      {step.titleEn}
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    {step.title}
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    {step.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

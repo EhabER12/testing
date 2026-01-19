@@ -1,0 +1,166 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { useTransition, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { login } from "@/store/services/authService";
+import { reset } from "@/store/slices/authSlice";
+
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+
+const formSchema = z.object({
+  email: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
+  password: z.string(),
+});
+
+export function LoginForm() {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { isLoading, isError, message } = useAppSelector((state) => state.auth);
+
+  // Reset error state on mount to prevent hydration mismatch
+  useEffect(() => {
+    dispatch(reset());
+  }, [dispatch]);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    startTransition(async () => {
+      try {
+        const result = await dispatch(login(values)).unwrap();
+
+        // Check user role and redirect accordingly
+        const userRole = result.data?.role;
+        const teacherApproved = result.data?.teacherInfo?.isApproved;
+
+        setTimeout(() => {
+          if (userRole === "teacher") {
+            if (teacherApproved) {
+              // Approved teacher - go to dashboard
+              router.push("/dashboard");
+            } else {
+              // Pending teacher - show pending message
+              router.push("/login?message=teacher_pending");
+            }
+          } else if (userRole === "admin" || userRole === "moderator") {
+            // Admin/Moderator - go to dashboard
+            router.push("/dashboard");
+          } else {
+            // Regular user - go to homepage
+            router.push("/ar");
+          }
+        }, 100);
+      } catch (error) {
+        console.error(error);
+      }
+    });
+  }
+
+  return (
+    <div className="grid gap-6 rounded-lg border p-6 shadow-sm w-full max-w-md">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          {isError && message && (
+            <Alert variant="destructive">
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+          )}
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="your.email@example.com"
+                    {...field}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      if (isError) dispatch(reset());
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    {...field}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      if (isError) dispatch(reset());
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Logging in...
+              </>
+            ) : (
+              "Sign In"
+            )}
+          </Button>
+        </form>
+      </Form>
+      <div className="text-center text-sm">
+        <Link
+          href="/forgot-password"
+          className="text-secondary-blue hover:text-secondary-blue/90"
+        >
+          Forgot your password?
+        </Link>
+      </div>
+      <div className="text-center text-sm">
+        Don't have an account?{" "}
+        <Link
+          href="/register"
+          className="text-genoun-green hover:text-genoun-green/90 font-semibold"
+        >
+          Sign Up
+        </Link>
+      </div>
+    </div>
+  );
+}

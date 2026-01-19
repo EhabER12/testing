@@ -1,0 +1,434 @@
+import { UserRepository } from "../repositories/userRepository.js";
+import { ApiError } from "../utils/apiError.js";
+import crypto from "crypto";
+import { EmailService } from "./emailService.js";
+import logger from "../utils/logger.js";
+
+export class UserService {
+  constructor() {
+    this.userRepository = new UserRepository();
+    this.emailService = new EmailService();
+  }
+
+  async createUser(userData) {
+    const { name, email, password, role = "user" } = userData;
+
+    // Check if user already exists
+    const existingUser = await this.userRepository.findByEmail(email);
+    if (existingUser) {
+      throw new ApiError(400, "User with this email already exists");
+    }
+
+    // Validate role
+    if (!["admin", "moderator", "user", "teacher"].includes(role)) {
+      throw new ApiError(400, "Invalid role");
+    }
+
+    let userPayload = {
+      fullName: {
+        ar: name || "مستخدم جديد",
+        en: name || "New User",
+      },
+      email,
+      role,
+    };
+
+    if (password) {
+      userPayload.password = password;
+      userPayload.status = "active";
+    } else {
+      // Invitation flow
+      userPayload.status = "invited";
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+      userPayload.verificationToken = crypto
+        .createHash("sha256")
+        .update(verificationToken)
+        .digest("hex");
+      userPayload.verificationTokenExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+
+      // Send invitation email
+      const clientUrl = process.env.ADMIN_URL || "http://localhost:3000";
+      const invitationLink = `${clientUrl}/complete-registration?token=${verificationToken}`;
+
+      const roleArabic = {
+        admin: "مدير",
+        moderator: "مشرف",
+        user: "مستخدم",
+        teacher: "مدرس",
+      };
+
+      const subject = "دعوة للانضمام لفريق Genoun - Invitation to Join Genoun";
+      const html = `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #04524B 0%, #033D38 100%); padding: 40px 30px; text-align: center;">
+      <h1 style="color: #FB9903; margin: 0; font-size: 32px; font-weight: bold;">Genoun</h1>
+      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">لوحة التحكم - Dashboard</p>
+    </div>
+    
+    <!-- Content -->
+    <div style="padding: 40px 30px; text-align: right;" dir="rtl">
+      <h2 style="color: #04524B; margin: 0 0 20px; font-size: 24px;">مرحباً بك في فريق Genoun! 🎉</h2>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 20px;">
+        تمت دعوتك للانضمام إلى لوحة تحكم <strong style="color: #04524B;">Genoun</strong> كـ <strong style="color: #FB9903;">${
+          roleArabic[role] || role
+        }</strong>.
+      </p>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 30px;">
+        لإكمال التسجيل وتعيين كلمة المرور الخاصة بك، يرجى الضغط على الزر أدناه:
+      </p>
+    </div>
+
+    <div style="padding: 0 30px 40px; text-align: left;" dir="ltr">
+      <h2 style="color: #04524B; margin: 0 0 20px; font-size: 24px;">Welcome to Genoun Team! 🎉</h2>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 20px;">
+        You have been invited to join the <strong style="color: #04524B;">Genoun</strong> dashboard as a <strong style="color: #FB9903;">${
+          role
+        }</strong>.
+      </p>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 30px;">
+        To complete your registration and set your password, please click the button below:
+      </p>
+    </div>
+    
+    <!-- CTA Button -->
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${invitationLink}" style="display: inline-block; background: linear-gradient(135deg, #FB9903 0%, #d98102 100%); color: #1a1a1a; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(251, 153, 3, 0.3);">
+        إكمال التسجيل - Complete Registration
+      </a>
+    </div>
+    
+    <div style="padding: 20px 30px; background-color: #f8f9fa;">
+      <p style="color: #666; font-size: 14px; line-height: 1.6; margin: 0; text-align: center;">
+        أو انسخ هذا الرابط في متصفحك - Or copy this link: <br>
+        <a href="${invitationLink}" style="color: #04524B; word-break: break-all;">${invitationLink}</a>
+      </p>
+    </div>
+    
+    <div style="padding: 20px 30px; text-align: center;">
+      <p style="color: #999; font-size: 12px; margin: 0;">
+        هذا الرابط صالح لمدة 24 ساعة فقط. إذا لم تكن تتوقع هذه الدعوة، يمكنك تجاهلها.<br>
+        This link is valid for 24 hours. If you didn't expect this invite, please ignore it.
+      </p>
+    </div>
+    
+    <!-- Footer -->
+    <div style="background-color: #04524B; padding: 30px; text-align: center;">
+      <p style="color: rgba(255,255,255,0.8); margin: 0 0 10px; font-size: 14px;">
+        فريق Genoun Team
+      </p>
+      <p style="color: rgba(255,255,255,0.6); margin: 0; font-size: 12px;">
+        © ${new Date().getFullYear()} Genoun. جميع الحقوق محفوظة - All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+      `;
+
+      try {
+        await this.emailService.sendEmail(email, subject, html);
+        logger.info("Invitation email sent", { email });
+      } catch (error) {
+        logger.error("Failed to send invitation email", { email, error: error.message });
+        // We still proceed with user creation, but maybe we should warn?
+        // For now, we'll just log the error.
+      }
+    }
+
+    // Create user
+    const user = await this.userRepository.create(userPayload);
+
+    return user;
+  }
+
+  async getAllUsers(queryParams) {
+    const { page, limit, role, search } = queryParams;
+
+    const filter = {};
+
+    if (role) {
+      filter.role = role;
+    }
+
+    const options = {
+      page,
+      limit,
+      filter,
+      select: "-password",
+    };
+
+    if (search) {
+      return this.userRepository.search(search, options);
+    }
+
+    return this.userRepository.findAll(options);
+  }
+
+  async getUserById(id) {
+    const user = await this.userRepository.findById(id, {
+      select: "-password",
+    });
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    return user;
+  }
+
+  async updateUser(id, userData) {
+    const user = await this.userRepository.findById(id);
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    // Don't allow role update through this endpoint
+    if (userData.role) {
+      delete userData.role;
+    }
+
+    return this.userRepository.update(id, userData);
+  }
+
+  async updateUserRole(id, role) {
+    const user = await this.userRepository.findById(id);
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    if (!["admin", "moderator", "user", "teacher"].includes(role)) {
+      throw new ApiError(400, "Invalid role");
+    }
+
+    return this.userRepository.updateRole(id, role);
+  }
+
+  async deleteUser(id) {
+    const user = await this.userRepository.findById(id);
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    return this.userRepository.delete(id);
+  }
+
+  // Teacher approval methods
+  async approveTeacher(id, approverData = {}) {
+    const user = await this.userRepository.findById(id);
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    if (user.role !== "teacher") {
+      throw new ApiError(400, "User is not a teacher");
+    }
+
+    const updateData = {
+      "teacherInfo.isApproved": true,
+      "teacherInfo.approvedAt": new Date(),
+      "teacherInfo.approvedBy": approverData.approverId || null,
+    };
+
+    const updatedUser = await this.userRepository.update(id, updateData);
+
+    // Send approval email
+    try {
+      const clientUrl = process.env.ADMIN_URL || "http://localhost:3000";
+      const dashboardLink = `${clientUrl}/dashboard`;
+
+      const subject = "تم تفعيل حسابك كمعلم - Teacher Account Approved";
+      const html = `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <div style="background: linear-gradient(135deg, #04524B 0%, #033D38 100%); padding: 40px 30px; text-align: center;">
+      <h1 style="color: #FB9903; margin: 0; font-size: 32px; font-weight: bold;">Genoun</h1>
+      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">لوحة التحكم - Dashboard</p>
+    </div>
+    
+    <div style="padding: 40px 30px; text-align: right;" dir="rtl">
+      <h2 style="color: #04524B; margin: 0 0 20px; font-size: 24px;">مبروك! تم تفعيل حسابك 🎉</h2>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 20px;">
+        مرحباً <strong style="color: #04524B;">${user.fullName?.ar || user.fullName?.en || user.email}</strong>,
+      </p>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 20px;">
+        يسعدنا إبلاغك بأنه تم <strong style="color: #10b981;">الموافقة على حسابك كمعلم</strong> في منصة Genoun.
+      </p>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 30px;">
+        يمكنك الآن الدخول إلى لوحة التحكم وإدارة دوراتك ومجموعاتك.
+      </p>
+    </div>
+
+    <div style="padding: 0 30px 40px; text-align: left;" dir="ltr">
+      <h2 style="color: #04524B; margin: 0 0 20px; font-size: 24px;">Congratulations! Your account is active 🎉</h2>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 20px;">
+        Hello <strong style="color: #04524B;">${user.fullName?.en || user.fullName?.ar || user.email}</strong>,
+      </p>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 20px;">
+        We are happy to inform you that your <strong style="color: #10b981;">teacher account has been approved</strong> on Genoun platform.
+      </p>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 30px;">
+        You can now access the dashboard and manage your courses and groups.
+      </p>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${dashboardLink}" style="display: inline-block; background: linear-gradient(135deg, #FB9903 0%, #d98102 100%); color: #1a1a1a; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(251, 153, 3, 0.3);">
+        الدخول للوحة التحكم - Access Dashboard
+      </a>
+    </div>
+    
+    <div style="background-color: #04524B; padding: 30px; text-align: center;">
+      <p style="color: rgba(255,255,255,0.8); margin: 0 0 10px; font-size: 14px;">
+        فريق Genoun Team
+      </p>
+      <p style="color: rgba(255,255,255,0.6); margin: 0; font-size: 12px;">
+        © ${new Date().getFullYear()} Genoun. جميع الحقوق محفوظة - All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+      `;
+
+      await this.emailService.sendEmail(user.email, subject, html);
+      logger.info("Teacher approval email sent", { email: user.email });
+    } catch (error) {
+      logger.error("Failed to send teacher approval email", {
+        email: user.email,
+        error: error.message,
+      });
+    }
+
+    return updatedUser;
+  }
+
+  async rejectTeacher(id, rejectData = {}) {
+    const user = await this.userRepository.findById(id);
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    if (user.role !== "teacher") {
+      throw new ApiError(400, "User is not a teacher");
+    }
+
+    const updateData = {
+      "teacherInfo.isApproved": false,
+      "teacherInfo.rejectedAt": new Date(),
+      "teacherInfo.rejectedBy": rejectData.rejectorId || null,
+      "teacherInfo.rejectionReason": rejectData.reason || "",
+    };
+
+    const updatedUser = await this.userRepository.update(id, updateData);
+
+    // Send rejection email
+    if (rejectData.sendEmail !== false) {
+      try {
+        const subject = "تحديث بخصوص طلب التسجيل كمعلم - Teacher Registration Update";
+        const html = `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <div style="background: linear-gradient(135deg, #04524B 0%, #033D38 100%); padding: 40px 30px; text-align: center;">
+      <h1 style="color: #FB9903; margin: 0; font-size: 32px; font-weight: bold;">Genoun</h1>
+      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">لوحة التحكم - Dashboard</p>
+    </div>
+    
+    <div style="padding: 40px 30px; text-align: right;" dir="rtl">
+      <h2 style="color: #04524B; margin: 0 0 20px; font-size: 24px;">تحديث بخصوص طلب التسجيل</h2>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 20px;">
+        مرحباً <strong style="color: #04524B;">${user.fullName?.ar || user.fullName?.en || user.email}</strong>,
+      </p>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 20px;">
+        شكراً لاهتمامك بالانضمام لمنصة Genoun كمعلم. نأسف لإبلاغك أنه لا يمكننا الموافقة على طلبك في الوقت الحالي.
+      </p>
+    </div>
+
+    <div style="padding: 0 30px 40px; text-align: left;" dir="ltr">
+      <h2 style="color: #04524B; margin: 0 0 20px; font-size: 24px;">Update regarding your registration</h2>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 20px;">
+        Hello <strong style="color: #04524B;">${user.fullName?.en || user.fullName?.ar || user.email}</strong>,
+      </p>
+      
+      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 20px;">
+        Thank you for your interest in joining Genoun as a teacher. We regret to inform you that we cannot approve your request at this time.
+      </p>
+    </div>
+      
+    ${rejectData.reason ? `
+    <div style="margin: 0 30px 30px; background-color: #fef2f2; border-radius: 12px; border-right: 4px solid #ef4444; padding: 20px;">
+      <p style="color: #04524B; font-weight: bold; margin: 0 0 10px; font-size: 14px;">السبب - Reason:</p>
+      <p style="color: #666; margin: 0; font-size: 14px;">${rejectData.reason}</p>
+    </div>
+    ` : ""}
+    
+    <div style="padding: 0 30px 40px; text-align: center;">
+      <p style="color: #666; font-size: 14px; line-height: 1.6; margin: 0;">
+        إذا كان لديك أي استفسارات، يرجى التواصل معنا.<br>
+        If you have any questions, please contact us.
+      </p>
+    </div>
+    
+    <div style="background-color: #04524B; padding: 30px; text-align: center;">
+      <p style="color: rgba(255,255,255,0.8); margin: 0 0 10px; font-size: 14px;">
+        فريق Genoun Team
+      </p>
+      <p style="color: rgba(255,255,255,0.6); margin: 0; font-size: 12px;">
+        © ${new Date().getFullYear()} Genoun. جميع الحقوق محفوظة - All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+        `;
+
+        await this.emailService.sendEmail(user.email, subject, html);
+        logger.info("Teacher rejection email sent", { email: user.email });
+      } catch (error) {
+        logger.error("Failed to send teacher rejection email", {
+          email: user.email,
+          error: error.message,
+        });
+      }
+    }
+
+    return updatedUser;
+  }
+}

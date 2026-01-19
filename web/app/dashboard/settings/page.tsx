@@ -1,0 +1,1646 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { LanguageSwitcher } from "@/components/dashboard/common/LanguageSwitcher";
+import {
+  Loader2,
+  AlertCircle,
+  ShieldCheck,
+  Plus,
+  Trash2,
+  X,
+  QrCode,
+  Send,
+  Smartphone,
+  RefreshCcw,
+} from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import toast from "react-hot-toast";
+import {
+  getWebsiteSettingsThunk,
+  updateWebsiteSettingsThunk,
+  WebsiteSettingsData,
+  SocialLink,
+  Notifications,
+  NavbarLink,
+  HomepageSections,
+  PromoModalSettings as PromoModalSettingsType,
+} from "@/store/services/settingsService";
+import { resetSettingsStatus } from "@/store/slices/settingsSlice";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
+import Image from "next/image";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
+import { AiArticlesSettings } from "@/components/dashboard/settings/AiArticlesSettings";
+import { MarketingBannersSettings } from "@/components/dashboard/settings/MarketingBannersSettings";
+import { NavbarSettings } from "@/components/dashboard/settings/NavbarSettings";
+import { HomepageSectionsSettings } from "@/components/dashboard/settings/HomepageSectionsSettings";
+import { PromoModalSettings } from "@/components/dashboard/settings/PromoModalSettings";
+import { EmailSettings } from "@/components/dashboard/settings/EmailSettings";
+
+interface SettingsFormData extends Partial<WebsiteSettingsData> {
+  logoFile?: File;
+  logoArFile?: File;
+  faviconFile?: File;
+  heroBackgroundFile?: File;
+}
+
+// Color picker component
+interface ColorPickerProps {
+  id: string;
+  value: string;
+  onChange: (color: string) => void;
+  disabled?: boolean;
+}
+
+const ColorPickerComponent = ({
+  id,
+  value,
+  onChange,
+  disabled,
+}: ColorPickerProps) => {
+  return (
+    <div className="flex items-center">
+      <input
+        type="color"
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 w-9 cursor-pointer appearance-none overflow-hidden rounded-md border border-input bg-transparent p-0"
+        disabled={disabled}
+      />
+    </div>
+  );
+};
+
+interface LocalHeroButton {
+  text: string;
+  url: string;
+  variant?: "primary" | "secondary" | "outline" | "ghost";
+  _id?: string;
+}
+
+export default function SettingsDashboardPage() {
+  const dispatch = useAppDispatch();
+  const { t, isRtl } = useAdminLocale();
+  const { settings, isLoading, isError, isSuccess, message } = useAppSelector(
+    (state) => state.settings
+  );
+
+  const [formData, setFormData] = useState<SettingsFormData>({});
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoArPreview, setLogoArPreview] = useState<string | null>(null);
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+  const [formLang, setFormLang] = useState<"en" | "ar">("en");
+  const [clearingCache, setClearingCache] = useState(false);
+  const [activeTab, setActiveTab] = useState("general");
+  const [navbarLinks, setNavbarLinks] = useState<NavbarLink[]>([]);
+  const [homepageSections, setHomepageSections] = useState<HomepageSections>({
+    hero: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
+    features: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
+    services: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
+    stats: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
+    about: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
+    cta: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
+    testimonials: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
+  });
+  const [promoModal, setPromoModal] = useState<PromoModalSettingsType>({
+    isEnabled: false,
+    title: { ar: "", en: "" },
+    content: { ar: "", en: "" },
+    buttonText: { ar: "", en: "" },
+    buttonLink: "",
+    displayDelay: 3000,
+    showOnce: true,
+  });
+  const [theme, setTheme] = useState({
+    primary: "#1a472a",
+    secondary: "#f97316",
+    accent: "#22c55e",
+    background: "#ffffff",
+    text: "#0f172a",
+    adminPrimary: "#1a472a",
+  });
+  const [homepageBanner, setHomepageBanner] = useState({
+    isEnabled: false,
+    imageUrl: "",
+    title: { ar: "", en: "" },
+    subtitle: { ar: "", en: "" },
+    buttonText: { ar: "", en: "" },
+    buttonLink: "",
+  });
+  const [homepageCourses, setHomepageCourses] = useState({
+    isEnabled: true,
+    displayCount: 6,
+    title: { ar: "الدورات المتاحة", en: "Available Courses" },
+    subtitle: { ar: "تصفح أحدث دوراتنا", en: "Browse our latest courses" },
+    buttonText: { ar: "عرض جميع الدورات", en: "View All Courses" },
+  });
+
+  // All available platforms
+  const allPlatforms = [
+    "facebook",
+    "instagram",
+    "whatsapp",
+    "x",
+    "snapchat",
+    "email",
+  ];
+
+  // Get platforms that are already in use
+  const usedPlatforms = socialLinks.map((link) => link.platform.toLowerCase());
+
+  // Get available platforms (not yet added)
+  const availablePlatforms = allPlatforms.filter(
+    (platform) => !usedPlatforms.includes(platform)
+  );
+
+  // Check if all platforms are used
+  const allPlatformsUsed = availablePlatforms.length === 0;
+
+  const [headerDisplay, setHeaderDisplay] = useState({
+    showLogo: true,
+    showTitle: true,
+    logoWidth: 40,
+  });
+
+  const [formFields, setFormFields] = useState<
+    { id: string; label: string; value: string }[]
+  >([{ id: "", label: "", value: "" }]);
+
+  useEffect(() => {
+    dispatch(getWebsiteSettingsThunk());
+
+    return () => {
+      dispatch(resetSettingsStatus());
+    };
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (isSuccess && message) {
+      toast.dismiss();
+      toast.success(message);
+    } else if (isError && message) {
+      toast.dismiss();
+      toast.error(message);
+    }
+  }, [isSuccess, isError, message]);
+
+  useEffect(() => {
+    if (settings) {
+      setFormData({
+        siteName: settings.siteName,
+        siteName_ar: settings.siteName_ar || "",
+        siteDescription: settings.siteDescription,
+        siteDescription_ar: settings.siteDescription_ar || "",
+        contactEmail: settings.contactEmail,
+        contactPhone: settings.contactPhone,
+        whatsappNumber: settings.whatsappNumber || "",
+        address: settings.address,
+        address_ar: settings.address_ar || "",
+      });
+
+      setLogoPreview(settings.logo);
+      setLogoArPreview(settings.logo_ar || null);
+      setFaviconPreview(settings.favicon);
+
+      if (settings.socialLinks && Array.isArray(settings.socialLinks)) {
+        setSocialLinks(settings.socialLinks);
+      }
+
+      if (settings.headerDisplay) {
+        setHeaderDisplay({
+          showLogo: settings.headerDisplay.showLogo ?? true,
+          showTitle: settings.headerDisplay.showTitle ?? true,
+          logoWidth: settings.headerDisplay.logoWidth ?? 40,
+        });
+      }
+
+      if (settings.theme) {
+        setTheme({
+          primary: settings.theme.primary || "#1a472a",
+          secondary: settings.theme.secondary || "#f97316",
+          accent: settings.theme.accent || "#22c55e",
+          background: settings.theme.background || "#ffffff",
+          text: settings.theme.text || "#0f172a",
+          adminPrimary: settings.theme.adminPrimary || "#1a472a",
+        });
+      }
+
+      if (settings.navbarLinks) {
+        setNavbarLinks(settings.navbarLinks);
+      }
+
+      if (settings.homepageSections) {
+        setHomepageSections(settings.homepageSections);
+      }
+
+      if (settings.promoModal) {
+        setPromoModal(settings.promoModal);
+      }
+
+      if (settings.homepageBanner) {
+        setHomepageBanner(settings.homepageBanner);
+      }
+
+      if (settings.homepageCourses) {
+        setHomepageCourses(settings.homepageCourses);
+      }
+    }
+  }, [settings]);
+
+  useEffect(() => {
+    // Inject theme colors as CSS variables for real-time preview
+    const root = document.documentElement;
+    root.style.setProperty("--primary", theme.primary);
+    root.style.setProperty("--secondary", theme.secondary);
+    root.style.setProperty("--accent", theme.accent);
+    root.style.setProperty("--background", theme.background);
+    root.style.setProperty("--text", theme.text);
+    root.style.setProperty("--admin-primary", theme.adminPrimary);
+
+    // We can also update specific tailwind-like variables if needed
+    // root.style.setProperty("--primary-foreground", theme.background);
+  }, [theme]);
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const addSocialLink = () => {
+    setSocialLinks([
+      ...socialLinks,
+      { platform: "", url: "", _id: `temp-${Date.now()}` },
+    ]);
+  };
+
+  const removeSocialLink = (index: number) => {
+    const newLinks = [...socialLinks];
+    newLinks.splice(index, 1);
+    setSocialLinks(newLinks);
+  };
+
+  const updateSocialLink = (index: number, field: string, value: string) => {
+    if (field === "platform" && value) {
+      const isDuplicate = socialLinks.some(
+        (link, i) =>
+          i !== index && link.platform.toLowerCase() === value.toLowerCase()
+      );
+      if (isDuplicate) {
+        toast.error(
+          `${value} is already added. Each platform can only be used once.`
+        );
+        return;
+      }
+    }
+
+    const newLinks = [...socialLinks];
+    newLinks[index] = { ...newLinks[index], [field]: value };
+    setSocialLinks(newLinks);
+  };
+
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "logo" | "logo_ar" | "favicon" | "heroBackground"
+  ) => {
+    const file = e.target.files?.[0];
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (type === "logo") setLogoPreview(reader.result as string);
+        if (type === "logo_ar") setLogoArPreview(reader.result as string);
+        if (type === "favicon") setFaviconPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      if (type === "logo" || type === "favicon" || type === "logo_ar") {
+        setFormData((prev) => ({
+          ...prev,
+          [type === "logo"
+            ? "logoFile"
+            : type === "logo_ar"
+              ? "logoArFile"
+              : "faviconFile"]: file,
+          [type]: undefined,
+        }));
+      } else if (type === "heroBackground") {
+        setFormData((prev) => ({
+          ...prev,
+          heroBackgroundFile: file,
+        }));
+      }
+    } else {
+      if (type === "logo") {
+        setLogoPreview(null);
+        setFormData((prev) => ({
+          ...prev,
+          logoFile: undefined,
+          logo: undefined,
+        }));
+      } else if (type === "logo_ar") {
+        setLogoArPreview(null);
+        setFormData((prev) => ({
+          ...prev,
+          logoArFile: undefined,
+          logo_ar: undefined,
+        }));
+      } else if (type === "favicon") {
+        setFaviconPreview(null);
+        setFormData((prev) => ({
+          ...prev,
+          faviconFile: undefined,
+          favicon: undefined,
+        }));
+      }
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const updateData: Partial<WebsiteSettingsData> & Record<string, any> = {
+      ...formData,
+      socialLinks,
+      headerDisplay,
+      theme,
+      navbarLinks,
+      homepageSections,
+      promoModal,
+      homepageBanner,
+      homepageCourses,
+    };
+
+    delete updateData.logoFile;
+    delete updateData.logoArFile;
+    delete updateData.faviconFile;
+    delete updateData.heroBackgroundFile;
+
+    if (updateData.socialLinks) {
+      updateData.socialLinks = updateData.socialLinks.map((link: any) => {
+        const { _id, ...linkWithoutId } = link;
+        return linkWithoutId;
+      });
+    }
+
+    const submitFormData = new FormData();
+
+    if (updateData.logo && typeof updateData.logo === "string") {
+      submitFormData.append("logo", updateData.logo);
+    } else {
+      delete updateData.logo;
+    }
+
+    if (updateData.logo_ar && typeof updateData.logo_ar === "string") {
+      // Ensure we don't send "" to backend if it expects a valid URL or null
+      // But based on our logic, we usually want to keep existing values
+      submitFormData.append("logo_ar", updateData.logo_ar);
+    } else {
+      delete updateData.logo_ar;
+    }
+
+    if (updateData.favicon && typeof updateData.favicon === "string") {
+      submitFormData.append("favicon", updateData.favicon);
+    } else {
+      delete updateData.favicon;
+    }
+
+    Object.entries(updateData).forEach(([key, value]) => {
+      if (
+        value &&
+        typeof value === "object" &&
+        Object.keys(value).length === 0
+      ) {
+        return;
+      }
+
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        !(value instanceof File)
+      ) {
+        submitFormData.append(key, JSON.stringify(value));
+      } else if (value !== null && value !== undefined) {
+        submitFormData.append(key, String(value));
+      }
+    });
+
+    if (formData.logoFile) {
+      submitFormData.append("logo", formData.logoFile);
+    }
+
+    if (formData.logoArFile) {
+      submitFormData.append("logo_ar", formData.logoArFile);
+    }
+
+    if (formData.faviconFile) {
+      submitFormData.append("favicon", formData.faviconFile);
+    }
+
+    if (formData.heroBackgroundFile) {
+      submitFormData.append("heroBackground", formData.heroBackgroundFile);
+    }
+
+    dispatch(updateWebsiteSettingsThunk(submitFormData as any));
+  };
+
+  if (isLoading && !settings) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6" dir={isRtl ? "rtl" : "ltr"}>
+      <h1 className="text-2xl font-bold mb-6">
+        {t("admin.settings.websiteSettings")}
+      </h1>
+
+      {isError && message && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t("admin.settings.error")}</AlertTitle>
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
+      )}
+      {isSuccess && message && (
+        <Alert
+          variant="default"
+          className="mb-4 border-green-200 bg-green-50 text-green-800"
+        >
+          <ShieldCheck className="h-4 w-4 text-green-600" />
+          <AlertTitle>{t("admin.settings.success")}</AlertTitle>
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <Tabs
+          defaultValue="general"
+          dir={isRtl ? "rtl" : "ltr"}
+          onValueChange={setActiveTab}
+        >
+          <TabsList className="mb-6">
+            <TabsTrigger value="general">
+              {t("admin.settings.general")}
+            </TabsTrigger>
+            <TabsTrigger value="contact">
+              {t("admin.settings.contact")}
+            </TabsTrigger>
+            <TabsTrigger value="theme">
+              {isRtl ? "المظهر" : "Theme"}
+            </TabsTrigger>
+            <TabsTrigger value="marketing">
+              {t("admin.settings.marketingBanners.title")}
+            </TabsTrigger>
+            <TabsTrigger value="navbar">
+              {isRtl ? "القائمة" : "Navbar"}
+            </TabsTrigger>
+            <TabsTrigger value="sections">
+              {isRtl ? "الأقسام" : "Sections"}
+            </TabsTrigger>
+            <TabsTrigger value="modal">
+              {isRtl ? "نافذة العرض" : "Promo Modal"}
+            </TabsTrigger>
+            <TabsTrigger value="ai-articles">
+              {isRtl ? "مقالات AI" : "AI Articles"}
+            </TabsTrigger>
+            <TabsTrigger value="homepage">
+              {isRtl ? "الصفحة الرئيسية" : "Homepage"}
+            </TabsTrigger>
+            <TabsTrigger value="email">
+              {isRtl ? "البريد الإلكتروني" : "Email"}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="general" className="space-y-6">
+            {/* General Settings Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>{t("admin.settings.generalSettings")}</CardTitle>
+                  <CardDescription>
+                    {t("admin.settings.basicInfo")}
+                  </CardDescription>
+                </div>
+                <LanguageSwitcher
+                  language={formLang}
+                  setLanguage={setFormLang}
+                />
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="siteName">
+                    {t("admin.settings.siteName")} (
+                    {formLang === "ar"
+                      ? t("admin.settings.arabicContent")
+                      : t("admin.settings.englishContent")}
+                    )
+                  </Label>
+                  <Input
+                    id={formLang === "en" ? "siteName" : "siteName_ar"}
+                    name={formLang === "en" ? "siteName" : "siteName_ar"}
+                    value={
+                      (formLang === "en"
+                        ? formData.siteName
+                        : formData.siteName_ar) || ""
+                    }
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                    dir={formLang === "ar" ? "rtl" : "ltr"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="siteDescription">
+                    {t("admin.settings.siteDescription")} (
+                    {formLang === "ar"
+                      ? t("admin.settings.arabicContent")
+                      : t("admin.settings.englishContent")}
+                    )
+                  </Label>
+                  <Textarea
+                    id={
+                      formLang === "en"
+                        ? "siteDescription"
+                        : "siteDescription_ar"
+                    }
+                    name={
+                      formLang === "en"
+                        ? "siteDescription"
+                        : "siteDescription_ar"
+                    }
+                    value={
+                      (formLang === "en"
+                        ? formData.siteDescription
+                        : formData.siteDescription_ar) || ""
+                    }
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                    dir={formLang === "ar" ? "rtl" : "ltr"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="logo">
+                    {t("admin.settings.logo")} (
+                    {formLang === "ar"
+                      ? t("admin.settings.arabicContent")
+                      : t("admin.settings.englishContent")}
+                    )
+                  </Label>
+                  {formLang === "en" ? (
+                    // English Logo
+                    <>
+                      {logoPreview && (
+                        <div className="relative">
+                          <Image
+                            src={logoPreview}
+                            alt="Logo Preview"
+                            width={100}
+                            height={40}
+                            className="h-10 w-auto object-contain border rounded p-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border"
+                            onClick={() => {
+                              setLogoPreview(null);
+                              setFormData((prev) => ({
+                                ...prev,
+                                logoFile: undefined,
+                                logo: undefined,
+                              }));
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                      <Input
+                        id="logoFile"
+                        name="logoFile"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange(e, "logo")}
+                        disabled={isLoading}
+                      />
+                    </>
+                  ) : (
+                    // Arabic Logo
+                    <>
+                      {logoArPreview && (
+                        <div className="relative">
+                          <Image
+                            src={logoArPreview}
+                            alt="Logo AR Preview"
+                            width={100}
+                            height={40}
+                            className="h-10 w-auto object-contain border rounded p-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border"
+                            onClick={() => {
+                              setLogoArPreview(null);
+                              setFormData((prev) => ({
+                                ...prev,
+                                logoArFile: undefined,
+                                logo_ar: undefined,
+                              }));
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                      <Input
+                        id="logoArFile"
+                        name="logoArFile"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange(e, "logo_ar")}
+                        disabled={isLoading}
+                      />
+                    </>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {t("admin.settings.uploadLogoHint")}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="favicon">{t("admin.settings.favicon")}</Label>
+                  {faviconPreview && (
+                    <div className="relative inline-block">
+                      <Image
+                        src={faviconPreview}
+                        alt="Favicon Preview"
+                        width={32}
+                        height={32}
+                        className="h-8 w-8 object-contain border rounded p-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className={`absolute -top-2 h-6 w-6 rounded-full bg-background border ${isRtl ? "-left-2" : "-right-2"
+                          }`}
+                        onClick={() => {
+                          setFaviconPreview(null);
+                          setFormData((prev) => ({
+                            ...prev,
+                            faviconFile: undefined,
+                            favicon: undefined,
+                          }));
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                  <Input
+                    id="faviconFile"
+                    name="faviconFile"
+                    type="file"
+                    accept="image/x-icon, image/png, image/svg+xml"
+                    onChange={(e) => handleFileChange(e, "favicon")}
+                    disabled={isLoading}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("admin.settings.uploadFaviconHint")}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Social Links Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className={`flex items-center justify-between`}>
+                  {t("admin.settings.social")}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addSocialLink}
+                    disabled={allPlatformsUsed || isLoading}
+                  >
+                    <Plus className={`h-4 w-4 ${isRtl ? "ml-1" : "mr-1"}`} />
+                    {allPlatformsUsed
+                      ? t("admin.settings.allPlatformsAdded")
+                      : t("admin.settings.addLink")}
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {socialLinks.map((link, index) => (
+                  <div
+                    key={link._id || index}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end border-b pb-4"
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor={`platform-${index}`}>
+                        {t("admin.settings.platform")}
+                      </Label>
+                      <Select
+                        value={link.platform}
+                        onValueChange={(value) =>
+                          updateSocialLink(index, "platform", value)
+                        }
+                        disabled={isLoading}
+                      >
+                        <SelectTrigger
+                          id={`platform-${index}`}
+                          dir={isRtl ? "rtl" : "ltr"}
+                        >
+                          <SelectValue
+                            placeholder={t("admin.settings.selectPlatform")}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {/* Show current platform if already selected */}
+                          {link.platform && (
+                            <SelectItem value={link.platform}>
+                              {link.platform.charAt(0).toUpperCase() +
+                                link.platform.slice(1)}
+                            </SelectItem>
+                          )}
+                          {/* Only show platforms that aren't already used */}
+                          {allPlatforms
+                            .filter(
+                              (platform) =>
+                                platform !== link.platform &&
+                                !usedPlatforms.includes(platform)
+                            )
+                            .map((platform) => (
+                              <SelectItem key={platform} value={platform}>
+                                {platform === "x"
+                                  ? "X (Twitter)"
+                                  : platform.charAt(0).toUpperCase() +
+                                  platform.slice(1)}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor={`url-${index}`}>
+                        {t("admin.settings.url")}
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id={`url-${index}`}
+                          value={link.url}
+                          onChange={(e) =>
+                            updateSocialLink(index, "url", e.target.value)
+                          }
+                          placeholder="https://..."
+                          className="flex-1"
+                          disabled={isLoading}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeSocialLink(index)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {socialLinks.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {t("admin.settings.noSocialLinks")}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Header Display Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("admin.settings.headerDisplay")}</CardTitle>
+                <CardDescription>
+                  {t("admin.settings.headerDisplayDescription")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="showLogo">
+                        {t("admin.settings.showLogo")}
+                      </Label>
+                      <div className="text-sm text-muted-foreground">
+                        {t("admin.settings.displayLogoInHeader")}
+                      </div>
+                    </div>
+                    <Switch
+                      id="showLogo"
+                      checked={headerDisplay.showLogo}
+                      onCheckedChange={(checked) =>
+                        setHeaderDisplay((prev) => ({
+                          ...prev,
+                          showLogo: checked,
+                        }))
+                      }
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="showTitle">
+                        {t("admin.settings.showSiteName")}
+                      </Label>
+                      <div className="text-sm text-muted-foreground">
+                        {t("admin.settings.displaySiteNameInHeader")}
+                      </div>
+                    </div>
+                    <Switch
+                      id="showTitle"
+                      checked={headerDisplay.showTitle}
+                      onCheckedChange={(checked) =>
+                        setHeaderDisplay((prev) => ({
+                          ...prev,
+                          showTitle: checked,
+                        }))
+                      }
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="logoWidth">
+                    {t("admin.settings.logoWidth")}
+                  </Label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      id="logoWidth"
+                      type="number"
+                      min={20}
+                      max={200}
+                      value={headerDisplay.logoWidth}
+                      onChange={(e) =>
+                        setHeaderDisplay((prev) => ({
+                          ...prev,
+                          logoWidth: parseInt(e.target.value) || 40,
+                        }))
+                      }
+                      disabled={isLoading}
+                      className="w-32"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {t("admin.settings.logoWidthRange")}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Cache Management Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {isRtl ? "إدارة الكاش" : "Cache Management"}
+                </CardTitle>
+                <CardDescription>
+                  {isRtl
+                    ? "مسح كاش الموقع لتحديث المحتوى فوراً"
+                    : "Clear website cache to update content instantly"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <div className="font-medium">
+                      {isRtl ? "مسح كاش الموقع" : "Clear Website Cache"}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {isRtl
+                        ? "مسح الكاش سيجعل جميع الصفحات تعيد تحميل أحدث البيانات"
+                        : "Clearing cache will force all pages to reload with fresh data"}
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={async () => {
+                      setClearingCache(true);
+                      try {
+                        const res = await fetch("/api/revalidate", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            secret: "genoun-revalidate-secret",
+                            all: true,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          toast.success(
+                            isRtl
+                              ? "تم مسح الكاش بنجاح!"
+                              : "Cache cleared successfully!"
+                          );
+                        } else {
+                          toast.error(data.message || "Failed to clear cache");
+                        }
+                      } catch (error) {
+                        toast.error(
+                          isRtl
+                            ? "حدث خطأ أثناء مسح الكاش"
+                            : "Error clearing cache"
+                        );
+                      } finally {
+                        setClearingCache(false);
+                      }
+                    }}
+                    disabled={clearingCache}
+                  >
+                    {clearingCache ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <RefreshCcw
+                          className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`}
+                        />
+                        {isRtl ? "مسح الكاش" : "Clear Cache"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="contact" className="space-y-6">
+            {/* Contact Information Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>{t("admin.settings.contactInfo")}</CardTitle>
+                  <CardDescription>
+                    {t("admin.settings.publicContactDetails")}
+                  </CardDescription>
+                </div>
+                <LanguageSwitcher
+                  language={formLang}
+                  setLanguage={setFormLang}
+                />
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="contactEmail">
+                    {t("admin.settings.contactEmail")}
+                  </Label>
+                  <Input
+                    id="contactEmail"
+                    name="contactEmail"
+                    type="email"
+                    value={formData.contactEmail || ""}
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contactPhone">
+                    {t("admin.settings.contactPhone")}
+                  </Label>
+                  <Input
+                    id="contactPhone"
+                    name="contactPhone"
+                    type="tel"
+                    value={formData.contactPhone || ""}
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappNumber">
+                    {t("admin.settings.whatsappNumber")}
+                  </Label>
+                  <Input
+                    id="whatsappNumber"
+                    name="whatsappNumber"
+                    placeholder="+1234567890"
+                    type="tel"
+                    value={formData.whatsappNumber || ""}
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="address">
+                    {t("admin.settings.address")} (
+                    {formLang === "ar"
+                      ? t("admin.settings.arabicContent")
+                      : t("admin.settings.englishContent")}
+                    )
+                  </Label>
+                  <Textarea
+                    id={formLang === "en" ? "address" : "address_ar"}
+                    name={formLang === "en" ? "address" : "address_ar"}
+                    value={
+                      (formLang === "en"
+                        ? formData.address
+                        : formData.address_ar) || ""
+                    }
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                    dir={formLang === "ar" ? "rtl" : "ltr"}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="theme" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{isRtl ? "تخصيص الألوان والمظهر" : "Theme & Color Customization"}</CardTitle>
+                <CardDescription>
+                  {isRtl
+                    ? "إدارة ألوان علامتك التجارية والمظهر العام للموقع"
+                    : "Manage your brand colors and overall site appearance"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Brand Colors */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">{isRtl ? "ألوان العلامة التجارية" : "Brand Colors"}</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="primaryColor">{isRtl ? "اللون الأساسي" : "Primary Color"}</Label>
+                          <div className="text-xs text-muted-foreground">{theme.primary}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className="w-24 h-8 px-1"
+                            value={theme.primary}
+                            onChange={(e) => setTheme(prev => ({ ...prev, primary: e.target.value }))}
+                          />
+                          <ColorPickerComponent
+                            id="primaryColor"
+                            value={theme.primary}
+                            onChange={(color) => setTheme(prev => ({ ...prev, primary: color }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="secondaryColor">{isRtl ? "اللون الثانوي" : "Secondary Color"}</Label>
+                          <div className="text-xs text-muted-foreground">{theme.secondary}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className="w-24 h-8 px-1"
+                            value={theme.secondary}
+                            onChange={(e) => setTheme(prev => ({ ...prev, secondary: e.target.value }))}
+                          />
+                          <ColorPickerComponent
+                            id="secondaryColor"
+                            value={theme.secondary}
+                            onChange={(color) => setTheme(prev => ({ ...prev, secondary: color }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="accentColor">{isRtl ? "لون التميز" : "Accent Color"}</Label>
+                          <div className="text-xs text-muted-foreground">{theme.accent}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className="w-24 h-8 px-1"
+                            value={theme.accent}
+                            onChange={(e) => setTheme(prev => ({ ...prev, accent: e.target.value }))}
+                          />
+                          <ColorPickerComponent
+                            id="accentColor"
+                            value={theme.accent}
+                            onChange={(color) => setTheme(prev => ({ ...prev, accent: color }))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* UI Colors */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">{isRtl ? "ألوان الواجهة" : "Interface Colors"}</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="backgroundColor">{isRtl ? "لون الخلفية" : "Background Color"}</Label>
+                          <div className="text-xs text-muted-foreground">{theme.background}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className="w-24 h-8 px-1"
+                            value={theme.background}
+                            onChange={(e) => setTheme(prev => ({ ...prev, background: e.target.value }))}
+                          />
+                          <ColorPickerComponent
+                            id="backgroundColor"
+                            value={theme.background}
+                            onChange={(color) => setTheme(prev => ({ ...prev, background: color }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="textColor">{isRtl ? "لون النص" : "Text Color"}</Label>
+                          <div className="text-xs text-muted-foreground">{theme.text}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className="w-24 h-8 px-1"
+                            value={theme.text}
+                            onChange={(e) => setTheme(prev => ({ ...prev, text: e.target.value }))}
+                          />
+                          <ColorPickerComponent
+                            id="textColor"
+                            value={theme.text}
+                            onChange={(color) => setTheme(prev => ({ ...prev, text: color }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="adminPrimaryColor">{isRtl ? "لون لوحة التحكم" : "Admin Dashboard Primary"}</Label>
+                          <div className="text-xs text-muted-foreground">{theme.adminPrimary}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className="w-24 h-8 px-1"
+                            value={theme.adminPrimary}
+                            onChange={(e) => setTheme(prev => ({ ...prev, adminPrimary: e.target.value }))}
+                          />
+                          <ColorPickerComponent
+                            id="adminPrimaryColor"
+                            value={theme.adminPrimary}
+                            onChange={(color) => setTheme(prev => ({ ...prev, adminPrimary: color }))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview Section */}
+                <div className="mt-8 space-y-4">
+                  <h3 className="text-lg font-medium">{isRtl ? "معاينة المظهر" : "Theme Preview"}</h3>
+                  <div className="rounded-xl border p-8" style={{ backgroundColor: theme.background, color: theme.text }}>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-lg" style={{ backgroundColor: theme.primary }}></div>
+                        <div>
+                          <h4 className="text-xl font-bold" style={{ color: theme.primary }}>{isRtl ? "هذا عنوان أساسي" : "This is a Primary Heading"}</h4>
+                          <p className="text-sm opacity-80">{isRtl ? "هذا نص تجريبي للمعاينة." : "This is some preview sample text."}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                        <Button style={{ backgroundColor: theme.primary, color: "#fff" }}>{isRtl ? "زر أساسي" : "Primary Button"}</Button>
+                        <Button style={{ backgroundColor: theme.secondary, color: "#fff" }}>{isRtl ? "زر ثانوي" : "Secondary Button"}</Button>
+                        <Button variant="outline" style={{ borderColor: theme.accent, color: theme.accent }}>{isRtl ? "زر تميز" : "Accent Outline"}</Button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 mt-2">
+                        <div className="h-2 rounded" style={{ backgroundColor: theme.primary }}></div>
+                        <div className="h-2 rounded" style={{ backgroundColor: theme.secondary }}></div>
+                        <div className="h-2 rounded" style={{ backgroundColor: theme.accent }}></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="marketing">
+            <MarketingBannersSettings />
+          </TabsContent>
+
+          <TabsContent value="navbar" className="space-y-6">
+            <NavbarSettings
+              navbarLinks={navbarLinks}
+              setNavbarLinks={setNavbarLinks}
+              formLang={formLang}
+            />
+          </TabsContent>
+
+          <TabsContent value="sections" className="space-y-6">
+            <HomepageSectionsSettings
+              sections={homepageSections}
+              setSections={setHomepageSections}
+              formLang={formLang}
+            />
+          </TabsContent>
+
+          <TabsContent value="modal" className="space-y-6">
+            <PromoModalSettings
+              promoModal={promoModal}
+              setPromoModal={setPromoModal}
+              formLang={formLang}
+            />
+          </TabsContent>
+
+          {/* AI Articles Tab */}
+          <TabsContent value="ai-articles">
+            <AiArticlesSettings />
+          </TabsContent>
+
+          {/* Homepage Settings Tab */}
+          <TabsContent value="homepage" className="space-y-6">
+            {/* Banner Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {isRtl ? "بنر الصفحة الرئيسية" : "Homepage Banner"}
+                </CardTitle>
+                <CardDescription>
+                  {isRtl
+                    ? "إعدادات البنر المعروض في الصفحة الرئيسية"
+                    : "Configure the banner displayed on the homepage"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>
+                    {isRtl ? "تفعيل البنر" : "Enable Banner"}
+                  </Label>
+                  <Switch
+                    checked={homepageBanner.isEnabled}
+                    onCheckedChange={(checked) =>
+                      setHomepageBanner({ ...homepageBanner, isEnabled: checked })
+                    }
+                  />
+                </div>
+
+                {homepageBanner.isEnabled && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>
+                        {isRtl ? "رابط الصورة" : "Image URL"}
+                      </Label>
+                      <Input
+                        type="url"
+                        value={homepageBanner.imageUrl}
+                        onChange={(e) =>
+                          setHomepageBanner({
+                            ...homepageBanner,
+                            imageUrl: e.target.value,
+                          })
+                        }
+                        placeholder="https://..."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>
+                          {isRtl ? "العنوان (عربي)" : "Title (Arabic)"}
+                        </Label>
+                        <Input
+                          value={homepageBanner.title.ar}
+                          onChange={(e) =>
+                            setHomepageBanner({
+                              ...homepageBanner,
+                              title: { ...homepageBanner.title, ar: e.target.value },
+                            })
+                          }
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>
+                          {isRtl ? "العنوان (إنجليزي)" : "Title (English)"}
+                        </Label>
+                        <Input
+                          value={homepageBanner.title.en}
+                          onChange={(e) =>
+                            setHomepageBanner({
+                              ...homepageBanner,
+                              title: { ...homepageBanner.title, en: e.target.value },
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>
+                          {isRtl ? "الوصف (عربي)" : "Subtitle (Arabic)"}
+                        </Label>
+                        <Textarea
+                          value={homepageBanner.subtitle.ar}
+                          onChange={(e) =>
+                            setHomepageBanner({
+                              ...homepageBanner,
+                              subtitle: { ...homepageBanner.subtitle, ar: e.target.value },
+                            })
+                          }
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>
+                          {isRtl ? "الوصف (إنجليزي)" : "Subtitle (English)"}
+                        </Label>
+                        <Textarea
+                          value={homepageBanner.subtitle.en}
+                          onChange={(e) =>
+                            setHomepageBanner({
+                              ...homepageBanner,
+                              subtitle: { ...homepageBanner.subtitle, en: e.target.value },
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>
+                          {isRtl ? "نص الزر (عربي)" : "Button Text (Arabic)"}
+                        </Label>
+                        <Input
+                          value={homepageBanner.buttonText.ar}
+                          onChange={(e) =>
+                            setHomepageBanner({
+                              ...homepageBanner,
+                              buttonText: { ...homepageBanner.buttonText, ar: e.target.value },
+                            })
+                          }
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>
+                          {isRtl ? "نص الزر (إنجليزي)" : "Button Text (English)"}
+                        </Label>
+                        <Input
+                          value={homepageBanner.buttonText.en}
+                          onChange={(e) =>
+                            setHomepageBanner({
+                              ...homepageBanner,
+                              buttonText: { ...homepageBanner.buttonText, en: e.target.value },
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>
+                        {isRtl ? "رابط الزر" : "Button Link"}
+                      </Label>
+                      <Input
+                        type="url"
+                        value={homepageBanner.buttonLink}
+                        onChange={(e) =>
+                          setHomepageBanner({
+                            ...homepageBanner,
+                            buttonLink: e.target.value,
+                          })
+                        }
+                        placeholder="/courses"
+                      />
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Courses Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {isRtl ? "إعدادات عرض الدورات" : "Courses Display Settings"}
+                </CardTitle>
+                <CardDescription>
+                  {isRtl
+                    ? "إعدادات عرض الدورات في الصفحة الرئيسية"
+                    : "Configure how courses are displayed on the homepage"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>
+                    {isRtl ? "عرض قسم الدورات" : "Show Courses Section"}
+                  </Label>
+                  <Switch
+                    checked={homepageCourses.isEnabled}
+                    onCheckedChange={(checked) =>
+                      setHomepageCourses({ ...homepageCourses, isEnabled: checked })
+                    }
+                  />
+                </div>
+
+                {homepageCourses.isEnabled && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>
+                        {isRtl ? "عدد الدورات المعروضة" : "Number of Courses to Display"}
+                      </Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={homepageCourses.displayCount}
+                        onChange={(e) =>
+                          setHomepageCourses({
+                            ...homepageCourses,
+                            displayCount: parseInt(e.target.value) || 6,
+                          })
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {isRtl
+                          ? "النطاق: 1-20 دورة"
+                          : "Range: 1-20 courses"}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>
+                          {isRtl ? "العنوان (عربي)" : "Title (Arabic)"}
+                        </Label>
+                        <Input
+                          value={homepageCourses.title.ar}
+                          onChange={(e) =>
+                            setHomepageCourses({
+                              ...homepageCourses,
+                              title: { ...homepageCourses.title, ar: e.target.value },
+                            })
+                          }
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>
+                          {isRtl ? "العنوان (إنجليزي)" : "Title (English)"}
+                        </Label>
+                        <Input
+                          value={homepageCourses.title.en}
+                          onChange={(e) =>
+                            setHomepageCourses({
+                              ...homepageCourses,
+                              title: { ...homepageCourses.title, en: e.target.value },
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>
+                          {isRtl ? "الوصف (عربي)" : "Subtitle (Arabic)"}
+                        </Label>
+                        <Input
+                          value={homepageCourses.subtitle.ar}
+                          onChange={(e) =>
+                            setHomepageCourses({
+                              ...homepageCourses,
+                              subtitle: { ...homepageCourses.subtitle, ar: e.target.value },
+                            })
+                          }
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>
+                          {isRtl ? "الوصف (إنجليزي)" : "Subtitle (English)"}
+                        </Label>
+                        <Input
+                          value={homepageCourses.subtitle.en}
+                          onChange={(e) =>
+                            setHomepageCourses({
+                              ...homepageCourses,
+                              subtitle: { ...homepageCourses.subtitle, en: e.target.value },
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>
+                          {isRtl ? "نص الزر (عربي)" : "Button Text (Arabic)"}
+                        </Label>
+                        <Input
+                          value={homepageCourses.buttonText.ar}
+                          onChange={(e) =>
+                            setHomepageCourses({
+                              ...homepageCourses,
+                              buttonText: { ...homepageCourses.buttonText, ar: e.target.value },
+                            })
+                          }
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>
+                          {isRtl ? "نص الزر (إنجليزي)" : "Button Text (English)"}
+                        </Label>
+                        <Input
+                          value={homepageCourses.buttonText.en}
+                          onChange={(e) =>
+                            setHomepageCourses({
+                              ...homepageCourses,
+                              buttonText: { ...homepageCourses.buttonText, en: e.target.value },
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="email" className="space-y-6">
+            <EmailSettings
+              settings={formData.emailSettings!}
+              updateSettings={(key, value) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  emailSettings: {
+                    ...prev.emailSettings!,
+                    [key]: value,
+                  },
+                }));
+              }}
+              formLang={formLang}
+            />
+          </TabsContent>
+        </Tabs>
+
+        {/* Save Button - Hide for tabs with their own save (AI Articles, Marketing) */}
+        {activeTab !== "ai-articles" && activeTab !== "marketing" && (
+          <div className="sticky bottom-0 z-10 flex justify-end bg-background p-4 border-t mt-6 -mx-6 px-6 shadow-sm">
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="bg-secondary-blue hover:bg-secondary-blue/90 text-white min-w-[150px]"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2
+                    className={`h-4 w-4 animate-spin ${isRtl ? "ml-2" : "mr-2"
+                      }`}
+                  />
+                  {t("common.loading")}
+                </>
+              ) : (
+                t("admin.settings.saveChanges")
+              )}
+            </Button>
+          </div>
+        )}
+      </form>
+    </div>
+  );
+}
