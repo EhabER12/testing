@@ -210,6 +210,15 @@ export default function CourseCheckoutPage() {
         setSubmitting(true);
 
         try {
+            // Get courseId - use id or _id
+            const courseId = (currentCourse?.id || currentCourse?._id) as string;
+
+            // Validate courseId exists
+            if (!courseId) {
+                toast.error(isRtl ? "خطأ: معرف الدورة غير موجود" : "Error: Course ID not found");
+                return;
+            }
+
             // Compress image if it's too large (> 2MB)
             let processedProof = paymentProof;
             if (paymentProof && paymentProof.size > 2 * 1024 * 1024) {
@@ -227,7 +236,7 @@ export default function CourseCheckoutPage() {
 
             const paymentData = {
                 // Use courseId as productId for backend compatibility
-                productId: currentCourse?._id || "",
+                productId: courseId,
                 serviceId: undefined,
                 pricingTierId: "course_enrollment",
                 manualPaymentMethodId: selectedMethodId,
@@ -242,7 +251,7 @@ export default function CourseCheckoutPage() {
                     amount: currentCourse?.price || 0,
                     items: [
                         {
-                            productId: currentCourse?._id || "",
+                            productId: courseId,
                             name: getLocalizedText(currentCourse?.title, "en"),
                             price: currentCourse?.price || 0,
                             quantity: 1,
@@ -254,7 +263,7 @@ export default function CourseCheckoutPage() {
                 // Add course-specific metadata
                 metadata: {
                     type: "course",
-                    courseId: currentCourse?._id,
+                    courseId: courseId,
                     courseSlug: slug,
                     courseName: getLocalizedText(currentCourse?.title, locale),
                 },
@@ -515,8 +524,8 @@ export default function CourseCheckoutPage() {
                                                     <div
                                                         key={method._id}
                                                         className={`rounded-xl border-2 transition-all overflow-hidden ${selectedMethodId === method._id
-                                                                ? "border-primary bg-primary/5"
-                                                                : "border-gray-200 hover:border-primary/50"
+                                                            ? "border-primary bg-primary/5"
+                                                            : "border-gray-200 hover:border-primary/50"
                                                             }`}
                                                         dir={isRtl ? "rtl" : "ltr"}
                                                     >
