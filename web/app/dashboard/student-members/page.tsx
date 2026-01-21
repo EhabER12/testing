@@ -211,12 +211,7 @@ export default function StudentMembersPage() {
               : "Manage student member subscriptions and reminders"}
           </p>
         </div>
-        <Link href="/dashboard/student-members/create">
-          <Button className="bg-genoun-green hover:bg-genoun-green/90">
-            <Plus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-            {isRtl ? "إضافة عضو جديد" : "Add Member"}
-          </Button>
-        </Link>
+        {/* Create functionality disabled - needs to be implemented */}
       </div>
 
       {error && (
@@ -346,14 +341,7 @@ export default function StudentMembersPage() {
                   ? "ابدأ بإضافة عضو جديد"
                   : "Get started by adding a new member"}
               </p>
-              <div className="mt-6">
-                <Link href="/dashboard/student-members/create">
-                  <Button className="bg-genoun-green hover:bg-genoun-green/90">
-                    <Plus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-                    {isRtl ? "إضافة عضو" : "Add Member"}
-                  </Button>
-                </Link>
-              </div>
+              {/* Create functionality disabled - needs to be implemented */}
             </div>
           ) : (
             <Table>
@@ -459,8 +447,8 @@ export default function StudentMembersPage() {
                                 ? "جاري الحذف..."
                                 : "Deleting..."
                               : isRtl
-                              ? "حذف"
-                              : "Delete"}
+                                ? "حذف"
+                                : "Delete"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
