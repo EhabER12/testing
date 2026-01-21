@@ -1,0 +1,83 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Add server to known_hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to Server
+      env:
+        SSH_USER: ${{ secrets.SSH_USER }}
+        SSH_HOST: ${{ secrets.SSH_HOST }}
+      run: |
+        ssh $SSH_USER@$SSH_HOST << 'EOF'
+          set -e
+          
+          echo "🚀 Starting deployment..."
+          
+          # Navigate to project (create if doesn't exist)
+          if [ ! -d "/var/www/genoun-main" ]; then
+            echo "📂 Cloning repository for first time..."
+            cd /var/www
+            git clone https://github.com/EhabER12/testing.git genoun-main
+            cd genoun-main
+          else
+            echo "📥 Pulling latest changes..."
+            cd /var/www/genoun-main
+            git pull origin main
+          fi
+          
+          # Install backend dependencies
+          echo "🔧 Installing backend dependencies..."
+          cd api
+          npm install --production
+          
+          # Install frontend dependencies
+          echo "🎨 Installing frontend dependencies..."
+          cd ../web
+          npm install
+          
+          # Build frontend
+          echo "🏗️ Building frontend..."
+          npm run build
+          
+          # Restart or start services with PM2
+          echo "♻️ Restarting services..."
+          cd ..
+          
+          # Check if PM2 processes exist
+          if pm2 list | grep -q "genoun"; then
+            pm2 restart all
+          else
+            # First time - start with ecosystem file
+            if [ -f "ecosystem.config.js" ]; then
+              pm2 start ecosystem.config.js
+            else
+              # Start manually
+              pm2 start api/src/server.js --name genoun-api
+              cd web && pm2 start npm --name genoun-web -- start
+            fi
+            pm2 save
+          fi
+          
+          echo "✅ Deployment successful!"
+          pm2 status
+        EOF
