@@ -90,7 +90,7 @@ export default function NotFound() {
 
         {/* Footer */}
         <div className="mt-8 text-white/30 text-sm" suppressHydrationWarning>
-          Genoun &copy; 2026
+          موقع الكتاب &copy; 2026
         </div>
       </div>
     </div>
