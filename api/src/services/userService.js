@@ -1,7 +1,8 @@
 import { UserRepository } from "../repositories/userRepository.js";
 import { ApiError } from "../utils/apiError.js";
 import crypto from "crypto";
-import { EmailService } from "./emailService.js";
+import { EmailService } from "./emailService.js"; // Keep this just in case other methods use it directly, though we prefer template service
+import emailTemplateService from "./emailTemplateService.js";
 import logger from "../utils/logger.js";
 
 export class UserService {
@@ -47,7 +48,7 @@ export class UserService {
       userPayload.verificationTokenExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
       // Send invitation email
-      const clientUrl = process.env.ADMIN_URL || "http://localhost:3000";
+      const clientUrl = process.env.CLIENT_URL || process.env.WEBSITE_URL || "http://localhost:3000";
       const invitationLink = `${clientUrl}/complete-registration?token=${verificationToken}`;
 
       const roleArabic = {
@@ -57,93 +58,20 @@ export class UserService {
         teacher: "مدرس",
       };
 
-      const subject = "دعوة للانضمام لفريق Genoun - Invitation to Join Genoun";
-      const html = `
-<!DOCTYPE html>
-<html dir="rtl" lang="ar">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
-  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #04524B 0%, #033D38 100%); padding: 40px 30px; text-align: center;">
-      <h1 style="color: #FB9903; margin: 0; font-size: 32px; font-weight: bold;">Genoun</h1>
-      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">لوحة التحكم - Dashboard</p>
-    </div>
-    
-    <!-- Content -->
-    <div style="padding: 40px 30px; text-align: right;" dir="rtl">
-      <h2 style="color: #04524B; margin: 0 0 20px; font-size: 24px;">مرحباً بك في فريق Genoun! 🎉</h2>
-      
-      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 20px;">
-        تمت دعوتك للانضمام إلى لوحة تحكم <strong style="color: #04524B;">Genoun</strong> كـ <strong style="color: #FB9903;">${
-          roleArabic[role] || role
-        }</strong>.
-      </p>
-      
-      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 30px;">
-        لإكمال التسجيل وتعيين كلمة المرور الخاصة بك، يرجى الضغط على الزر أدناه:
-      </p>
-    </div>
-
-    <div style="padding: 0 30px 40px; text-align: left;" dir="ltr">
-      <h2 style="color: #04524B; margin: 0 0 20px; font-size: 24px;">Welcome to Genoun Team! 🎉</h2>
-      
-      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 20px;">
-        You have been invited to join the <strong style="color: #04524B;">Genoun</strong> dashboard as a <strong style="color: #FB9903;">${
-          role
-        }</strong>.
-      </p>
-      
-      <p style="color: #333; line-height: 1.8; font-size: 16px; margin: 0 0 30px;">
-        To complete your registration and set your password, please click the button below:
-      </p>
-    </div>
-    
-    <!-- CTA Button -->
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${invitationLink}" style="display: inline-block; background: linear-gradient(135deg, #FB9903 0%, #d98102 100%); color: #1a1a1a; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(251, 153, 3, 0.3);">
-        إكمال التسجيل - Complete Registration
-      </a>
-    </div>
-    
-    <div style="padding: 20px 30px; background-color: #f8f9fa;">
-      <p style="color: #666; font-size: 14px; line-height: 1.6; margin: 0; text-align: center;">
-        أو انسخ هذا الرابط في متصفحك - Or copy this link: <br>
-        <a href="${invitationLink}" style="color: #04524B; word-break: break-all;">${invitationLink}</a>
-      </p>
-    </div>
-    
-    <div style="padding: 20px 30px; text-align: center;">
-      <p style="color: #999; font-size: 12px; margin: 0;">
-        هذا الرابط صالح لمدة 24 ساعة فقط. إذا لم تكن تتوقع هذه الدعوة، يمكنك تجاهلها.<br>
-        This link is valid for 24 hours. If you didn't expect this invite, please ignore it.
-      </p>
-    </div>
-    
-    <!-- Footer -->
-    <div style="background-color: #04524B; padding: 30px; text-align: center;">
-      <p style="color: rgba(255,255,255,0.8); margin: 0 0 10px; font-size: 14px;">
-        فريق Genoun Team
-      </p>
-      <p style="color: rgba(255,255,255,0.6); margin: 0; font-size: 12px;">
-        © ${new Date().getFullYear()} Genoun. جميع الحقوق محفوظة - All rights reserved.
-      </p>
-    </div>
-  </div>
-</body>
-</html>
-      `;
-
       try {
-        await this.emailService.sendEmail(email, subject, html);
+        await emailTemplateService.sendTemplatedEmail(
+          email,
+          "user_invitation",
+          {
+            role: roleArabic[role] || role,
+            inviteUrl: invitationLink,
+            year: new Date().getFullYear()
+          },
+          "ar"
+        );
         logger.info("Invitation email sent", { email });
       } catch (error) {
         logger.error("Failed to send invitation email", { email, error: error.message });
-        // We still proceed with user creation, but maybe we should warn?
-        // For now, we'll just log the error.
       }
     }
 
@@ -200,6 +128,15 @@ export class UserService {
       delete userData.role;
     }
 
+    // Map single 'name' field to fullName structure (ar & en)
+    if (userData.name) {
+      userData.fullName = {
+        ar: userData.name,
+        en: userData.name,
+      };
+      delete userData.name;
+    }
+
     return this.userRepository.update(id, userData);
   }
 
@@ -252,6 +189,7 @@ export class UserService {
       const clientUrl = process.env.ADMIN_URL || "http://localhost:3000";
       const dashboardLink = `${clientUrl}/dashboard`;
 
+      // We should probably convert this to template too later, but keeping it for now to minimize changes scope
       const subject = "تم تفعيل حسابك كمعلم - Teacher Account Approved";
       const html = `
 <!DOCTYPE html>

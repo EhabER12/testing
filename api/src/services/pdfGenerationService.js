@@ -18,7 +18,7 @@ class PDFGenerationService {
    */
   reshapeArabic(text) {
     if (!text) return "";
-    
+
     // Check if text contains Arabic characters
     const isArabic = /[\u0600-\u06FF]/.test(text);
     if (!isArabic) return text;
@@ -26,12 +26,48 @@ class PDFGenerationService {
     try {
       // Reshape Arabic characters (handle joining)
       const reshaped = arabicReshaper.reshape(text);
-      
+
       // Reverse for RTL display in PDF
       return reshaped.split("").reverse().join("");
     } catch (error) {
       console.error("Arabic reshaping error:", error);
       return text;
+    }
+  }
+
+  /**
+   * Font mapping: Maps font family names to .ttf filenames
+   */
+  getFontFilename(fontFamily) {
+    const fontMap = {
+      "Cairo": "Cairo-Regular.ttf",
+      "Amiri": "Amiri-Regular.ttf",
+      "Tajawal": "Tajawal-Regular.ttf",
+      "Almarai": "Almarai-Regular.ttf",
+      "Changa": "Changa-Regular.ttf",
+      "Noto Kufi Arabic": "NotoKufiArabic-Regular.ttf",
+      "Noto Sans Arabic": "NotoSansArabic-Regular.ttf",
+    };
+
+    return fontMap[fontFamily] || "Cairo-Regular.ttf";
+  }
+
+  /**
+   * Load and embed a font
+   */
+  async loadFont(pdfDoc, fontFamily) {
+    const filename = this.getFontFilename(fontFamily);
+    const fontPath = path.join(__dirname, "..", "assets", "fonts", filename);
+
+    try {
+      const fontBytes = await fs.readFile(fontPath);
+      return await pdfDoc.embedFont(fontBytes);
+    } catch (error) {
+      // Fallback to Cairo if font not found
+      console.warn(`Font ${fontFamily} (${filename}) not found, falling back to Cairo`);
+      const fallbackPath = path.join(__dirname, "..", "assets", "fonts", "Cairo-Regular.ttf");
+      const fallbackBytes = await fs.readFile(fallbackPath);
+      return await pdfDoc.embedFont(fallbackBytes);
     }
   }
 
@@ -45,7 +81,7 @@ class PDFGenerationService {
     try {
       // Create a new PDF document
       const pdfDoc = await PDFDocument.create();
-      
+
       // Register fontkit
       pdfDoc.registerFontkit(fontkit);
 
@@ -57,10 +93,13 @@ class PDFGenerationService {
 
       const { width, height } = page.getSize();
 
-      // Load and embed Arabic-supporting font
-      const fontPath = path.join(__dirname, "..", "assets", "fonts", "Cairo-Regular.ttf");
-      const fontBytes = await fs.readFile(fontPath);
-      const customFont = await pdfDoc.embedFont(fontBytes);
+      // Load default font (Cairo) for fallback
+      const defaultFont = await this.loadFont(pdfDoc, "Cairo");
+
+      // Font cache to avoid loading same font multiple times
+      const fontCache = {
+        "Cairo": defaultFont
+      };
 
       // Try to load background image if provided
       if (template.backgroundImage) {
@@ -96,7 +135,7 @@ class PDFGenerationService {
       }
 
       // Helper function to draw text
-      const drawText = (text, placeholderConfig, defaultY) => {
+      const drawText = async (text, placeholderConfig, defaultY) => {
         if (!placeholderConfig || !text) return;
 
         // Reshape if Arabic
@@ -108,10 +147,16 @@ class PDFGenerationService {
           fontSize: placeholderConfig.fontSize || 24,
           color: this.hexToRgb(placeholderConfig.color || "#000000"),
           align: placeholderConfig.align || "center",
+          fontFamily: placeholderConfig.fontFamily || "Cairo",
           fontWeight: placeholderConfig.fontWeight || "normal",
         };
 
-        const font = customFont;
+        // Load font if not in cache
+        if (!fontCache[config.fontFamily]) {
+          fontCache[config.fontFamily] = await this.loadFont(pdfDoc, config.fontFamily);
+        }
+
+        const font = fontCache[config.fontFamily];
         const textWidth = font.widthOfTextAtSize(processedText, config.fontSize);
 
         let xPosition = config.x;
@@ -136,15 +181,15 @@ class PDFGenerationService {
         typeof certificateData.studentName === "string"
           ? certificateData.studentName
           : certificateData.studentName?.[locale] ||
-            certificateData.studentName?.en ||
-            "Student";
+          certificateData.studentName?.en ||
+          "Student";
 
       const courseName =
         typeof certificateData.courseName === "string"
           ? certificateData.courseName
           : certificateData.courseName?.[locale] ||
-            certificateData.courseName?.en ||
-            "Course";
+          certificateData.courseName?.en ||
+          "Course";
 
       const issuedDate = new Date(certificateData.issuedAt).toLocaleDateString(
         locale === "ar" ? "ar-EG" : "en-US",
@@ -156,22 +201,22 @@ class PDFGenerationService {
 
       // Student Name
       if (placeholders.studentName) {
-        drawText(studentName, placeholders.studentName, height - 300);
+        await drawText(studentName, placeholders.studentName, height - 300);
       }
 
       // Course Name
       if (placeholders.courseName) {
-        drawText(courseName, placeholders.courseName, height - 450);
+        await drawText(courseName, placeholders.courseName, height - 450);
       }
 
       // Issue Date
       if (placeholders.issuedDate) {
-        drawText(issuedDate, placeholders.issuedDate, height - 600);
+        await drawText(issuedDate, placeholders.issuedDate, height - 600);
       }
 
       // Certificate Number
       if (placeholders.certificateNumber) {
-        drawText(
+        await drawText(
           certificateData.certificateNumber,
           placeholders.certificateNumber,
           height - 750
@@ -180,11 +225,11 @@ class PDFGenerationService {
 
       // Custom Text Elements
       if (placeholders.customText && Array.isArray(placeholders.customText)) {
-        placeholders.customText.forEach((custom) => {
+        for (const custom of placeholders.customText) {
           if (custom.text) {
-            drawText(custom.text, custom, height / 2);
+            await drawText(custom.text, custom, height / 2);
           }
-        });
+        }
       }
 
       // Additional Images
@@ -219,7 +264,7 @@ class PDFGenerationService {
         !placeholders.certificateNumber
       ) {
         const font = customFont;
-        
+
         // Title
         const title = "CERTIFICATE OF COMPLETION";
         page.drawText(title, {
@@ -331,10 +376,10 @@ class PDFGenerationService {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
       ? rgb(
-          parseInt(result[1], 16) / 255,
-          parseInt(result[2], 16) / 255,
-          parseInt(result[3], 16) / 255
-        )
+        parseInt(result[1], 16) / 255,
+        parseInt(result[2], 16) / 255,
+        parseInt(result[3], 16) / 255
+      )
       : rgb(0, 0, 0);
   }
 

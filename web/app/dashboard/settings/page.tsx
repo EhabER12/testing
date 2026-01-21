@@ -30,6 +30,11 @@ import {
   NavbarLink,
   HomepageSections,
   PromoModalSettings as PromoModalSettingsType,
+  AuthorityBarSettings,
+  ReviewsSectionSettings,
+  WhyGenounSettings,
+  AuthorityBarItem,
+  WhyGenounFeature,
 } from "@/store/services/settingsService";
 import { resetSettingsStatus } from "@/store/slices/settingsSlice";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -57,6 +62,9 @@ import { NavbarSettings } from "@/components/dashboard/settings/NavbarSettings";
 import { HomepageSectionsSettings } from "@/components/dashboard/settings/HomepageSectionsSettings";
 import { PromoModalSettings } from "@/components/dashboard/settings/PromoModalSettings";
 import { EmailSettings } from "@/components/dashboard/settings/EmailSettings";
+import { AuthorityBarSettings as AuthorityBarSettingsComponent } from "@/components/dashboard/settings/AuthorityBarSettings";
+import { ReviewsSectionSettings as ReviewsSectionSettingsComponent } from "@/components/dashboard/settings/ReviewsSectionSettings";
+import { WhyGenounSettings as WhyGenounSettingsComponent } from "@/components/dashboard/settings/WhyGenounSettings";
 
 interface SettingsFormData extends Partial<WebsiteSettingsData> {
   logoFile?: File;
@@ -111,6 +119,7 @@ export default function SettingsDashboardPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoArPreview, setLogoArPreview] = useState<string | null>(null);
   const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
+  const [heroBackgroundPreview, setHeroBackgroundPreview] = useState<string | null>(null);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [formLang, setFormLang] = useState<"en" | "ar">("en");
   const [clearingCache, setClearingCache] = useState(false);
@@ -156,6 +165,39 @@ export default function SettingsDashboardPage() {
     title: { ar: "الدورات المتاحة", en: "Available Courses" },
     subtitle: { ar: "تصفح أحدث دوراتنا", en: "Browse our latest courses" },
     buttonText: { ar: "عرض جميع الدورات", en: "View All Courses" },
+  });
+
+  const [emailSettings, setEmailSettings] = useState({
+    enabled: false,
+    host: "",
+    port: 587,
+    secure: false,
+    user: "",
+    pass: "",
+    fromName: "",
+    fromEmail: "",
+  });
+
+  const [authorityBar, setAuthorityBar] = useState<AuthorityBarSettings>({
+    isEnabled: true,
+    title: { ar: "موثوق من قبل المؤسسات الرائدة", en: "Trusted by Leading Institutions" },
+    items: [],
+  });
+
+  const [reviewsSettings, setReviewsSettings] = useState<ReviewsSectionSettings>({
+    isEnabled: true,
+    title: { ar: "آراء طلابنا", en: "Student Reviews" },
+    subtitle: { ar: "ماذا يقول طلابنا عنا", en: "What our students say about us" },
+    showRating: true,
+    showDate: true,
+    displayCount: 6,
+  });
+
+  const [whyGenounSettings, setWhyGenounSettings] = useState<WhyGenounSettings>({
+    isEnabled: true,
+    title: { ar: "لماذا جنون؟", en: "Why Genoun?" },
+    subtitle: { ar: "منصة متكاملة لحفظ القرآن الكريم", en: "Complete platform for Quran memorization" },
+    features: [],
   });
 
   // All available platforms
@@ -266,6 +308,31 @@ export default function SettingsDashboardPage() {
 
       if (settings.homepageCourses) {
         setHomepageCourses(settings.homepageCourses);
+      }
+
+      if (settings.emailSettings) {
+        setEmailSettings({
+          enabled: settings.emailSettings.enabled ?? false,
+          host: settings.emailSettings.host || "",
+          port: settings.emailSettings.port || 587,
+          secure: settings.emailSettings.secure ?? false,
+          user: settings.emailSettings.user || "",
+          pass: settings.emailSettings.pass || "",
+          fromName: settings.emailSettings.fromName || "",
+          fromEmail: settings.emailSettings.fromEmail || "",
+        });
+      }
+
+      if (settings.authorityBar) {
+        setAuthorityBar(settings.authorityBar);
+      }
+
+      if (settings.reviewsSettings) {
+        setReviewsSettings(settings.reviewsSettings);
+      }
+
+      if (settings.whyGenounSettings) {
+        setWhyGenounSettings(settings.whyGenounSettings);
       }
     }
   }, [settings]);
@@ -393,6 +460,10 @@ export default function SettingsDashboardPage() {
       promoModal,
       homepageBanner,
       homepageCourses,
+      authorityBar,
+      reviewsSettings,
+      whyGenounSettings,
+      emailSettings,
     };
 
     delete updateData.logoFile;
@@ -533,6 +604,9 @@ export default function SettingsDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="homepage">
               {isRtl ? "الصفحة الرئيسية" : "Homepage"}
+            </TabsTrigger>
+            <TabsTrigger value="sections">
+              {isRtl ? "الأقسام" : "Sections"}
             </TabsTrigger>
             <TabsTrigger value="email">
               {isRtl ? "البريد الإلكتروني" : "Email"}
@@ -1267,10 +1341,37 @@ export default function SettingsDashboardPage() {
           </TabsContent>
 
           <TabsContent value="sections" className="space-y-6">
+            {/* Existing Homepage Sections Settings */}
             <HomepageSectionsSettings
               sections={homepageSections}
               setSections={setHomepageSections}
               formLang={formLang}
+              heroBackgroundPreview={heroBackgroundPreview}
+              setHeroBackgroundPreview={setHeroBackgroundPreview}
+              onHeroBackgroundFileChange={(file) => {
+                setFormData((prev) => ({ ...prev, heroBackgroundFile: file }));
+              }}
+            />
+
+            {/* NEW: Authority Bar Settings */}
+            <AuthorityBarSettingsComponent
+              settings={authorityBar}
+              onChange={setAuthorityBar}
+              lang={formLang}
+            />
+
+            {/* NEW: Reviews Section Settings */}
+            <ReviewsSectionSettingsComponent
+              settings={reviewsSettings}
+              onChange={setReviewsSettings}
+              lang={formLang}
+            />
+
+            {/* NEW: Why Genoun Settings */}
+            <WhyGenounSettingsComponent
+              settings={whyGenounSettings}
+              onChange={setWhyGenounSettings}
+              lang={formLang}
             />
           </TabsContent>
 
@@ -1603,14 +1704,11 @@ export default function SettingsDashboardPage() {
 
           <TabsContent value="email" className="space-y-6">
             <EmailSettings
-              settings={formData.emailSettings!}
+              settings={emailSettings}
               updateSettings={(key, value) => {
-                setFormData((prev) => ({
+                setEmailSettings((prev) => ({
                   ...prev,
-                  emailSettings: {
-                    ...prev.emailSettings!,
-                    [key]: value,
-                  },
+                  [key]: value,
                 }));
               }}
               formLang={formLang}

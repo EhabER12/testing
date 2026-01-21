@@ -155,7 +155,7 @@ export default function HomeClient({
       <HeroSection locale={locale} settings={settings || undefined} />
 
       {/* Authority Bar - Platform Recognition */}
-      <AuthorityBar locale={locale} />
+      <AuthorityBar locale={locale} settings={settings || undefined} />
 
       {/* Why Choose Our Platform - Value Proposition */}
       <WhyGenoun locale={locale} settings={settings || undefined} />
@@ -167,7 +167,12 @@ export default function HomeClient({
       <HomepageCourses settings={settings || undefined} locale={locale} />
 
       {/* Reviews Section - Student Testimonials */}
-      <ReviewsSection ref={reviewsRef} locale={locale} reviews={reviews} />
+      <ReviewsSection
+        ref={reviewsRef}
+        locale={locale}
+        reviews={reviews}
+        settings={settings || undefined}
+      />
 
       {/* Final CTA Section */}
       <CTASection locale={locale} settings={settings || undefined} />

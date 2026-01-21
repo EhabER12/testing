@@ -37,13 +37,13 @@ export function HeroSection({
       ? heroSettings.title.ar
       : heroSettings.title.en
     : t("title1");
-  
+
   const subtitle = showDynamic
     ? isRtl
       ? heroSettings.subtitle.ar
       : heroSettings.subtitle.en
     : t("subtitle");
-  
+
   const content = showDynamic
     ? isRtl
       ? heroSettings.content.ar
@@ -136,12 +136,32 @@ export function HeroSection({
   // Inline SVG avatars - no network requests, instant load
   const avatarColors = ["#FB9903", "#04524B", "#066a60", "#d98102"];
 
+  // Get proper background image URL
+  const getBackgroundImageUrl = () => {
+    if (!heroSettings?.backgroundImage) return null;
+
+    //If URL is already absolute, use as is
+    if (heroSettings.backgroundImage.startsWith('http')) {
+      return heroSettings.backgroundImage;
+    }
+
+    // Otherwise prepend API base URL
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    return `${apiBase}${heroSettings.backgroundImage}`;
+  };
+
+  const backgroundImageUrl = getBackgroundImageUrl();
+
   return (
     <section
       ref={heroRef}
       className="relative min-h-screen w-full overflow-hidden flex flex-col"
       style={{
-        background: `linear-gradient(135deg, var(--primary) 0%, var(--genoun-green-dark) 50%, var(--genoun-green-dark) 100%)`,
+        background: backgroundImageUrl
+          ? `linear-gradient(135deg, rgba(26, 71, 42, 0.85) 0%, rgba(4, 82, 75, 0.85) 50%, rgba(4, 82, 75, 0.85) 100%), url(${backgroundImageUrl})`
+          : `linear-gradient(135deg, var(--primary) 0%, var(--genoun-green-dark) 50%, var(--genoun-green-dark) 100%)`,
+        backgroundSize: backgroundImageUrl ? 'cover' : undefined,
+        backgroundPosition: backgroundImageUrl ? 'center' : undefined,
       }}
     >
       {/* Grid Pattern Overlay */}
@@ -229,11 +249,10 @@ export function HeroSection({
               >
                 <span>{t("secondaryCta")}</span>
                 <ArrowIcon
-                  className={`w-5 h-5 transition-transform ${
-                    isRtl
-                      ? "group-hover:-translate-x-1"
-                      : "group-hover:translate-x-1"
-                  }`}
+                  className={`w-5 h-5 transition-transform ${isRtl
+                    ? "group-hover:-translate-x-1"
+                    : "group-hover:translate-x-1"
+                    }`}
                 />
               </Link>
             </div>

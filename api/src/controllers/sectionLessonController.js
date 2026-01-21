@@ -1,5 +1,8 @@
 import sectionService from "../services/sectionService.js";
 import lessonService from "../services/lessonService.js";
+import fs from "fs";
+import path from "path";
+import { deleteVideoFile } from "../middleware/videoUpload.js";
 
 // ============ SECTION CONTROLLERS ============
 
@@ -235,6 +238,133 @@ export const getCourseStructure = async (req, res, next) => {
       success: true,
       data: structure,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============ VIDEO UPLOAD/STREAM CONTROLLERS ============
+
+/**
+ * Upload video file for a lesson
+ * POST /api/lessons/:id/upload-video
+ */
+export const uploadLessonVideo = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No video file uploaded",
+      });
+    }
+
+    const lesson = await lessonService.uploadVideo(id, req.file);
+
+    res.status(200).json({
+      success: true,
+      message: "Video uploaded successfully",
+      data: {
+        lesson,
+        videoInfo: {
+          filename: req.file.filename,
+          size: req.file.size,
+          path: lesson.videoUrl,
+        },
+      },
+    });
+  } catch (error) {
+    // Clean up uploaded file if database update fails
+    if (req.file && req.file.path) {
+      deleteVideoFile(req.file.path);
+    }
+    next(error);
+  }
+};
+
+/**
+ * Delete uploaded video for a lesson
+ * DELETE /api/lessons/:id/video
+ */
+export const deleteLessonVideo = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Get video path before deletion
+    const videoPath = await lessonService.getVideoPath(id);
+
+    // Delete from database
+    const lesson = await lessonService.deleteVideo(id);
+
+    // Delete file from disk
+    deleteVideoFile(videoPath);
+
+    res.status(200).json({
+      success: true,
+      message: "Video deleted successfully",
+      data: lesson,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Stream video file with range support (for seeking)
+ * GET /api/lessons/:lessonId/video/stream
+ * Protected by videoAuth middleware
+ */
+export const streamLessonVideo = async (req, res, next) => {
+  try {
+    const { lessonId } = req.params;
+
+    // Get video file path
+    const videoPath = await lessonService.getVideoPath(lessonId);
+
+    // Check if file exists
+    if (!fs.existsSync(videoPath)) {
+      return res.status(404).json({
+        success: false,
+        message: "Video file not found",
+      });
+    }
+
+    const stat = fs.statSync(videoPath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (range) {
+      // Handle range request (for video seeking)
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = end - start + 1;
+      const file = fs.createReadStream(videoPath, { start, end });
+
+      const head = {
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": chunksize,
+        "Content-Type": "video/mp4",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "X-Content-Type-Options": "nosniff",
+      };
+
+      res.writeHead(206, head);
+      file.pipe(res);
+    } else {
+      // No range request - stream entire video
+      const head = {
+        "Content-Length": fileSize,
+        "Content-Type": "video/mp4",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "X-Content-Type-Options": "nosniff",
+      };
+
+      res.writeHead(200, head);
+      fs.createReadStream(videoPath).pipe(res);
+    }
   } catch (error) {
     next(error);
   }

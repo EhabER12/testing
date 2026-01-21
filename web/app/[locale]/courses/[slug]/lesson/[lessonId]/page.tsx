@@ -32,6 +32,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/use-toast";
 import CourseSidebar from "@/components/courses/CourseSidebar";
+import { SecureVideoPlayer } from "@/components/course/SecureVideoPlayer";
 
 export default function LessonPage() {
   const params = useParams();
@@ -106,7 +107,7 @@ export default function LessonPage() {
             courseId: courseId,
             lessonId: lid,
           })
-        ).catch(() => {}); // Silently handle errors
+        ).catch(() => { }); // Silently handle errors
       }
     }
   }, [currentLesson?.id, currentLesson?._id, currentCourse?.id, currentCourse?._id, user]);
@@ -202,8 +203,8 @@ export default function LessonPage() {
             ? "مبروك! لقد أتممت الدورة بنجاح"
             : "Congratulations! You completed the course!"
           : isRtl
-          ? "تم تسجيل إتمام الدرس"
-          : "Lesson marked as complete",
+            ? "تم تسجيل إتمام الدرس"
+            : "Lesson marked as complete",
         variant: "default",
       });
 
@@ -270,12 +271,23 @@ export default function LessonPage() {
         <div className="container mx-auto">
           <div className="relative aspect-video bg-gray-900">
             {currentLesson?.videoUrl ? (
-              <iframe
-                src={getYouTubeEmbedUrl(currentLesson.videoUrl)}
-                className="absolute top-0 left-0 w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              currentLesson?.videoSource === "upload" ? (
+                // Use SecureVideoPlayer for uploaded videos
+                <SecureVideoPlayer
+                  videoUrl={currentLesson.videoUrl}
+                  lessonId={currentLessonId}
+                  userEmail={user?.email}
+                  className="w-full"
+                />
+              ) : (
+                // Use iframe for YouTube/Vimeo
+                <iframe
+                  src={getYouTubeEmbedUrl(currentLesson.videoUrl)}
+                  className="absolute top-0 left-0 w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )
             ) : (
               <div className="flex items-center justify-center h-full bg-gray-900 text-white">
                 <div className="text-center">
@@ -401,8 +413,8 @@ export default function LessonPage() {
                     ? "تمت المشاهدة"
                     : "Completed"
                   : isRtl
-                  ? "إتمام الدرس"
-                  : "Mark Complete"}
+                    ? "إتمام الدرس"
+                    : "Mark Complete"}
               </Button>
 
               <Button
@@ -456,10 +468,10 @@ export default function LessonPage() {
 
           {/* Sidebar - Course Content */}
           <div className="md:col-span-1">
-            <CourseSidebar 
-              locale={locale} 
-              slug={slug} 
-              currentLessonId={currentLessonId} 
+            <CourseSidebar
+              locale={locale}
+              slug={slug}
+              currentLessonId={currentLessonId}
             />
           </div>
         </div>

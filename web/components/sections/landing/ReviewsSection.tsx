@@ -2,6 +2,7 @@
 
 import { forwardRef } from "react";
 import { Star } from "lucide-react";
+import { PublicWebsiteSettingsData } from "@/store/services/settingsService";
 
 interface Review {
   id: string;
@@ -13,15 +14,32 @@ interface Review {
 interface ReviewsSectionProps {
   locale: string;
   reviews: Review[];
+  settings?: PublicWebsiteSettingsData;
 }
 
 export const ReviewsSection = forwardRef<HTMLDivElement, ReviewsSectionProps>(
-  function ReviewsSection({ locale, reviews }, ref) {
+  function ReviewsSection({ locale, reviews, settings }, ref) {
     const isRtl = locale === "ar";
+
+    const reviewSettings = settings?.reviewsSettings;
+
+    // Hide section if disabled in settings
+    if (reviewSettings && !reviewSettings.isEnabled) {
+      return null;
+    }
 
     // Safeguard: ensure reviews is an array
     if (!reviews || !Array.isArray(reviews) || reviews.length === 0)
       return null;
+
+    // Use settings or fallback to defaults
+    const title = reviewSettings?.title?.[locale as 'ar' | 'en'] || (locale === 'ar' ? 'آراء العملاء' : 'Client Reviews');
+    const subtitle = reviewSettings?.subtitle?.[locale as 'ar' | 'en'] || (locale === 'ar' ? 'قصص نجاح حقيقية من شركاء أعمالنا' : 'Real success stories from our business partners');
+    const displayCount = reviewSettings?.displayCount || 6;
+    const showRating = reviewSettings?.showRating ?? true;
+
+    // Limit reviews to display count from settings
+    const displayedReviews = reviews.slice(0, displayCount);
 
     return (
       <section
@@ -37,7 +55,7 @@ export const ReviewsSection = forwardRef<HTMLDivElement, ReviewsSectionProps>(
           >
             <h2 className="mb-3">
               <span className="block text-base sm:text-lg md:text-xl font-medium text-gray-700 tracking-wide mb-1">
-                {isRtl ? "آراء العملاء" : "Client Reviews"}
+                {title}
               </span>
               <span className="block text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900">
                 {isRtl ? "ماذا يقول " : "What Our "}
@@ -47,9 +65,7 @@ export const ReviewsSection = forwardRef<HTMLDivElement, ReviewsSectionProps>(
               </span>
             </h2>
             <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto mt-3 px-4 sm:px-0">
-              {isRtl
-                ? "قصص نجاح حقيقية من شركاء أعمالنا"
-                : "Real success stories from our business partners"}
+              {subtitle}
             </p>
           </div>
 
@@ -76,7 +92,7 @@ export const ReviewsSection = forwardRef<HTMLDivElement, ReviewsSectionProps>(
             {/* First Row - Scrolling Left to Right */}
             <div className="overflow-hidden pb-6">
               <div className="review-slider-row-1 flex gap-6 w-max">
-                {[...reviews, ...reviews, ...reviews].map((review, index) => (
+                {[...displayedReviews, ...displayedReviews, ...displayedReviews].map((review, index) => (
                   <div
                     key={`row1-${review.id}-${index}`}
                     className="review-card group relative overflow-hidden rounded-3xl p-6 transition-all duration-500 flex-shrink-0 w-[340px] bg-white border border-gray-200 shadow-lg hover:shadow-xl hover:border-genoun-gold/30"
@@ -93,18 +109,19 @@ export const ReviewsSection = forwardRef<HTMLDivElement, ReviewsSectionProps>(
                     </div>
 
                     {/* Rating Stars */}
-                    <div className="flex gap-1 mb-3">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 transition-all duration-300 ${
-                            i < review.rating
+                    {showRating && (
+                      <div className="flex gap-1 mb-3">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 transition-all duration-300 ${i < review.rating
                               ? "fill-genoun-gold text-genoun-gold"
                               : "fill-gray-200 text-gray-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
+                              }`}
+                          />
+                        ))}
+                      </div>
+                    )}
 
                     {/* Review Text */}
                     <p
@@ -136,7 +153,7 @@ export const ReviewsSection = forwardRef<HTMLDivElement, ReviewsSectionProps>(
             {/* Second Row - Scrolling Right to Left */}
             <div className="overflow-hidden pb-6">
               <div className="review-slider-row-2 flex gap-6 w-max">
-                {[...reviews, ...reviews, ...reviews].map((review, index) => (
+                {[...displayedReviews, ...displayedReviews, ...displayedReviews].map((review, index) => (
                   <div
                     key={`row2-${review.id}-${index}`}
                     className="review-card group relative overflow-hidden rounded-3xl p-6 transition-all duration-500 flex-shrink-0 w-[340px] bg-white border border-gray-200 shadow-lg hover:shadow-xl hover:border-genoun-gold/30"
@@ -153,18 +170,19 @@ export const ReviewsSection = forwardRef<HTMLDivElement, ReviewsSectionProps>(
                     </div>
 
                     {/* Rating Stars */}
-                    <div className="flex gap-1 mb-3">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 transition-all duration-300 ${
-                            i < review.rating
+                    {showRating && (
+                      <div className="flex gap-1 mb-3">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 transition-all duration-300 ${i < review.rating
                               ? "fill-genoun-gold text-genoun-gold"
                               : "fill-gray-200 text-gray-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
+                              }`}
+                          />
+                        ))}
+                      </div>
+                    )}
 
                     {/* Review Text */}
                     <p

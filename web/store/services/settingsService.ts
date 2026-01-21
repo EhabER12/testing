@@ -157,6 +157,42 @@ export interface EmailSettings {
   fromEmail: string;
 }
 
+// Authority Bar Settings (NEW)
+export interface AuthorityBarItem {
+  icon: string;
+  text: { ar: string; en: string };
+}
+
+export interface AuthorityBarSettings {
+  isEnabled: boolean;
+  title: { ar: string; en: string };
+  items: AuthorityBarItem[];
+}
+
+// Reviews Section Settings (NEW)
+export interface ReviewsSectionSettings {
+  isEnabled: boolean;
+  title: { ar: string; en: string };
+  subtitle: { ar: string; en: string };
+  showRating: boolean;
+  showDate: boolean;
+  displayCount: number;
+}
+
+// Why Genoun Settings (NEW)
+export interface WhyGenounFeature {
+  icon: string;
+  title: { ar: string; en: string };
+  description: { ar: string; en: string };
+}
+
+export interface WhyGenounSettings {
+  isEnabled: boolean;
+  title: { ar: string; en: string };
+  subtitle: { ar: string; en: string };
+  features: WhyGenounFeature[];
+}
+
 export interface PromoModalSettings {
   isEnabled: boolean;
   title: { ar: string; en: string };
@@ -194,6 +230,9 @@ export interface WebsiteSettingsData {
   promoModal?: PromoModalSettings;
   homepageBanner?: HomepageBannerSettings;
   homepageCourses?: HomepageCoursesSettings;
+  authorityBar?: AuthorityBarSettings;
+  reviewsSettings?: ReviewsSectionSettings;
+  whyGenounSettings?: WhyGenounSettings;
   emailSettings?: EmailSettings;
   updatedBy?: string;
   createdAt: string;
@@ -225,6 +264,9 @@ export interface PublicWebsiteSettingsData {
   promoModal?: PromoModalSettings;
   homepageBanner?: HomepageBannerSettings;
   homepageCourses?: HomepageCoursesSettings;
+  authorityBar?: AuthorityBarSettings;
+  reviewsSettings?: ReviewsSectionSettings;
+  whyGenounSettings?: WhyGenounSettings;
   // Excluded: _id, whatsappConnected, updatedBy, createdAt, updatedAt, __v, notifications, paymentGateways
 }
 

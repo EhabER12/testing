@@ -23,7 +23,7 @@ const emailTemplateSchema = new mongoose.Schema(
     ],
     type: {
       type: String,
-      enum: ["registration", "order_confirmation", "teacher_approval", "teacher_rejection", "course_enrollment", "certificate_issued", "password_reset", "custom"],
+      enum: ["registration", "order_confirmation", "teacher_approval", "teacher_rejection", "course_enrollment", "certificate_issued", "password_reset", "invitation", "custom"],
       default: "custom",
     },
     isActive: {

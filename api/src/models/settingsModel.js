@@ -208,6 +208,82 @@ const homepageCoursesSchema = new mongoose.Schema({
   },
 });
 
+// Authority Bar Settings Schema (NEW - Platform Recognition Badges)
+const authorityBarSchema = new mongoose.Schema({
+  isEnabled: {
+    type: Boolean,
+    default: true,
+  },
+  title: {
+    ar: { type: String, default: "موثوق من قبل المؤسسات الرائدة" },
+    en: { type: String, default: "Trusted by Leading Institutions" },
+  },
+  items: [{
+    icon: { type: String, default: "shield" }, // shield, users, award, check, star
+    text: {
+      ar: { type: String, default: "" },
+      en: { type: String, default: "" },
+    },
+  }],
+}, { _id: false });
+
+// Reviews Section Settings Schema (NEW - Testimonials Control)
+const reviewsSectionSchema = new mongoose.Schema({
+  isEnabled: {
+    type: Boolean,
+    default: true,
+  },
+  title: {
+    ar: { type: String, default: "آراء طلابنا" },
+    en: { type: String, default: "Student Reviews" },
+  },
+  subtitle: {
+    ar: { type: String, default: "ماذا يقول طلابنا عنا" },
+    en: { type: String, default: "What our students say about us" },
+  },
+  showRating: {
+    type: Boolean,
+    default: true,
+  },
+  showDate: {
+    type: Boolean,
+    default: true,
+  },
+  displayCount: {
+    type: Number,
+    default: 6,
+    min: 1,
+    max: 20,
+  },
+}, { _id: false });
+
+// Why Genoun Section Settings Schema (NEW - Features/Value Proposition)
+const whyGenounSchema = new mongoose.Schema({
+  isEnabled: {
+    type: Boolean,
+    default: true,
+  },
+  title: {
+    ar: { type: String, default: "لماذا جنون؟" },
+    en: { type: String, default: "Why Genoun?" },
+  },
+  subtitle: {
+    ar: { type: String, default: "منصة متكاملة لحفظ القرآن الكريم" },
+    en: { type: String, default: "Complete platform for Quran memorization" },
+  },
+  features: [{
+    icon: { type: String, default: "book" }, // book, users, award, video, check
+    title: {
+      ar: { type: String, default: "" },
+      en: { type: String, default: "" },
+    },
+    description: {
+      ar: { type: String, default: "" },
+      en: { type: String, default: "" },
+    },
+  }],
+}, { _id: false });
+
 const emailSettingsSchema = new mongoose.Schema({
   enabled: {
     type: Boolean,
@@ -470,6 +546,37 @@ const settingsSchema = new mongoose.Schema(
     homepageCourses: {
       type: homepageCoursesSchema,
       default: () => ({}),
+    },
+    authorityBar: {
+      type: authorityBarSchema,
+      default: () => ({
+        isEnabled: true,
+        title: {
+          ar: "موثوق من قبل المؤسسات الرائدة",
+          en: "Trusted by Leading Institutions"
+        },
+        items: []
+      }),
+    },
+    reviewsSettings: {
+      type: reviewsSectionSchema,
+      default: () => ({
+        isEnabled: true,
+        title: { ar: "آراء طلابنا", en: "Student Reviews" },
+        subtitle: { ar: "ماذا يقول طلابنا عنا", en: "What our students say about us" },
+        showRating: true,
+        showDate: true,
+        displayCount: 6
+      }),
+    },
+    whyGenounSettings: {
+      type: whyGenounSchema,
+      default: () => ({
+        isEnabled: true,
+        title: { ar: "لماذا جنون؟", en: "Why Genoun?" },
+        subtitle: { ar: "منصة متكاملة لحفظ القرآن الكريم", en: "Complete platform for Quran memorization" },
+        features: []
+      }),
     },
     emailSettings: {
       type: emailSettingsSchema,

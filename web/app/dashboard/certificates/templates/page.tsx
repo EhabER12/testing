@@ -67,12 +67,12 @@ export default function CertificateDesignerPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { t, isRtl } = useAdminLocale();
-  
+
   const { templates, isLoading } = useAppSelector((state) => state.certificates);
   const [selectedTemplate, setSelectedTemplate] = useState<CertificateTemplate | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showNewDialog, setShowShowNewDialog] = useState(false);
-  
+
   // Designer State
   const [design, setDesign] = useState<{
     name: string;
@@ -165,7 +165,7 @@ export default function CertificateDesignerPage() {
     try {
       const response = await axios.post("/upload/image", formData);
       const url = response.data.data.url;
-      
+
       if (target === "background") {
         const img = new Image();
         img.onload = () => {
@@ -309,11 +309,11 @@ export default function CertificateDesignerPage() {
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
-    
+
     const rect = containerRef.current.getBoundingClientRect();
     const x = Math.round((e.clientX - rect.left) / previewScale);
     const y = Math.round((e.clientY - rect.top) / previewScale);
-    
+
     if (activeType === "standard") {
       updatePlaceholder(activePlaceholder, { x, y });
     } else if (activeType === "custom") {
@@ -374,8 +374,8 @@ export default function CertificateDesignerPage() {
           {templates.map((template, idx) => (
             <Card key={template.id || template._id || `template-${idx}`} className="overflow-hidden hover:shadow-lg transition-shadow">
               <div className="aspect-video relative bg-gray-100 border-b">
-                <img 
-                  src={template.backgroundImage.startsWith("http") ? template.backgroundImage : `${process.env.NEXT_PUBLIC_API_URL || ""}${template.backgroundImage}`} 
+                <img
+                  src={template.backgroundImage.startsWith("http") ? template.backgroundImage : `${process.env.NEXT_PUBLIC_API_URL || ""}${template.backgroundImage}`}
                   alt={template.name}
                   className="w-full h-full object-contain"
                 />
@@ -474,7 +474,7 @@ export default function CertificateDesignerPage() {
                         <SelectItem value="certificateNumber">{isRtl ? "رقم الشهادة" : "Certificate ID"}</SelectItem>
                       </SelectContent>
                     </Select>
-                    
+
                     {(() => {
                       const k = activePlaceholder as keyof typeof design.placeholders;
                       const p = design.placeholders[k] as Placeholder;
@@ -495,6 +495,61 @@ export default function CertificateDesignerPage() {
                               <Input value={p.color} onChange={(e) => updatePlaceholder(k, { color: e.target.value })} />
                             </div>
                           </div>
+                          <div className="space-y-2">
+                            <Label>{isRtl ? "نوع الخط" : "Font Family"}</Label>
+                            <Select
+                              value={p.fontFamily}
+                              onValueChange={(val) => updatePlaceholder(k, { fontFamily: val })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Cairo">Cairo - القاهرة</SelectItem>
+                                <SelectItem value="Amiri">Amiri - الأميري</SelectItem>
+                                <SelectItem value="Tajawal">Tajawal - تجوال</SelectItem>
+                                <SelectItem value="Almarai">Almarai - المرعى</SelectItem>
+                                <SelectItem value="Noto Kufi Arabic">Noto Kufi Arabic</SelectItem>
+                                <SelectItem value="Changa">Changa - شانغا</SelectItem>
+                                <SelectItem value="Arial">Arial</SelectItem>
+                                <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>{isRtl ? "سُمك الخط" : "Font Weight"}</Label>
+                            <Select
+                              value={p.fontWeight || "normal"}
+                              onValueChange={(val) => updatePlaceholder(k, { fontWeight: val })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="normal">{isRtl ? "عادي" : "Normal"}</SelectItem>
+                                <SelectItem value="bold">{isRtl ? "عريض" : "Bold"}</SelectItem>
+                                <SelectItem value="500">Medium</SelectItem>
+                                <SelectItem value="600">Semi Bold</SelectItem>
+                                <SelectItem value="800">Extra Bold</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>{isRtl ? "محاذاة النص" : "Text Alignment"}</Label>
+                            <Select
+                              value={p.align || "center"}
+                              onValueChange={(val) => updatePlaceholder(k, { align: val })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="left">{isRtl ? "يسار" : "Left"}</SelectItem>
+                                <SelectItem value="center">{isRtl ? "وسط" : "Center"}</SelectItem>
+                                <SelectItem value="right">{isRtl ? "يمين" : "Right"}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       );
                     })()}
@@ -511,14 +566,14 @@ export default function CertificateDesignerPage() {
                             ))}
                           </SelectContent>
                         </Select>
-                        
+
                         {activeIndex !== -1 && design.placeholders.customText[activeIndex] && (
                           <div className="space-y-4">
                             <div className="space-y-2">
                               <Label>{isRtl ? "النص" : "Text Content"}</Label>
-                              <Input 
-                                value={design.placeholders.customText[activeIndex].text} 
-                                onChange={(e) => updatePlaceholder("", { text: e.target.value }, "custom", activeIndex)} 
+                              <Input
+                                value={design.placeholders.customText[activeIndex].text}
+                                onChange={(e) => updatePlaceholder("", { text: e.target.value }, "custom", activeIndex)}
                               />
                             </div>
                             <div className="space-y-2">
@@ -526,11 +581,37 @@ export default function CertificateDesignerPage() {
                                 <Label>{isRtl ? "حجم الخط" : "Font Size"}</Label>
                                 <span>{design.placeholders.customText[activeIndex].fontSize}px</span>
                               </div>
-                              <Slider 
-                                value={[design.placeholders.customText[activeIndex].fontSize]} 
-                                min={10} max={100} 
-                                onValueChange={([val]) => updatePlaceholder("", { fontSize: val }, "custom", activeIndex)} 
+                              <Slider
+                                value={[design.placeholders.customText[activeIndex].fontSize]}
+                                min={10} max={100}
+                                onValueChange={([val]) => updatePlaceholder("", { fontSize: val }, "custom", activeIndex)}
                               />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{isRtl ? "نوع الخط" : "Font Family"}</Label>
+                              <Select
+                                value={design.placeholders.customText[activeIndex].fontFamily}
+                                onValueChange={(val) => updatePlaceholder("", { fontFamily: val }, "custom", activeIndex)}
+                              >
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Cairo">Cairo - القاهرة</SelectItem>
+                                  <SelectItem value="Amiri">Amiri - الأميري</SelectItem>
+                                  <SelectItem value="Tajawal">Tajawal - تجوال</SelectItem>
+                                  <SelectItem value="Almarai">Almarai - المرعى</SelectItem>
+                                  <SelectItem value="Noto Kufi Arabic">Noto Kufi Arabic</SelectItem>
+                                  <SelectItem value="Changa">Changa - شانغا</SelectItem>
+                                  <SelectItem value="Arial">Arial</SelectItem>
+                                  <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{isRtl ? "اللون" : "Color"}</Label>
+                              <div className="flex gap-2">
+                                <Input type="color" className="w-12 h-10 p-1" value={design.placeholders.customText[activeIndex].color} onChange={(e) => updatePlaceholder("", { color: e.target.value }, "custom", activeIndex)} />
+                                <Input value={design.placeholders.customText[activeIndex].color} onChange={(e) => updatePlaceholder("", { color: e.target.value }, "custom", activeIndex)} />
+                              </div>
                             </div>
                             <Button variant="destructive" size="sm" onClick={() => removeElement("custom", activeIndex)} className="w-full">
                               <Trash2 className="h-4 w-4 mr-2" /> {isRtl ? "حذف النص" : "Remove Text"}
@@ -554,7 +635,7 @@ export default function CertificateDesignerPage() {
                             ))}
                           </SelectContent>
                         </Select>
-                        
+
                         {activeIndex !== -1 && design.placeholders.images[activeIndex] && (
                           <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-2">
@@ -589,10 +670,10 @@ export default function CertificateDesignerPage() {
                 <CardTitle className="text-base">{isRtl ? "المعاينة" : "Preview"}</CardTitle>
                 <div className="flex items-center gap-2">
                   <Label className="text-xs">{isRtl ? "تكبير" : "Zoom"}</Label>
-                  <Slider 
+                  <Slider
                     className="w-32"
-                    value={[previewScale * 100]} 
-                    min={10} max={150} 
+                    value={[previewScale * 100]}
+                    min={10} max={150}
                     onValueChange={([val]) => setPreviewScale(val / 100)}
                   />
                   <span className="text-xs w-10">{Math.round(previewScale * 100)}%</span>
@@ -604,7 +685,7 @@ export default function CertificateDesignerPage() {
               </p>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto p-8 flex items-start justify-center">
-              <div 
+              <div
                 ref={containerRef}
                 onClick={handleCanvasClick}
                 className="relative bg-white shadow-2xl transition-all cursor-crosshair shrink-0"
@@ -616,19 +697,19 @@ export default function CertificateDesignerPage() {
                 }}
               >
                 {design.backgroundImage && (
-                  <img 
-                    src={design.backgroundImage.startsWith("http") ? design.backgroundImage : `${process.env.NEXT_PUBLIC_API_URL || ""}${design.backgroundImage}`} 
+                  <img
+                    src={design.backgroundImage.startsWith("http") ? design.backgroundImage : `${process.env.NEXT_PUBLIC_API_URL || ""}${design.backgroundImage}`}
                     className="absolute inset-0 w-full h-full pointer-events-none"
                     alt="Certificate Background"
                   />
                 )}
-                
+
                 {/* Standard Text Placeholders */}
                 {Object.keys(design.placeholders).filter(k => !['customText', 'images', 'signature'].includes(k)).map((key) => {
                   const k = key as keyof typeof design.placeholders;
                   const p = design.placeholders[k] as Placeholder;
                   const isActive = activeType === "standard" && activePlaceholder === k;
-                  
+
                   return (
                     <div
                       key={k}
@@ -643,7 +724,7 @@ export default function CertificateDesignerPage() {
                         left: p.align === "center" ? 0 : p.align === "right" ? "auto" : p.x,
                         right: p.align === "right" ? design.width - p.x : "auto",
                         width: p.align === "center" ? "100%" : "auto",
-                        textAlign: p.align,
+                        textAlign: (p.align || "center") as React.CSSProperties["textAlign"],
                         color: p.color,
                         fontSize: p.fontSize,
                         fontFamily: p.fontFamily,
@@ -653,9 +734,9 @@ export default function CertificateDesignerPage() {
                       }}
                     >
                       {k === "studentName" ? (isRtl ? "اسم الطالب هنا" : "Student Name") :
-                       k === "courseName" ? (isRtl ? "اسم الدورة القرآنية" : "Quran Course Name") :
-                       k === "issuedDate" ? "2026-01-11" :
-                       "CERT-2026-XXXX"}
+                        k === "courseName" ? (isRtl ? "اسم الدورة القرآنية" : "Quran Course Name") :
+                          k === "issuedDate" ? "2026-01-11" :
+                            "CERT-2026-XXXX"}
                     </div>
                   );
                 })}
@@ -677,7 +758,7 @@ export default function CertificateDesignerPage() {
                         left: p.align === "center" ? 0 : p.align === "right" ? "auto" : p.x,
                         right: p.align === "right" ? design.width - p.x : "auto",
                         width: p.align === "center" ? "100%" : "auto",
-                        textAlign: p.align,
+                        textAlign: (p.align || "center") as React.CSSProperties["textAlign"],
                         color: p.color,
                         fontSize: p.fontSize,
                         fontFamily: p.fontFamily,
@@ -710,8 +791,8 @@ export default function CertificateDesignerPage() {
                         height: img.height,
                       }}
                     >
-                      <img 
-                        src={img.url.startsWith("http") ? img.url : `${process.env.NEXT_PUBLIC_API_URL || ""}${img.url}`} 
+                      <img
+                        src={img.url.startsWith("http") ? img.url : `${process.env.NEXT_PUBLIC_API_URL || ""}${img.url}`}
                         className="w-full h-full object-contain pointer-events-none"
                         alt={`Extra Image ${idx + 1}`}
                       />
@@ -736,10 +817,10 @@ export default function CertificateDesignerPage() {
           <div className="py-4 space-y-4">
             <div className="space-y-2">
               <Label>{isRtl ? "اسم القالب" : "Template Name"}</Label>
-              <Input 
-                placeholder={isRtl ? "مثلاً: شهادة إتمام جزء عم" : "e.g., Juz Amma Completion"} 
+              <Input
+                placeholder={isRtl ? "مثلاً: شهادة إتمام جزء عم" : "e.g., Juz Amma Completion"}
                 value={design.name}
-                onChange={(e) => setDesign({...design, name: e.target.value})}
+                onChange={(e) => setDesign({ ...design, name: e.target.value })}
               />
             </div>
           </div>

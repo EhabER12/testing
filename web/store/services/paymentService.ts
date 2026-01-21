@@ -14,39 +14,39 @@ export interface PaymentIntent {
 export interface Payment {
   id: string;
   productId:
-    | string
-    | {
-        _id?: string;
-        id?: string;
-        name?: {
-          ar?: string;
-          en?: string;
-        };
-        slug?: string;
-        basePrice?: number;
-        [key: string]: any;
-      };
+  | string
+  | {
+    _id?: string;
+    id?: string;
+    name?: {
+      ar?: string;
+      en?: string;
+    };
+    slug?: string;
+    basePrice?: number;
+    [key: string]: any;
+  };
   serviceId?:
-    | string
-    | {
-        _id?: string;
-        id?: string;
-        title?: {
-          ar?: string;
-          en?: string;
-        };
-        [key: string]: any;
-      };
+  | string
+  | {
+    _id?: string;
+    id?: string;
+    title?: {
+      ar?: string;
+      en?: string;
+    };
+    [key: string]: any;
+  };
   userId?:
-    | string
-    | {
-        _id?: string;
-        id?: string;
-        name?: string;
-        email?: string;
-        role?: string;
-        [key: string]: any;
-      };
+  | string
+  | {
+    _id?: string;
+    id?: string;
+    name?: string;
+    email?: string;
+    role?: string;
+    [key: string]: any;
+  };
   amount: number;
   currency: string;
   status: string;
@@ -73,12 +73,16 @@ export interface Payment {
     paymentToken?: string;
     iframeId?: string;
     merchantOrderId?: string;
+    paypalOrderId?: string;
+    approvalLink?: string;
     [key: string]: any;
   };
   merchantOrderId?: string;
   manualPaymentMethodId?: string;
   paymentProofUrl?: string;
   cartSessionId?: string;
+  checkoutUrl?: string; // For Cashier/Redirects
+  approvalUrl?: string; // For PayPal
 }
 
 // Get Payment History (Admin - all payments)
@@ -373,6 +377,60 @@ export const cancelPaymentThunk = createAsyncThunk<
   try {
     const response = await axiosInstance.post(`/payments/${id}/cancel`);
     return response.data.data;
+  } catch (error: any) {
+    const message =
+      (error.response && error.response.data && error.response.data.message) ||
+      error.message ||
+      error.toString();
+    return thunkAPI.rejectWithValue(message);
+  }
+});
+
+// ==================== NEW: PayPal & Cashier Thunks ====================
+
+interface CreatePaypalPaymentPayload {
+  courseId?: string;
+  productId?: string;
+  amount: number;
+  currency?: string;
+}
+
+export const createPaypalPaymentThunk = createAsyncThunk<
+  Payment,
+  CreatePaypalPaymentPayload,
+  { rejectValue: string }
+>("payments/paypalCreate", async (data, thunkAPI) => {
+  try {
+    const response = await axiosInstance.post("/payments/paypal/create", data);
+    return response.data.data; // Expected to contain approvalUrl or payment details
+  } catch (error: any) {
+    const message =
+      (error.response && error.response.data && error.response.data.message) ||
+      error.message ||
+      error.toString();
+    return thunkAPI.rejectWithValue(message);
+  }
+});
+
+interface CreateCashierPaymentPayload {
+  courseId?: string;
+  productId?: string;
+  amount: number;
+  currency?: string;
+  customer?: {
+    name: string;
+    email: string;
+  };
+}
+
+export const createCashierPaymentThunk = createAsyncThunk<
+  Payment,
+  CreateCashierPaymentPayload,
+  { rejectValue: string }
+>("payments/cashierCreate", async (data, thunkAPI) => {
+  try {
+    const response = await axiosInstance.post("/payments/cashier/create", data);
+    return response.data.data; // Expected to contain checkoutUrl
   } catch (error: any) {
     const message =
       (error.response && error.response.data && error.response.data.message) ||

@@ -37,8 +37,8 @@ export interface Placeholder {
   fontSize: number;
   fontFamily: string;
   color: string;
-  align: "left" | "center" | "right";
-  fontWeight: "normal" | "bold";
+  align: string;
+  fontWeight: string;
 }
 
 export interface ImagePlaceholder {

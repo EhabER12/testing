@@ -56,7 +56,7 @@ export class SettingsService {
 
     const filename = path.basename(filePath);
 
-    return `uploads/${filename}`;
+    return `/uploads/${filename}`;
   }
 
   async updateSettings(
@@ -82,6 +82,10 @@ export class SettingsService {
       "promoModal",
       "homepageBanner",
       "homepageCourses",
+      "emailSettings",
+      "authorityBar",
+      "reviewsSettings",
+      "whyGenounSettings",
     ];
     for (const field of jsonFields) {
       if (typeof settingsData[field] === "string") {

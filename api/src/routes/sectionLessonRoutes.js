@@ -14,8 +14,13 @@ import {
   deleteLesson,
   reorderLessons,
   getCourseStructure,
+  uploadLessonVideo,
+  deleteLessonVideo,
+  streamLessonVideo,
 } from "../controllers/sectionLessonController.js";
 import { protect, authorize } from "../middlewares/authMiddleware.js";
+import { handleVideoUpload } from "../middleware/videoUpload.js";
+import { protectVideo, rateLimitVideo } from "../middleware/videoAuth.js";
 
 const router = express.Router();
 
@@ -87,6 +92,34 @@ router.post(
   protect,
   authorize("admin", "teacher"),
   reorderLessons
+);
+
+// ============ VIDEO UPLOAD/STREAM ROUTES ============
+
+// Upload video for lesson (Admin/Teacher only)
+router.post(
+  "/lessons/:id/upload-video",
+  protect,
+  authorize("admin", "teacher"),
+  handleVideoUpload,
+  uploadLessonVideo
+);
+
+// Delete video for lesson (Admin/Teacher only)
+router.delete(
+  "/lessons/:id/video",
+  protect,
+  authorize("admin", "teacher"),
+  deleteLessonVideo
+);
+
+// Stream video (Protected - requires enrollment or admin/teacher)
+router.get(
+  "/lessons/:lessonId/video/stream",
+  protect,
+  protectVideo,
+  rateLimitVideo,
+  streamLessonVideo
 );
 
 export default router;

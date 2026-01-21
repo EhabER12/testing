@@ -176,8 +176,8 @@ function UsersContent() {
 
   const openEditDialog = (user: any) => {
     setEditingUser({
-      userId: user._id,
-      name: user.name || "",
+      userId: user.id || user._id || "",
+      name: user.name || (isRtl ? user.fullName?.ar : user.fullName?.en) || (typeof user.fullName === 'string' ? user.fullName : "") || "",
       email: user.email || "",
       role: user.role || "user",
       status: user.status || "active",
@@ -192,7 +192,7 @@ function UsersContent() {
     }
 
     // Get the original user to check if role changed
-    const originalUser = users.find((u) => u._id === editingUser.userId);
+    const originalUser = users.find((u) => (u.id || u._id) === editingUser.userId);
 
     // Update basic user info
     await dispatch(updateUser(editingUser));
@@ -407,6 +407,7 @@ function UsersContent() {
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="edit-status">{t("admin.users.status")}</Label>
                 <Select
@@ -414,41 +415,30 @@ function UsersContent() {
                   onValueChange={(value) =>
                     setEditingUser({ ...editingUser, status: value })
                   }
+                  dir={isRtl ? "rtl" : "ltr"}
                 >
                   <SelectTrigger id="edit-status" dir={isRtl ? "rtl" : "ltr"}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent
-                    className="text-start"
-                    dir={isRtl ? "rtl" : "ltr"}
-                  >
-                    <SelectItem value="active" className="text-start">
-                      {t("admin.users.active")}
-                    </SelectItem>
-                    <SelectItem value="inactive">
-                      {t("admin.users.inactive")}
-                    </SelectItem>
-                    <SelectItem value="invited">
-                      {t("admin.users.invited")}
-                    </SelectItem>
+                  <SelectContent dir={isRtl ? "rtl" : "ltr"}>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="invited">Invited</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
             </div>
-            <DialogFooter
-              dir={isRtl ? "rtl" : "ltr"}
-              className="flex !justify-start"
-            >
+            <DialogFooter className="gap-2 justify-start">
               <Button
                 variant="outline"
                 onClick={() => setIsEditDialogOpen(false)}
               >
-                {t("common.cancel")}
+                {t("admin.common.cancel")}
               </Button>
-              <div></div>
               <Button onClick={handleUpdateUser} disabled={isLoading}>
                 {isLoading && <Loader2 className="mx-2 h-4 w-4 animate-spin" />}
-                {t("common.update")}
+                {t("admin.users.update")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -456,270 +446,185 @@ function UsersContent() {
 
         {/* Reject Teacher Dialog */}
         <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]" dir={isRtl ? "rtl" : "ltr"}>
-            <DialogHeader className={`sm:text-start`}>
-              <DialogTitle>Reject Teacher</DialogTitle>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("admin.teachers.rejectTeacher")}</DialogTitle>
               <DialogDescription>
-                Provide a reason for rejecting this teacher application (optional).
+                {t("admin.teachers.rejectConfirm")}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="rejection-reason">Reason (Optional)</Label>
-                <textarea
-                  id="rejection-reason"
-                  className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="e.g., Incomplete credentials, not qualified..."
-                />
-              </div>
+            <div className="py-4">
+              <Label htmlFor="reject-reason">{t("admin.teachers.rejectionReason")}</Label>
+              <Input
+                id="reject-reason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder={t("admin.teachers.reasonPlaceholder")}
+                className="mt-2"
+              />
             </div>
-            <DialogFooter className="gap-2 justify-start">
-              <Button
-                variant="outline"
-                onClick={() => setIsRejectDialogOpen(false)}
-              >
-                Cancel
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
+                {t("admin.common.cancel")}
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleRejectTeacher}
-                disabled={isLoading}
-              >
-                {isLoading && <Loader2 className="mx-2 h-4 w-4 animate-spin" />}
-                Reject Teacher
+              <Button variant="destructive" onClick={handleRejectTeacher}>
+                {t("admin.common.confirm")}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
       </div>
 
-      {/* Error State */}
-      {isError && message && (
-        <Alert variant="destructive" className="mb-4">
+      {isError && (
+        <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            {message || "Failed to load users."}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={retryFetch}
-              disabled={isLoading}
-              className="ml-2 h-auto p-1 text-xs"
-            >
-              {isLoading ? (
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-              ) : null}
-              Try Again
-            </Button>
-          </AlertDescription>
+          <AlertDescription>{message}</AlertDescription>
         </Alert>
       )}
 
-      {/* Success State (e.g., after update/delete) */}
       {isSuccess && message && (
-        <Alert
-          variant="default"
-          className="mb-4 border-green-200 bg-green-50 text-green-800"
-        >
-          <ShieldCheck className="h-4 w-4 text-green-600" />
+        <Alert className="mb-6 bg-green-50 text-green-800 border-green-200">
+          <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertTitle>Success</AlertTitle>
           <AlertDescription>{message}</AlertDescription>
         </Alert>
       )}
 
-      {/* Empty State */}
-      {!isLoading && !isError && users.length === 0 && (
-        <div className="rounded-lg bg-white/50 p-6 text-center">
-          <p className="text-gray-500">{t("admin.users.noUsersFound")}</p>
-        </div>
-      )}
-
-      {/* Table and Pagination */}
-      {users.length > 0 && (
-        <>
-          <div className="rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow dir={isRtl ? "rtl" : "ltr"}>
-                  <TableHead className={`text-${isRtl ? "right" : "left"}`}>
-                    {t("admin.users.name")}
-                  </TableHead>
-                  <TableHead className={`text-${isRtl ? "right" : "left"}`}>
-                    {t("admin.users.email")}
-                  </TableHead>
-                  <TableHead className={`text-${isRtl ? "right" : "left"}`}>
-                    {t("admin.users.role")}
-                  </TableHead>
-                  <TableHead className={`text-${isRtl ? "right" : "left"}`}>
-                    {t("admin.users.status")}
-                  </TableHead>
-                  <TableHead className={`text-${isRtl ? "right" : "left"}`}>
-                    {t("admin.users.actions")}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading && users.length > 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center">
-                      <Loader2 className="inline-block h-6 w-6 animate-spin text-primary" />
-                    </TableCell>
-                  </TableRow>
-                )}
-                {!isLoading &&
-                  users.map((user) => (
-                    <TableRow key={user._id}>
-                      <TableCell className="font-medium">
-                        {user.name ?? "N/A"}
-                      </TableCell>
-                      <TableCell>{user.email ?? "N/A"}</TableCell>
-                      <TableCell>
-                        <Badge variant={getRoleBadgeVariant(user.role)}>
-                          {getRoleIcon(user.role)} {user.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            user.status === "active" ? "default" : "secondary"
-                          }
-                          className="capitalize"
-                        >
-                          {user.status || "active"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {/* Teacher approval buttons */}
-                          {user.role === "teacher" && (
-                            <div key={`teacher-actions-${user._id}`}>
-                              {!user.teacherInfo?.isApproved && (
-                                <div key={`teacher-pending-${user._id}`}>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    title="Approve Teacher"
-                                    className="text-green-600 hover:bg-green-50 hover:text-green-700"
-                                    onClick={() => user._id && handleApproveTeacher(user._id)}
-                                    disabled={isLoading || !user._id}
-                                  >
-                                    <CheckCircle className="h-4 w-4" />
-                                    <span className="sr-only">Approve</span>
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    title="Reject Teacher"
-                                    className="text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-                                    onClick={() => user._id && openRejectDialog(user._id)}
-                                    disabled={isLoading || !user._id}
-                                  >
-                                    <XCircle className="h-4 w-4" />
-                                    <span className="sr-only">Reject</span>
-                                  </Button>
-                                </div>
-                              )}
-                              {user.teacherInfo?.isApproved && (
-                                <Badge
-                                  variant="default"
-                                  className="bg-green-500 hover:bg-green-600 mr-2"
-                                >
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Approved
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(user)}
-                            className="mr-2"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            title="Delete User"
-                            className="text-red-500 hover:bg-red-50 hover:text-red-700"
-                            onClick={() => user._id && handleDelete(user._id)}
-                            disabled={isLoading || !user._id}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Pagination className="mt-4">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    className={
-                      currentPage === 1
-                        ? "cursor-not-allowed opacity-50"
-                        : "cursor-pointer"
-                    }
-                    aria-disabled={currentPage === 1}
-                  />
-                </PaginationItem>
-
-                {[...Array(totalPages)].map((_, i) => (
-                  <PaginationItem key={i + 1}>
-                    <PaginationLink
-                      onClick={() => handlePageChange(i + 1)}
-                      isActive={currentPage === i + 1}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("admin.users.name")}</TableHead>
+              <TableHead>{t("admin.users.email")}</TableHead>
+              <TableHead>{t("admin.users.role")}</TableHead>
+              <TableHead>{t("admin.users.status")}</TableHead>
+              <TableHead className="text-end">{t("admin.users.actions")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  {t("admin.users.noUsers")}
+                </TableCell>
+              </TableRow>
+            ) : (
+              users.map((user) => (
+                <TableRow key={user.id || user._id}>
+                  <TableCell className="font-medium">
+                    {user.name || (isRtl ? user.fullName?.ar : user.fullName?.en) || (typeof user.fullName === 'string' ? user.fullName : "N/A")}
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      <Badge variant="outline" className="flex gap-1 items-center">
+                        {getRoleIcon(user.role)}
+                        {user.role}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        user.status === "active"
+                          ? "default" // was "success" but not in standard UI
+                          : user.status === "invited"
+                            ? "secondary"
+                            : "destructive"
+                      }
+                      className={user.status === "active" ? "bg-green-600 hover:bg-green-700" : ""}
                     >
-                      {i + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
+                      {user.status || "active"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-end">
+                    <div className="flex justify-end gap-2">
+                      {user.role === "teacher" && !user.teacherInfo?.isApproved && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          onClick={() => handleApproveTeacher(user.id || user._id || "")}
+                          title={t("admin.teachers.approve")}
+                        >
+                          <ShieldCheck className="h-4 w-4" />
+                          <span className="sr-only">Approve</span>
+                        </Button>
+                      )}
 
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    className={
-                      currentPage === totalPages
-                        ? "cursor-not-allowed opacity-50"
-                        : "cursor-pointer"
-                    }
-                    aria-disabled={currentPage === totalPages}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
-        </>
-      )}
+                      {user.role === "teacher" && !user.teacherInfo?.isApproved && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => openRejectDialog(user.id || user._id || "")}
+                          title={t("admin.teachers.reject")}
+                        >
+                          <XCircle className="h-4 w-4" />
+                          <span className="sr-only">Reject</span>
+                        </Button>
+                      )}
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(user)}
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive/90"
+                        onClick={() => handleDelete(user.id || user._id || "")}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="mt-4 flex justify-center">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => handlePageChange(page - 1)}
+                className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <PaginationItem key={p}>
+                <PaginationLink
+                  isActive={page === p}
+                  onClick={() => handlePageChange(p)}
+                  className="cursor-pointer"
+                >
+                  {p}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => handlePageChange(page + 1)}
+                className={page === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
     </div>
   );
-}
-
-function getRoleBadgeVariant(
-  role: string | undefined
-): "default" | "secondary" | "destructive" | "outline" {
-  switch (role?.toLowerCase()) {
-    case "admin":
-      return "destructive";
-    case "moderator":
-      return "default";
-    case "teacher":
-      return "outline";
-    case "user":
-    default:
-      return "secondary";
-  }
 }

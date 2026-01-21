@@ -59,6 +59,7 @@ import {
   FileQuestion,
 } from "lucide-react";
 import Link from "next/link";
+import { VideoUploader } from "@/components/dashboard/VideoUploader";
 
 function CourseBuilderContent() {
   const searchParams = useSearchParams();
@@ -713,6 +714,9 @@ function CourseBuilderContent() {
                   <SelectContent>
                     <SelectItem value="youtube">YouTube</SelectItem>
                     <SelectItem value="vimeo">Vimeo</SelectItem>
+                    <SelectItem value="upload">
+                      {isRtl ? "رفع فيديو" : "Upload Video"}
+                    </SelectItem>
                     <SelectItem value="direct">
                       {isRtl ? "رابط مباشر" : "Direct Link"}
                     </SelectItem>
@@ -733,20 +737,57 @@ function CourseBuilderContent() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>{isRtl ? "رابط الفيديو" : "Video URL"}</Label>
-              <Input
-                type="url"
-                placeholder="https://..."
-                value={lessonDialog.data?.videoUrl || ""}
-                onChange={(e) =>
-                  setLessonDialog({
-                    ...lessonDialog,
-                    data: { ...lessonDialog.data, videoUrl: e.target.value },
-                  })
-                }
-              />
-            </div>
+
+            {/* Video Upload Section */}
+            {lessonDialog.data?.videoSource === "upload" && lessonDialog.data?.id && (
+              <div className="space-y-2">
+                <Label>{isRtl ? "الفيديو" : "Video File"}</Label>
+                <VideoUploader
+                  lessonId={lessonDialog.data.id || lessonDialog.data._id}
+                  currentVideoUrl={lessonDialog.data?.videoUrl}
+                  onUploadSuccess={(videoUrl) => {
+                    setLessonDialog({
+                      ...lessonDialog,
+                      data: { ...lessonDialog.data, videoUrl },
+                    });
+                  }}
+                  onDeleteSuccess={() => {
+                    setLessonDialog({
+                      ...lessonDialog,
+                      data: { ...lessonDialog.data, videoUrl: null },
+                    });
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Video URL for other sources */}
+            {lessonDialog.data?.videoSource !== "upload" && (
+              <div className="space-y-2">
+                <Label>{isRtl ? "رابط الفيديو" : "Video URL"}</Label>
+                <Input
+                  type="url"
+                  placeholder="https://..."
+                  value={lessonDialog.data?.videoUrl || ""}
+                  onChange={(e) =>
+                    setLessonDialog({
+                      ...lessonDialog,
+                      data: { ...lessonDialog.data, videoUrl: e.target.value },
+                    })
+                  }
+                />
+              </div>
+            )}
+
+            {lessonDialog.data?.videoSource === "upload" && !lessonDialog.data?.id && (
+              <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  {isRtl
+                    ? "يرجى حفظ الدرس أولاً لتتمكن من رفع الفيديو"
+                    : "Please save the lesson first to enable video upload"}
+                </p>
+              </div>
+            )}
 
             {/* Materials Section */}
             <div className="space-y-4 border-t pt-4">

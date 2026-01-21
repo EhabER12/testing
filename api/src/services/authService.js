@@ -74,10 +74,25 @@ export class AuthService {
     // Send verification email
     await this.sendVerificationEmail(user, verificationToken);
 
-    // Generate token pair (access + refresh)
-    const tokens = generateTokenPair(user._id);
-
     logger.info("New user registered", { userId: user._id, email: user.email });
+
+    // Check if email verification is required (default is TRUE)
+    const skipEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === "false";
+
+    if (!skipEmailVerification) {
+      return {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        isEmailVerified: false,
+        message: "Registration successful. Please check your email to verify your account.",
+        requiresVerification: true // Flag for frontend
+      };
+    }
+
+    // Only generate tokens if verification is skipped
+    const tokens = generateTokenPair(user._id);
 
     return {
       _id: user._id,
@@ -88,7 +103,7 @@ export class AuthService {
       token: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       expiresIn: tokens.expiresIn,
-      message: "Please check your email to verify your account.",
+      message: "Registration successful",
     };
   }
 
@@ -101,10 +116,10 @@ export class AuthService {
     try {
       await emailTemplateService.sendTemplatedEmail(
         user.email,
-        "registration",
+        "email_verification",
         {
           name: user.fullName || user.name || "User",
-          loginUrl: verifyUrl,
+          verifyUrl: verifyUrl,
           year: new Date().getFullYear(),
         },
         "ar"
@@ -137,8 +152,11 @@ export class AuthService {
     }
 
     // Check if email is verified (optional: you can make this mandatory)
-    const requireEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === "true";
-    if (requireEmailVerification && !user.isEmailVerified) {
+    // Check if email is verified (Mandatory by default unless disabled)
+    // Default to TRUE if not specified, or check for explicit "false" to disable
+    const skipEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === "false";
+
+    if (!skipEmailVerification && !user.isEmailVerified) {
       throw new ApiError(403, "Please verify your email before logging in. Check your inbox or request a new verification email.");
     }
 

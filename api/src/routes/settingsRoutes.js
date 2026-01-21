@@ -34,6 +34,26 @@ router.put(
     { name: "favicon", maxCount: 1 },
     { name: "heroBackground", maxCount: 1 },
   ]),
+  // Middleware to parse JSON strings from FormData
+  (req, res, next) => {
+    const fieldsToparse = [
+      'socialLinks', 'theme', 'navbarLinks', 'homepageSections',
+      'promoModal', 'homepageBanner', 'homepageCourses', 'emailSettings',
+      'authorityBar', 'reviewsSettings', 'whyGenounSettings',
+      'headerDisplay', 'marketingBanners', 'notifications', 'paymentGateways'
+    ];
+
+    fieldsToparse.forEach(field => {
+      if (req.body[field] && typeof req.body[field] === 'string') {
+        try {
+          req.body[field] = JSON.parse(req.body[field]);
+        } catch (e) {
+          // If parsing fails, leave as is
+        }
+      }
+    });
+    next();
+  },
   updateSettings
 );
 

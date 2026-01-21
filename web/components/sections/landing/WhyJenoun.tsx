@@ -4,43 +4,43 @@ import { useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { Check, Globe, BarChart3, Headphones } from "lucide-react";
+import { Check, BookOpen, Users, Award } from "lucide-react";
 import { PublicWebsiteSettingsData } from "@/store/services/settingsService";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const translations = {
   ar: {
-    title: "لماذا",
-    titleHighlight: "جنون",
-    subtitle: "لأننا نفهم لغة السوق السعودي ونتحدث بلغة النتائج",
-    value1Title: "فهم عميق للسوق السعودي",
+    title: "لماذا تختار",
+    titleHighlight: "منصة جنون",
+    subtitle: "منصة متكاملة لتحفيظ القرآن الكريم مع مدرسين مؤهلين ومنهج علمي متطور",
+    value1Title: "معلمون أكفاء ومؤهلون",
     value1Desc:
-      "نحن لا نترجم الحلول، نحن نبتكرها لتناسب ذائقة وسلوك العميل المحلي.",
-    value2Title: "لغة الأرقام",
+      "نخبة من المعلمين الحاصلين على إجازات في القرآن الكريم مع خبرة واسعة في التدريس والتحفيظ.",
+    value2Title: "مجموعات تفاعلية ومتابعة دقيقة",
     value2Desc:
-      "لا نؤمن بالتوقعات. نؤمن بالنتائج القابلة للقياس وتقارير الأداء الدقيقة.",
-    value3Title: "شراكة لا تنتهي بالتسليم",
-    value3Desc: "دعم فني مستمر، استشارات، وتطوير دائم لضمان استدامة النمو.",
+      "حلقات تحفيظ بأعداد محدودة لضمان التركيز، مع تقارير دورية لمتابعة تقدم كل طالب.",
+    value3Title: "شهادات معتمدة ومكافآت تحفيزية",
+    value3Desc: "شهادات إتمام معتمدة لكل مستوى، مع نظام مكافآت ونقاط لتشجيع الحفظ والمراجعة.",
   },
   en: {
-    title: "Why",
-    titleHighlight: "Genoun LLC",
+    title: "Why Choose",
+    titleHighlight: "Genoun Platform",
     subtitle:
-      "Because we understand the Saudi market language and speak the language of results",
-    value1Title: "Deep Saudi Market Understanding",
+      "A comprehensive platform for Quran memorization with qualified teachers and advanced scientific curriculum",
+    value1Title: "Qualified and Competent Teachers",
     value1Desc:
-      "We don't translate solutions, we innovate them to fit local customer taste and behavior.",
-    value2Title: "Language of Numbers",
+      "Elite teachers with Ijazah in Quran recitation and extensive experience in teaching and memorization.",
+    value2Title: "Interactive Groups and Precise Follow-up",
     value2Desc:
-      "We don't believe in expectations. We believe in measurable results and precise performance reports.",
-    value3Title: "Partnership Beyond Delivery",
+      "Memorization circles with limited numbers to ensure focus, with periodic reports to track each student's progress.",
+    value3Title: "Certified Certificates and Motivational Rewards",
     value3Desc:
-      "Continuous technical support, consulting, and ongoing development to ensure sustainable growth.",
+      "Accredited completion certificates for each level, with a rewards and points system to encourage memorization and revision.",
   },
 };
 
-const icons = [Globe, BarChart3, Headphones];
+const icons = [BookOpen, Users, Award];
 
 export function WhyGenoun({
   locale,
@@ -53,33 +53,31 @@ export function WhyGenoun({
   const isRtl = locale === "ar";
   const safeLocale = locale === "ar" || locale === "en" ? locale : "ar";
   const t = translations[safeLocale];
-  
-  const featureSettings = settings?.homepageSections?.features;
-  const showDynamic = featureSettings?.isEnabled;
 
-  const title = showDynamic
-    ? isRtl
-      ? featureSettings.title.ar
-      : featureSettings.title.en
-    : translations[safeLocale].title;
-  
-  const titleHighlight = showDynamic
-    ? isRtl
-      ? featureSettings.subtitle.ar
-      : featureSettings.subtitle.en
-    : translations[safeLocale].titleHighlight;
-  
-  const subtitle = showDynamic
-    ? isRtl
-      ? featureSettings.content.ar
-      : featureSettings.content.en
-    : translations[safeLocale].subtitle;
+  // Use new whyGenounSettings instead of homepageSections.features
+  const whyGenounSettings = settings?.whyGenounSettings;
 
-  const valuePropositions = [
-    { icon: Globe, title: t.value1Title, description: t.value1Desc },
-    { icon: BarChart3, title: t.value2Title, description: t.value2Desc },
-    { icon: Headphones, title: t.value3Title, description: t.value3Desc },
-  ];
+  // Hide section if disabled in settings
+  if (whyGenounSettings && !whyGenounSettings.isEnabled) {
+    return null;
+  }
+
+  const title = whyGenounSettings?.title?.[safeLocale as 'ar' | 'en'] || t.title;
+  const titleHighlight = whyGenounSettings?.subtitle?.[safeLocale as 'ar' | 'en'] || t.titleHighlight;
+  const subtitle = whyGenounSettings?.subtitle?.[safeLocale as 'ar' | 'en'] || t.subtitle;
+
+  // Use features from settings or fallback to hardcoded
+  const valuePropositions = whyGenounSettings?.features && whyGenounSettings.features.length > 0
+    ? whyGenounSettings.features.map((feature, idx) => ({
+      icon: icons[idx % icons.length], // Cycle through available icons
+      title: feature.title[safeLocale as 'ar' | 'en'],
+      description: feature.description[safeLocale as 'ar' | 'en'],
+    }))
+    : [
+      { icon: BookOpen, title: t.value1Title, description: t.value1Desc },
+      { icon: Users, title: t.value2Title, description: t.value2Desc },
+      { icon: Award, title: t.value3Title, description: t.value3Desc },
+    ];
 
   useGSAP(() => {
     if (!sectionRef.current) return;
@@ -142,9 +140,8 @@ export function WhyGenoun({
                   <item.icon className="w-8 h-8 text-genoun-green group-hover:text-white transition-colors duration-300" />
                 </div>
                 <div
-                  className={`absolute -top-2 ${
-                    isRtl ? "-right-2" : "-left-2"
-                  } w-6 h-6 rounded-full bg-genoun-gold flex items-center justify-center`}
+                  className={`absolute -top-2 ${isRtl ? "-right-2" : "-left-2"
+                    } w-6 h-6 rounded-full bg-genoun-gold flex items-center justify-center`}
                 >
                   <Check className="w-4 h-4 text-white" />
                 </div>

@@ -161,11 +161,10 @@ class TeacherGroupService {
     teacherGroup.updatedBy = addedBy;
     await teacherGroup.save();
 
-    // Send WhatsApp notification
+    // Send WhatsApp notification (reuse student object from above)
     try {
-      const student = await StudentMember.findById(studentId);
       const teacher = await User.findById(teacherGroup.teacherId);
-      
+
       if (student && student.phone && this.whatsappService.isConfigured()) {
         const message = `مرحباً ${student.name.ar}، لقد تمت إضافتك إلى مجموعة "${teacherGroup.groupName?.ar || teacherGroup.groupName?.en || 'تعليمية'}" مع المعلم ${teacher.fullName?.ar || teacher.fullName?.en}. بالتوفيق! 🌟`;
         await this.whatsappService.sendMessage(student.phone, message);
@@ -229,7 +228,7 @@ class TeacherGroupService {
           } else if (status === 'active') {
             message = `مرحباً ${studentMember.name.ar}، تم تفعيل حالتك في مجموعة "${teacherGroup.groupName?.ar || teacherGroup.groupName?.en || 'التعليمية'}". نتطلع لرؤيتك في الحصص القادمة! 📚`;
           }
-          
+
           if (message) {
             await this.whatsappService.sendMessage(studentMember.phone, message);
           }

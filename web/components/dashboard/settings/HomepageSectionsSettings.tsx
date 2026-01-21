@@ -8,17 +8,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HomepageSections, SectionConfig } from "@/store/services/settingsService";
+import Image from "next/image";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface HomepageSectionsSettingsProps {
   sections: HomepageSections;
   setSections: (sections: HomepageSections) => void;
   formLang: "en" | "ar";
+  heroBackgroundPreview?: string | null;
+  setHeroBackgroundPreview?: (preview: string | null) => void;
+  onHeroBackgroundFileChange?: (file: File | null) => void;
 }
 
 export const HomepageSectionsSettings: React.FC<HomepageSectionsSettingsProps> = ({
   sections,
   setSections,
   formLang,
+  heroBackgroundPreview,
+  setHeroBackgroundPreview,
+  onHeroBackgroundFileChange,
 }) => {
   const updateSection = (sectionKey: keyof HomepageSections, field: string, value: any) => {
     const updatedSections = { ...sections };
@@ -133,6 +142,63 @@ export const HomepageSectionsSettings: React.FC<HomepageSectionsSettingsProps> =
               />
             </div>
           </div>
+          {/* Background Image Field - Only for Hero Section */}
+          {key === "hero" && (
+            <div className="space-y-2">
+              <Label>{formLang === "ar" ? "صورة الخلفية" : "Background Image"}</Label>
+
+              {/* Image Preview */}
+              {(heroBackgroundPreview || section.backgroundImage) && (
+                <div className="relative inline-block">
+                  <Image
+                    src={heroBackgroundPreview || section.backgroundImage || ""}
+                    alt="Hero Background Preview"
+                    width={300}
+                    height={150}
+                    className="h-32 w-auto object-cover border rounded"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border"
+                    onClick={() => {
+                      if (setHeroBackgroundPreview) setHeroBackgroundPreview(null);
+                      if (onHeroBackgroundFileChange) onHeroBackgroundFileChange(null);
+                      updateSection(key, "backgroundImage", "");
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+
+              {/* File Input */}
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file && onHeroBackgroundFileChange) {
+                    onHeroBackgroundFileChange(file);
+                    // Create preview
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      if (setHeroBackgroundPreview) {
+                        setHeroBackgroundPreview(reader.result as string);
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+              <p className="text-sm text-muted-foreground">
+                {formLang === "ar"
+                  ? "قم برفع صورة للخلفية (يفضل 1920x1080 بكسل)"
+                  : "Upload background image (recommended 1920x1080px)"}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     );

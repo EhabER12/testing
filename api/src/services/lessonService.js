@@ -233,6 +233,64 @@ class LessonService {
 
     return structure;
   }
+
+  // Upload video file for lesson
+  async uploadVideo(lessonId, videoFile) {
+    const lesson = await Lesson.findById(lessonId);
+    if (!lesson) {
+      throw new Error("Lesson not found");
+    }
+
+    // Store relative path (from uploads folder)
+    const videoPath = videoFile.path.replace(/\\/g, "/");
+
+    // Update lesson with uploaded video
+    lesson.videoSource = "upload";
+    lesson.videoUrl = "/" + videoPath; // Store as relative URL
+    lesson.videoId = videoFile.filename; // Use filename as ID
+
+    await lesson.save();
+    return lesson;
+  }
+
+  // Delete video file for lesson
+  async deleteVideo(lessonId) {
+    const lesson = await Lesson.findById(lessonId);
+    if (!lesson) {
+      throw new Error("Lesson not found");
+    }
+
+    if (lesson.videoSource !== "upload" || !lesson.videoUrl) {
+      throw new Error("No uploaded video to delete");
+    }
+
+    // Clear video data
+    lesson.videoSource = "none";
+    lesson.videoUrl = null;
+    lesson.videoId = null;
+
+    await lesson.save();
+    return lesson;
+  }
+
+  // Get video file path for streaming
+  async getVideoPath(lessonId) {
+    const lesson = await Lesson.findById(lessonId);
+    if (!lesson) {
+      throw new Error("Lesson not found");
+    }
+
+    if (lesson.videoSource !== "upload" || !lesson.videoUrl) {
+      throw new Error("No uploaded video available");
+    }
+
+    // Remove leading slash and return full path
+    const videoPath = lesson.videoUrl.startsWith("/")
+      ? lesson.videoUrl.substring(1)
+      : lesson.videoUrl;
+
+    return videoPath;
+  }
 }
 
 export default new LessonService();

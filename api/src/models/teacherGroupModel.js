@@ -48,15 +48,22 @@ const teacherGroupSchema = new mongoose.Schema(
     pricing: {
       individualRate: {
         type: Number,
-        default: 0, // Price per individual student
+        default: 0,
+        min: [0, "Individual rate cannot be negative"],
       },
       groupRate: {
         type: Number,
-        default: 0, // Price for the whole group
+        default: 0,
+        min: [0, "Group rate cannot be negative"],
       },
       studentsPerIndividual: {
         type: Number,
-        default: 12, // Number of students for individual rate (e.g., 12 students = 1000)
+        default: 12,
+        min: [1, "Students per individual must be at least 1"],
+        validate: {
+          validator: Number.isInteger,
+          message: "Students per individual must be an integer",
+        },
       },
       currency: {
         type: String,
@@ -160,7 +167,7 @@ const teacherGroupSchema = new mongoose.Schema(
 // Virtual: Calculate expected revenue
 teacherGroupSchema.virtual("expectedRevenue").get(function () {
   const activeCount = this.students.filter((s) => s.status === "active").length;
-  
+
   if (this.groupType === "group") {
     return this.pricing.groupRate;
   } else {
@@ -171,9 +178,11 @@ teacherGroupSchema.virtual("expectedRevenue").get(function () {
   }
 });
 
-// Index for faster queries
+// Indexes for faster queries
 teacherGroupSchema.index({ teacherId: 1, isActive: 1 });
 teacherGroupSchema.index({ "students.studentId": 1 });
+teacherGroupSchema.index({ groupType: 1 });
+teacherGroupSchema.index({ teacherId: 1, groupType: 1, isActive: 1 });
 
 // Update statistics before saving
 teacherGroupSchema.pre("save", function (next) {

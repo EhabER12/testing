@@ -19,8 +19,14 @@ const extractErrorMessage = (error: any): string => {
  * isAuthenticated
  ***************************************************/
 export const isAuthenticated = () => {
-  const user = localStorage.getItem("user");
-  return user !== null;
+  const userStr = localStorage.getItem("user");
+  if (!userStr) return false;
+  try {
+    const user = JSON.parse(userStr);
+    return !!user.token;
+  } catch {
+    return false;
+  }
 };
 
 /***************************************************
@@ -157,6 +163,12 @@ export const register = createAsyncThunk<
 >("auth/register", async (userData, thunkAPI) => {
   try {
     const response = await axiosInstance.post("/auth/register", userData);
+
+    // If verification is required, do NOT auto-login (don't save to localStorage)
+    if (response.data?.requiresVerification) {
+      return response.data;
+    }
+
     if (response.data) {
       if (response.data.token) {
         Cookies.set("token", response.data.token, { expires: 7, path: "/" });
