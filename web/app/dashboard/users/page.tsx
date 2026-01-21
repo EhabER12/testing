@@ -517,7 +517,14 @@ function UsersContent() {
               users.map((user) => (
                 <TableRow key={user.id || user._id}>
                   <TableCell className="font-medium">
-                    {user.name || (isRtl ? user.fullName?.ar : user.fullName?.en) || (typeof user.fullName === 'string' ? user.fullName : "N/A")}
+                    {(() => {
+                      if (user.name) return user.name;
+                      if (user.fullName) {
+                        if (typeof user.fullName === 'string') return user.fullName;
+                        return isRtl ? (user.fullName.ar || user.fullName.en) : (user.fullName.en || user.fullName.ar);
+                      }
+                      return "N/A";
+                    })()}
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
