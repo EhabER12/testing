@@ -50,10 +50,15 @@ export const createUser = createAsyncThunk<
     const response = await axiosInstance.post("/users", userData);
     return response.data.data;
   } catch (error: any) {
-    const message =
+    let message =
       (error.response && error.response.data && error.response.data.message) ||
       error.message ||
       error.toString();
+
+    // Handle bilingual message objects
+    if (typeof message === 'object' && message !== null) {
+      message = message.en || message.ar || JSON.stringify(message);
+    }
     return thunkAPI.rejectWithValue(message);
   }
 });
@@ -72,10 +77,15 @@ export const updateUser = createAsyncThunk<
     const response = await axiosInstance.put(`/users/${userId}`, userData);
     return response.data.data;
   } catch (error: any) {
-    const message =
+    let message =
       (error.response && error.response.data && error.response.data.message) ||
       error.message ||
       error.toString();
+
+    // Handle bilingual message objects
+    if (typeof message === 'object' && message !== null) {
+      message = message.en || message.ar || JSON.stringify(message);
+    }
     return thunkAPI.rejectWithValue(message);
   }
 });
@@ -93,10 +103,15 @@ export const getAllUsers = createAsyncThunk<
     const response = await axiosInstance.get("/users");
     return response.data;
   } catch (error: any) {
-    const message =
+    let message =
       (error.response && error.response.data && error.response.data.message) ||
       error.message ||
       error.toString();
+
+    // Handle bilingual message objects
+    if (typeof message === 'object' && message !== null) {
+      message = message.en || message.ar || JSON.stringify(message);
+    }
     return thunkAPI.rejectWithValue(message);
   }
 });
@@ -115,10 +130,15 @@ export const getUserById = createAsyncThunk<
     const response = await axiosInstance.get(`/users/${userId}`);
     return response.data.data;
   } catch (error: any) {
-    const message =
+    let message =
       (error.response && error.response.data && error.response.data.message) ||
       error.message ||
       error.toString();
+
+    // Handle bilingual message objects
+    if (typeof message === 'object' && message !== null) {
+      message = message.en || message.ar || JSON.stringify(message);
+    }
     return thunkAPI.rejectWithValue(message);
   }
 });
@@ -137,10 +157,15 @@ export const updateUserRole = createAsyncThunk<
     const response = await axiosInstance.put(`/users/${userId}/role`, { role });
     return response.data.data;
   } catch (error: any) {
-    const message =
+    let message =
       (error.response && error.response.data && error.response.data.message) ||
       error.message ||
       error.toString();
+
+    // Handle bilingual message objects
+    if (typeof message === 'object' && message !== null) {
+      message = message.en || message.ar || JSON.stringify(message);
+    }
     return thunkAPI.rejectWithValue(message);
   }
 });
@@ -159,10 +184,15 @@ export const deleteUser = createAsyncThunk<
     await axiosInstance.delete(`/users/${userId}`);
     return userId;
   } catch (error: any) {
-    const message =
+    let message =
       (error.response && error.response.data && error.response.data.message) ||
       error.message ||
       error.toString();
+
+    // Handle bilingual message objects
+    if (typeof message === 'object' && message !== null) {
+      message = message.en || message.ar || JSON.stringify(message);
+    }
     return thunkAPI.rejectWithValue(message);
   }
 });
@@ -181,10 +211,15 @@ export const approveTeacher = createAsyncThunk<
     const response = await axiosInstance.post(`/users/${userId}/approve-teacher`);
     return response.data.data;
   } catch (error: any) {
-    const message =
+    let message =
       (error.response && error.response.data && error.response.data.message) ||
       error.message ||
       error.toString();
+
+    // Handle bilingual message objects
+    if (typeof message === 'object' && message !== null) {
+      message = message.en || message.ar || JSON.stringify(message);
+    }
     return thunkAPI.rejectWithValue(message);
   }
 });
@@ -206,10 +241,15 @@ export const rejectTeacher = createAsyncThunk<
     });
     return response.data.data;
   } catch (error: any) {
-    const message =
+    let message =
       (error.response && error.response.data && error.response.data.message) ||
       error.message ||
       error.toString();
+
+    // Handle bilingual message objects
+    if (typeof message === 'object' && message !== null) {
+      message = message.en || message.ar || JSON.stringify(message);
+    }
     return thunkAPI.rejectWithValue(message);
   }
 });
