@@ -83,7 +83,95 @@ class EmailTemplateService {
         });
       }
 
-      // Self-healing: If user_invitation is missing, create it on the fly
+      // Self-healing: If order_confirmation is missing, create it on the fly
+      if (name === 'order_confirmation') {
+        logger.info('Email template order_confirmation not found, creating it...');
+        return await this.saveTemplate({
+          name: "order_confirmation",
+          type: "transaction",
+          subject: {
+            ar: "تأكيد إتمام الدفع - طلب رقم {{orderId}}",
+            en: "Payment Confirmation - Order #{{orderId}}",
+          },
+          content: {
+            ar: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; direction: rtl; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+              <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 40px 30px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 1px;">منصة جنون</h1>
+              </div>
+              <div style="padding: 40px 30px; text-align: center;">
+                <h2 style="color: #1a472a; margin: 0 0 20px; font-size: 24px;">تم استلام دفعتك بنجاح! ✅</h2>
+                <p style="color: #4a5568; line-height: 1.6; font-size: 16px; margin-bottom: 30px;">
+                  مرحباً {{name}}، شكراً لك.<br>
+                  لقد تم استلام دفعتك بنجاح. تفاصيل الطلب موضحة أدناه.
+                </p>
+                
+                <div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: right;">
+                  <div style="margin-bottom: 10px;">
+                    <span style="color: #718096; font-size: 14px;">رقم الطلب:</span>
+                    <strong style="color: #2d3748; font-size: 16px; margin-right: 8px;">{{orderId}}</strong>
+                  </div>
+                  <div style="margin-bottom: 10px;">
+                    <span style="color: #718096; font-size: 14px;">المبلغ:</span>
+                    <strong style="color: #2d3748; font-size: 16px; margin-right: 8px;">{{amount}} {{currency}}</strong>
+                  </div>
+                </div>
+
+                <div style="margin: 30px 0;">
+                  <a href="{{dashboardUrl}}" 
+                     style="background-color: #d4af37; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block; transition: background-color 0.3s;">
+                    الذهاب إلى لوحة التحكم
+                  </a>
+                </div>
+              </div>
+              <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. جميع الحقوق محفوظة.</p>
+              </div>
+            </div>`,
+            en: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+              <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 40px 30px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 1px;">Genoun</h1>
+              </div>
+              <div style="padding: 40px 30px; text-align: center;">
+                <h2 style="color: #1a472a; margin: 0 0 20px; font-size: 24px;">Payment Received! ✅</h2>
+                <p style="color: #4a5568; line-height: 1.6; font-size: 16px; margin-bottom: 30px;">
+                  Hi {{name}},<br>
+                  We have successfully received your payment. Your order details are below.
+                </p>
+                
+                <div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: left;">
+                  <div style="margin-bottom: 10px;">
+                    <span style="color: #718096; font-size: 14px;">Order ID:</span>
+                    <strong style="color: #2d3748; font-size: 16px; margin-left: 8px;">{{orderId}}</strong>
+                  </div>
+                  <div style="margin-bottom: 10px;">
+                    <span style="color: #718096; font-size: 14px;">Amount:</span>
+                    <strong style="color: #2d3748; font-size: 16px; margin-left: 8px;">{{amount}} {{currency}}</strong>
+                  </div>
+                </div>
+
+                <div style="margin: 30px 0;">
+                  <a href="{{dashboardUrl}}" 
+                     style="background-color: #d4af37; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block; transition: background-color 0.3s;">
+                    Go to Dashboard
+                  </a>
+                </div>
+              </div>
+              <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. All rights reserved.</p>
+              </div>
+            </div>`,
+          },
+          variables: [
+            { name: "name", description: "Customer name" },
+            { name: "orderId", description: "Order ID" },
+            { name: "amount", description: "Payment amount" },
+            { name: "currency", description: "Payment currency" },
+            { name: "year", description: "Current year" },
+            { name: "dashboardUrl", description: "Link to user dashboard" },
+          ],
+        });
+      }
+
       if (name === 'user_invitation') {
         logger.info('Email template user_invitation not found, creating it...');
         return await this.saveTemplate({

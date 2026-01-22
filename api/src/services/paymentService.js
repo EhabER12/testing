@@ -156,6 +156,7 @@ export class PaymentService {
             amount: payment.amount,
             currency: payment.currency,
             year: new Date().getFullYear(),
+            dashboardUrl: (process.env.CLIENT_URL || "http://localhost:3000") + "/dashboard"
           },
           "ar"
         );
@@ -407,6 +408,7 @@ export class PaymentService {
               amount: billingInfo.amount || 0,
               currency: currency || billingInfo.currency || "SAR",
               year: new Date().getFullYear(),
+              dashboardUrl: (process.env.CLIENT_URL || "http://localhost:3000") + "/dashboard"
             },
             "ar"
           );
