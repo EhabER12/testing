@@ -126,15 +126,10 @@ function UsersContent() {
   useEffect(() => {
     fetchUsers(page);
 
-    // Debug logging
-    if (users && users.length > 0) {
-      console.log("Users Data Debug:", users);
-    }
-
     return () => {
       dispatch(resetUserManagementStatus());
     };
-  }, [dispatch, fetchUsers, page, users]);
+  }, [dispatch, fetchUsers, page]);
 
   useEffect(() => {
     if (currentPage && currentPage !== page) {
@@ -571,10 +566,10 @@ function UsersContent() {
                   </TableCell>
                   <TableCell>
                     <div className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${user.status === "active"
-                        ? "border-transparent bg-green-600 text-white hover:bg-green-700"
-                        : user.status === "invited"
-                          ? "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                          : "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80"
+                      ? "border-transparent bg-green-600 text-white hover:bg-green-700"
+                      : user.status === "invited"
+                        ? "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                        : "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80"
                       }`}>
                       {safeRender(user.status, "active")}
                     </div>

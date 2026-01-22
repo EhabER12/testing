@@ -335,15 +335,6 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
     checkAuth();
   }, [router]);
 
-  // Debug effect
-  useEffect(() => {
-    if (user) {
-      console.log("Current Dashboard User Object:", user);
-      if (typeof user.name === 'object') console.error("User Name is OBJECT:", user.name);
-      if (typeof user.role === 'object') console.error("User Role is OBJECT:", user.role);
-    }
-  }, [user]);
-
   // Close sidebar when navigating on mobile
   useEffect(() => {
     setSidebarOpen(false);
@@ -553,9 +544,6 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
               <UserCircle className="h-4 w-4" />
               <span>
                 {(() => {
-                  // Debug log to inspect user object structure
-                  // console.log("Dashboard User Debug:", user);
-
                   const name = user.name;
                   if (typeof name === 'object' && name !== null) {
                     return (name as any).en || (name as any).ar || "User";
