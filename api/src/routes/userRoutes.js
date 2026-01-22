@@ -27,6 +27,7 @@ router.get("/:id", protect, authorize("admin", "moderator"), getUserById);
 
 router.put("/:id", protect, authorize("admin"), updateUser);
 router.put("/:id/role", protect, authorize("admin"), updateUserRole);
+router.put("/:id/password", protect, authorize("admin"), updateUserPassword);
 
 router.delete("/:id", protect, authorize("admin"), deleteUser);
 

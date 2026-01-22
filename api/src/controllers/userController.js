@@ -77,6 +77,26 @@ export const updateUserRole = async (req, res, next) => {
   }
 };
 
+// @desc    Update user password
+// @route   PUT /api/users/:id/password
+// @access  Private/Admin
+export const updateUserPassword = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return ApiResponse.error(res, "Password must be at least 6 characters", 400);
+    }
+
+    const user = await userService.updatePassword(id, password);
+
+    return ApiResponse.success(res, user, "User password updated successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Delete user
 // @route   DELETE /api/users/:id
 // @access  Private/Admin

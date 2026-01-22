@@ -33,7 +33,13 @@ interface UpdateUserPayload {
   name?: string;
   email?: string;
   role?: string;
+  role?: string;
   status?: string;
+}
+
+interface UpdateUserPasswordPayload {
+  userId: string;
+  password: string;
 }
 
 // Create User (Admin)

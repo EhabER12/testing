@@ -51,6 +51,7 @@ import {
   Mail,
   CheckCircle,
   XCircle,
+  Key,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -61,6 +62,7 @@ import {
   updateUser,
   approveTeacher,
   rejectTeacher,
+  updateUserPassword,
 } from "@/store/services/userService";
 import { resetUserManagementStatus } from "@/store/slices/userSlice";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +101,11 @@ function UsersContent() {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectingTeacherId, setRejectingTeacherId] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
+
+  // Password Update State
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordUserId, setPasswordUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   // State for creating new user (Invite)
   const [newUser, setNewUser] = useState({
@@ -276,6 +283,19 @@ function UsersContent() {
     );
   }
 
+  const openPasswordDialog = (userId: string) => {
+    setPasswordUserId(userId);
+    setNewPassword("");
+    setIsPasswordDialogOpen(true);
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!passwordUserId || !newPassword) return;
+    if (newPassword.length < 6) return;
+
+    await dispatch(updateUserPassword({ userId: passwordUserId, password: newPassword }));
+    setIsPasswordDialogOpen(false);
+  };
 
   const safeRender = (value: any, fallback = "N/A") => {
     if (!value) return fallback;
@@ -609,6 +629,14 @@ function UsersContent() {
                       >
                         <Edit className="h-4 w-4" />
                         <span className="sr-only">Edit</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openPasswordDialog(user.id || user._id || "")}
+                        title={t("admin.users.changePassword") || "Change Password"}
+                      >
+                        <Key className="h-4 w-4 text-orange-500" />
                       </Button>
                       <Button
                         variant="ghost"

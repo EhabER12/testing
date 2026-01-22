@@ -7,7 +7,9 @@ import {
   deleteUser,
   updateUser,
   approveTeacher,
+  approveTeacher,
   rejectTeacher,
+  updateUserPassword,
 } from "../services/userService";
 import { User } from "./authSlice";
 
@@ -209,6 +211,23 @@ export const userManagementSlice = createSlice({
         }
       })
       .addCase(rejectTeacher.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload as string;
+      })
+      // UPDATE USER PASSWORD
+      .addCase(updateUserPassword.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(updateUserPassword.fulfilled, (state, action: PayloadAction<User>) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.message = "Password updated successfully";
+        state.users = state.users.map((user) =>
+          user._id === action.payload._id ? { ...user, ...action.payload } : user
+        );
+      })
+      .addCase(updateUserPassword.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
         state.message = action.payload as string;

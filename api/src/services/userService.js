@@ -140,6 +140,19 @@ export class UserService {
     return this.userRepository.update(id, userData);
   }
 
+  async updatePassword(id, password) {
+    const user = await this.userRepository.findById(id);
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    user.password = password;
+    await user.save(); // Triggers pre('save') hook for hashing
+
+    return user;
+  }
+
   async updateUserRole(id, role) {
     const user = await this.userRepository.findById(id);
 
