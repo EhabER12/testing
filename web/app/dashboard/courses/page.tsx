@@ -228,198 +228,199 @@ export default function CoursesPage() {
               </div>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{isRtl ? "العنوان" : "Title"}</TableHead>
-                  <TableHead>{isRtl ? "التصنيف" : "Category"}</TableHead>
-                  <TableHead>{isRtl ? "المدرس" : "Instructor"}</TableHead>
-                  <TableHead>{isRtl ? "المستوى" : "Level"}</TableHead>
-                  <TableHead>{isRtl ? "النوع" : "Access"}</TableHead>
-                  <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
-                  <TableHead>{isRtl ? "المسجلين" : "Enrolled"}</TableHead>
-                  <TableHead className="text-right">{isRtl ? "الإجراءات" : "Actions"}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {courses.map((course, index) => (
-                  <TableRow key={course.id || course._id || index}>
-                    <TableCell className="font-medium">
-                      {getLocalizedText(course.title, locale)}
-                    </TableCell>
-                    <TableCell>
-                      {course.categoryId ? (
-                        <Badge variant="outline" className="text-xs">
-                          {typeof course.categoryId === "object"
-                            ? getLocalizedText((course.categoryId as any).name, locale)
-                            : isRtl ? "تصنيف" : "Category"}
-                        </Badge>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {course.instructorId
-                        ? getLocalizedText(course.instructorId.fullName, locale)
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {course.level ? (
-                        <Badge variant="outline">
-                          {course.level === "beginner"
-                            ? isRtl
-                              ? "مبتدئ"
-                              : "Beginner"
-                            : course.level === "intermediate"
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{isRtl ? "العنوان" : "Title"}</TableHead>
+                    <TableHead>{isRtl ? "التصنيف" : "Category"}</TableHead>
+                    <TableHead>{isRtl ? "المدرس" : "Instructor"}</TableHead>
+                    <TableHead>{isRtl ? "المستوى" : "Level"}</TableHead>
+                    <TableHead>{isRtl ? "النوع" : "Access"}</TableHead>
+                    <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
+                    <TableHead>{isRtl ? "المسجلين" : "Enrolled"}</TableHead>
+                    <TableHead className="text-right">{isRtl ? "الإجراءات" : "Actions"}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {courses.map((course, index) => (
+                    <TableRow key={course.id || course._id || index}>
+                      <TableCell className="font-medium">
+                        {getLocalizedText(course.title, locale)}
+                      </TableCell>
+                      <TableCell>
+                        {course.categoryId ? (
+                          <Badge variant="outline" className="text-xs">
+                            {typeof course.categoryId === "object"
+                              ? getLocalizedText((course.categoryId as any).name, locale)
+                              : isRtl ? "تصنيف" : "Category"}
+                          </Badge>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {course.instructorId
+                          ? getLocalizedText(course.instructorId.fullName, locale)
+                          : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {course.level ? (
+                          <Badge variant="outline">
+                            {course.level === "beginner"
                               ? isRtl
-                                ? "متوسط"
-                                : "Intermediate"
-                              : isRtl
-                                ? "متقدم"
-                                : "Advanced"}
-                        </Badge>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          course.accessType === "free"
-                            ? "default"
-                            : course.accessType === "paid"
-                              ? "secondary"
-                              : "outline"
-                        }
-                      >
-                        {course.accessType === "free"
-                          ? isRtl
-                            ? "مجاني"
-                            : "Free"
-                          : course.accessType === "paid"
+                                ? "مبتدئ"
+                                : "Beginner"
+                              : course.level === "intermediate"
+                                ? isRtl
+                                  ? "متوسط"
+                                  : "Intermediate"
+                                : isRtl
+                                  ? "متقدم"
+                                  : "Advanced"}
+                          </Badge>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            course.accessType === "free"
+                              ? "default"
+                              : course.accessType === "paid"
+                                ? "secondary"
+                                : "outline"
+                          }
+                        >
+                          {course.accessType === "free"
                             ? isRtl
-                              ? "مدفوع"
-                              : "Paid"
-                            : isRtl
-                              ? "بالباقة"
-                              : "Package"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {course.isPublished ? (
-                        <Badge className="bg-green-100 text-green-800">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          {isRtl ? "منشور" : "Published"}
+                              ? "مجاني"
+                              : "Free"
+                            : course.accessType === "paid"
+                              ? isRtl
+                                ? "مدفوع"
+                                : "Paid"
+                              : isRtl
+                                ? "بالباقة"
+                                : "Package"}
                         </Badge>
-                      ) : course.publishRequestedAt || (course as any).approvalStatus?.status === 'pending' ? (
-                        <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                          <MoreHorizontal className="h-3 w-3 mr-1 animate-pulse" />
-                          {isRtl ? "في انتظار الموافقة" : "Pending Approval"}
-                        </Badge>
-                      ) : (course as any).approvalStatus?.status === 'rejected' ? (
-                        <Badge variant="destructive">
-                          <XCircle className="h-3 w-3 mr-1" />
-                          {isRtl ? "مرفوض" : "Rejected"}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">
-                          <FileText className="h-3 w-3 mr-1" />
-                          {isRtl ? "مسودة" : "Draft"}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        {course.stats?.enrolledCount || 0}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>
-                            {isRtl ? "الإجراءات" : "Actions"}
-                          </DropdownMenuLabel>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/courses/builder?courseId=${course.id || course._id}`}>
-                              <Layers className="h-4 w-4 mr-2" />
-                              {isRtl ? "بناء المحتوى" : "Builder"}
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/courses/${course.id || course._id}`}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              {isRtl ? "عرض" : "View"}
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/courses/${course.id || course._id}/edit`}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              {isRtl ? "تعديل" : "Edit"}
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handlePublishToggle((course.id || course._id)!, course.isPublished)
-                            }
-                          >
-                            {course.isPublished ? (
-                              <>
+                      </TableCell>
+                      <TableCell>
+                        {course.isPublished ? (
+                          <Badge className="bg-green-100 text-green-800">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            {isRtl ? "منشور" : "Published"}
+                          </Badge>
+                        ) : course.publishRequestedAt || (course as any).approvalStatus?.status === 'pending' ? (
+                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                            <MoreHorizontal className="h-3 w-3 mr-1 animate-pulse" />
+                            {isRtl ? "في انتظار الموافقة" : "Pending Approval"}
+                          </Badge>
+                        ) : (course as any).approvalStatus?.status === 'rejected' ? (
+                          <Badge variant="destructive">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            {isRtl ? "مرفوض" : "Rejected"}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">
+                            <FileText className="h-3 w-3 mr-1" />
+                            {isRtl ? "مسودة" : "Draft"}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          {course.stats?.enrolledCount || 0}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>
+                              {isRtl ? "الإجراءات" : "Actions"}
+                            </DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/dashboard/courses/builder?courseId=${course.id || course._id}`}>
+                                <Layers className="h-4 w-4 mr-2" />
+                                {isRtl ? "بناء المحتوى" : "Builder"}
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/dashboard/courses/${course.id || course._id}`}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                {isRtl ? "عرض" : "View"}
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/dashboard/courses/${course.id || course._id}/edit`}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                {isRtl ? "تعديل" : "Edit"}
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handlePublishToggle((course.id || course._id)!, course.isPublished)
+                              }
+                            >
+                              {course.isPublished ? (
+                                <>
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                  {isRtl ? "إلغاء النشر" : "Unpublish"}
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  {isRtl ? "نشر" : "Publish"}
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            {isAdmin() && !course.isPublished && (course.publishRequestedAt || (course as any).approvalStatus?.status === 'pending') && (
+                              <DropdownMenuItem
+                                className="text-orange-600"
+                                onClick={() => {
+                                  setRejectingId((course.id || course._id)!);
+                                  setIsRejectDialogOpen(true);
+                                }}
+                              >
                                 <XCircle className="h-4 w-4 mr-2" />
-                                {isRtl ? "إلغاء النشر" : "Unpublish"}
-                              </>
-                            ) : (
+                                {isRtl ? "رفض النشر" : "Reject Publish"}
+                              </DropdownMenuItem>
+                            )}
+                            {isAdmin() && (
                               <>
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                {isRtl ? "نشر" : "Publish"}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-red-600"
+                                  onClick={() => handleDelete((course.id || course._id)!)}
+                                  disabled={deleteLoading === (course.id || course._id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  {deleteLoading === (course.id || course._id)
+                                    ? isRtl
+                                      ? "جاري الحذف..."
+                                      : "Deleting..."
+                                    : isRtl
+                                      ? "حذف"
+                                      : "Delete"}
+                                </DropdownMenuItem>
                               </>
                             )}
-                          </DropdownMenuItem>
-                          {isAdmin() && !course.isPublished && (course.publishRequestedAt || (course as any).approvalStatus?.status === 'pending') && (
-                            <DropdownMenuItem
-                              className="text-orange-600"
-                              onClick={() => {
-                                setRejectingId((course.id || course._id)!);
-                                setIsRejectDialogOpen(true);
-                              }}
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              {isRtl ? "رفض النشر" : "Reject Publish"}
-                            </DropdownMenuItem>
-                          )}
-                          {isAdmin() && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => handleDelete((course.id || course._id)!)}
-                                disabled={deleteLoading === (course.id || course._id)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                {deleteLoading === (course.id || course._id)
-                                  ? isRtl
-                                    ? "جاري الحذف..."
-                                    : "Deleting..."
-                                  : isRtl
-                                    ? "حذف"
-                                    : "Delete"}
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>)}
         </CardContent>
       </Card>
 

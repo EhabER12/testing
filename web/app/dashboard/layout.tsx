@@ -396,8 +396,8 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
       {/* Sidebar */}
       <aside
         dir={isRtl ? "rtl" : "ltr"}
-        className={`fixed h-screen w-64 border-${isRtl ? "l" : "r"
-          } bg-header-bg overflow-y-auto z-50 transition-transform duration-300 ${isRtl ? "right-0" : "left-0"
+        className={`fixed h-screen w-64 ${isRtl ? "border-l" : "border-r"
+          } bg-header-bg overflow-y-auto z-[60] transition-transform duration-300 ${isRtl ? "right-0" : "left-0"
           } ${sidebarOpen
             ? "translate-x-0"
             : isRtl

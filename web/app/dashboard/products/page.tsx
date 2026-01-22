@@ -150,7 +150,7 @@ export default function ProductsPage() {
                 const result = await dispatch(syncProductAnalytics()).unwrap();
                 toast.success(
                   t("admin.dashboard.stats.views") +
-                    `: ${result.synced} synced, ${result.errors} errors`
+                  `: ${result.synced} synced, ${result.errors} errors`
                 );
                 dispatch(getProducts({}));
               } catch (e) {
@@ -251,122 +251,122 @@ export default function ProductsPage() {
                 </Link>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-start">{t("admin.products.productName")}</TableHead>
-                    <TableHead className="text-start">{t("admin.products.category")}</TableHead>
-                    <TableHead className="text-start">{t("admin.products.basePrice")}</TableHead>
-                    <TableHead className="text-start">{t("admin.products.variants")}</TableHead>
-                    <TableHead className="text-start">{t("admin.products.isActive")}</TableHead>
-                    <TableHead className="text-start">{t("admin.products.isFeatured")}</TableHead>
-                    <TableHead className="text-start">
-                      {t("admin.dashboard.stats.viewsTitle")}
-                    </TableHead>
-                    <TableHead className="w-[80px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-3">
-                          {product.coverImage && (
-                            <img
-                              src={product.coverImage}
-                              alt=""
-                              className="h-12 w-12 rounded-lg object-cover"
-                            />
-                          )}
-                          <div>
-                            <p className="font-semibold">
-                              {getLocalizedText(product.name, locale)}
-                            </p>
-                            <p className="text-xs text-muted-foreground line-clamp-1">
-                              {getLocalizedText(
-                                product.shortDescription,
-                                locale
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {product.category ? (
-                          <Badge variant="secondary">
-                            {getLocalizedText(product.category.name, locale)}
-                          </Badge>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {product.basePrice} {product.currency || "SAR"}
-                      </TableCell>
-                      <TableCell>{product.variants?.length || 0}</TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={product.isActive}
-                          onCheckedChange={() =>
-                            handleToggleStatus(product, "isActive")
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant={product.isFeatured ? "default" : "ghost"}
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() =>
-                            handleToggleStatus(product, "isFeatured")
-                          }
-                        >
-                          <Star
-                            className={`h-4 w-4 ${
-                              product.isFeatured
-                                ? "fill-current"
-                                : "text-muted-foreground"
-                            }`}
-                          />
-                        </Button>
-                      </TableCell>
-                      <TableCell>{product.seoData?.views30d || 0}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <Link
-                              href={`/dashboard/products/${product.id}/edit`}
-                            >
-                              <DropdownMenuItem>
-                                <Pencil
-                                  className={`h-4 w-4 ${
-                                    isRtl ? "ml-2" : "mr-2"
-                                  }`}
-                                />
-                                {t("common.edit")}
-                              </DropdownMenuItem>
-                            </Link>
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => setDeleteId(product.id)}
-                            >
-                              <Trash
-                                className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`}
-                              />
-                              {t("common.delete")}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-start">{t("admin.products.productName")}</TableHead>
+                      <TableHead className="text-start">{t("admin.products.category")}</TableHead>
+                      <TableHead className="text-start">{t("admin.products.basePrice")}</TableHead>
+                      <TableHead className="text-start">{t("admin.products.variants")}</TableHead>
+                      <TableHead className="text-start">{t("admin.products.isActive")}</TableHead>
+                      <TableHead className="text-start">{t("admin.products.isFeatured")}</TableHead>
+                      <TableHead className="text-start">
+                        {t("admin.dashboard.stats.viewsTitle")}
+                      </TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProducts.map((product) => (
+                      <TableRow key={product.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-3">
+                            {product.coverImage && (
+                              <img
+                                src={product.coverImage}
+                                alt=""
+                                className="h-12 w-12 rounded-lg object-cover"
+                              />
+                            )}
+                            <div>
+                              <p className="font-semibold">
+                                {getLocalizedText(product.name, locale)}
+                              </p>
+                              <p className="text-xs text-muted-foreground line-clamp-1">
+                                {getLocalizedText(
+                                  product.shortDescription,
+                                  locale
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {product.category ? (
+                            <Badge variant="secondary">
+                              {getLocalizedText(product.category.name, locale)}
+                            </Badge>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {product.basePrice} {product.currency || "SAR"}
+                        </TableCell>
+                        <TableCell>{product.variants?.length || 0}</TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={product.isActive}
+                            onCheckedChange={() =>
+                              handleToggleStatus(product, "isActive")
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant={product.isFeatured ? "default" : "ghost"}
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() =>
+                              handleToggleStatus(product, "isFeatured")
+                            }
+                          >
+                            <Star
+                              className={`h-4 w-4 ${product.isFeatured
+                                  ? "fill-current"
+                                  : "text-muted-foreground"
+                                }`}
+                            />
+                          </Button>
+                        </TableCell>
+                        <TableCell>{product.seoData?.views30d || 0}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <Link
+                                href={`/dashboard/products/${product.id}/edit`}
+                              >
+                                <DropdownMenuItem>
+                                  <Pencil
+                                    className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"
+                                      }`}
+                                  />
+                                  {t("common.edit")}
+                                </DropdownMenuItem>
+                              </Link>
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => setDeleteId(product.id)}
+                              >
+                                <Trash
+                                  className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`}
+                                />
+                                {t("common.delete")}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
