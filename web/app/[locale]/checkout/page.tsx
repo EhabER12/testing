@@ -9,10 +9,11 @@ import {
   ArrowRight,
   Check,
   Loader2,
-  CreditCard,
-  Upload,
   Image as ImageIcon,
   User,
+  CreditCard as CreditCardIcon,
+  Banknote,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,9 +38,14 @@ import {
 } from "@/store/slices/cartSlice";
 import {
   getManualPaymentMethodsThunk,
+  getPaymentGatewaysThunk,
   ManualPaymentMethod,
 } from "@/store/services/settingsService";
-import { createCustomerManualPaymentThunk } from "@/store/services/paymentService";
+import {
+  createCustomerManualPaymentThunk,
+  createPaypalPaymentThunk,
+  createCashierPaymentThunk,
+} from "@/store/services/paymentService";
 import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import { countries } from "@/constants/countries";
@@ -92,11 +98,13 @@ export default function CheckoutPage() {
   >({});
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [gateways, setGateways] = useState<any>({});
 
   // Initialize cart and fetch payment methods
   useEffect(() => {
     dispatch(initializeCart());
     dispatch(getManualPaymentMethodsThunk());
+    dispatch(getPaymentGatewaysThunk()).unwrap().then(setGateways).catch(console.error);
   }, [dispatch]);
 
   const total = calculateCartTotal(items);
@@ -197,7 +205,8 @@ export default function CheckoutPage() {
     const selectedMethod = manualPaymentMethods.find(
       (m) => m._id === selectedMethodId
     );
-    if (selectedMethod?.requiresAttachment && !paymentProof) {
+    // Only check proof if it's a manual method (not paypal/cashier) and requires it
+    if (selectedMethodId !== "paypal" && selectedMethodId !== "cashier" && selectedMethod?.requiresAttachment && !paymentProof) {
       toast.error(t("admin.payments.paymentProof") + " is required");
       return;
     }
@@ -232,72 +241,109 @@ export default function CheckoutPage() {
     setSubmitting(true);
 
     try {
-      // Compress image if it's too large (> 2MB) - helps mobile users
-      let processedProof = paymentProof;
-      if (paymentProof && paymentProof.size > 2 * 1024 * 1024) {
-        toast.loading(isRtl ? "جاري ضغط الصورة..." : "Compressing image...", {
-          id: "compress",
-        });
-        try {
-          processedProof = await compressImage(paymentProof);
-          toast.dismiss("compress");
-        } catch (compressError) {
-          toast.dismiss("compress");
-          console.warn(
-            "Image compression failed, using original",
-            compressError
-          );
+      // 1. PayPal
+      if (selectedMethodId === "paypal") {
+        const response = await dispatch(createPaypalPaymentThunk({
+          amount: total,
+          currency: items[0]?.product?.currency || "USD" // PayPal usually USD, but check support
+        })).unwrap();
+
+        if (response.approvalUrl) {
+          window.location.href = response.approvalUrl;
+          return;
+        } else if (response.links) { // Fallback if structure differs
+          const link = response.links.find((l: any) => l.rel === 'approve');
+          if (link) {
+            window.location.href = link.href;
+            return;
+          }
         }
       }
+      // 2. Cashier
+      else if (selectedMethodId === "cashier") {
+        const response = await dispatch(createCashierPaymentThunk({
+          amount: total,
+          currency: items[0]?.product?.currency || "EGP", // Cashier uses EGP
+          customer: {
+            name: formData.name,
+            email: formData.email
+          }
+        })).unwrap();
 
-      // Use the first item's product ID as the main reference (Limitation of current backend)
-      const mainItem = items[0];
-      const productId =
-        mainItem?.product?.id || (mainItem?.product as any)?._id;
+        if (response.checkoutUrl) {
+          window.location.href = response.checkoutUrl;
+          return;
+        }
+      }
+      // 3. Manual Payment (Existing Logic)
+      else {
+        // Compress image if it's too large (> 2MB) - helps mobile users
+        let processedProof = paymentProof;
+        if (paymentProof && paymentProof.size > 2 * 1024 * 1024) {
+          toast.loading(isRtl ? "جاري ضغط الصورة..." : "Compressing image...", {
+            id: "compress",
+          });
+          try {
+            processedProof = await compressImage(paymentProof);
+            toast.dismiss("compress");
+          } catch (compressError) {
+            toast.dismiss("compress");
+            console.warn(
+              "Image compression failed, using original",
+              compressError
+            );
+          }
+        }
 
-      const itemsPayload = items.map((item, index) => ({
-        productId: item.product.id || (item.product as any)._id || "",
-        name: getLocalizedText(item.product.name, "en"),
-        price: item.variant?.price ?? item.product.basePrice,
-        quantity: item.quantity,
-        variantId: item.variantId,
-        addonIds: item.addonIds,
-        customFields: item.product.customFields?.map((f, fIndex) => ({
-          label: getLocalizedText(f.label, "en"),
-          value: itemsData[index]?.[fIndex] || "",
-        })),
-      }));
+        // Use the first item's product ID as the main reference (Limitation of current backend)
+        const mainItem = items[0];
+        const productId =
+          mainItem?.product?.id || (mainItem?.product as any)?._id;
 
-      const paymentData = {
-        productId: productId,
-        serviceId: undefined,
-        pricingTierId: "checkout_order", // Placeholder required by backend
-        manualPaymentMethodId: selectedMethodId,
-        paymentProof: processedProof || undefined,
-        billingInfo: {
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address || "",
-          city: formData.city || "",
-          country: formData.country,
+        const itemsPayload = items.map((item, index) => ({
+          productId: item.product.id || (item.product as any)._id || "",
+          name: getLocalizedText(item.product.name, "en"),
+          price: item.variant?.price ?? item.product.basePrice,
+          quantity: item.quantity,
+          variantId: item.variantId,
+          addonIds: item.addonIds,
+          customFields: item.product.customFields?.map((f, fIndex) => ({
+            label: getLocalizedText(f.label, "en"),
+            value: itemsData[index]?.[fIndex] || "",
+          })),
+        }));
+
+        const paymentData = {
+          productId: productId,
+          serviceId: undefined,
+          pricingTierId: "checkout_order", // Placeholder required by backend
+          manualPaymentMethodId: selectedMethodId,
+          paymentProof: processedProof || undefined,
+          billingInfo: {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address || "",
+            city: formData.city || "",
+            country: formData.country,
+            amount: total,
+            items: itemsPayload,
+          },
           amount: total,
           items: itemsPayload,
-        },
-        amount: total,
-        items: itemsPayload,
-        currency: items[0]?.product?.currency || "SAR",
-      };
+          currency: items[0]?.product?.currency || "SAR",
+        };
 
-      await dispatch(createCustomerManualPaymentThunk(paymentData)).unwrap();
+        await dispatch(createCustomerManualPaymentThunk(paymentData)).unwrap();
 
-      // Clear cart and show success
-      dispatch(clearCart());
-      setOrderSuccess(true);
-      toast.success(t("checkout.orderSuccessMessage"));
+        // Clear cart and show success
+        dispatch(clearCart());
+        setOrderSuccess(true);
+        toast.success(t("checkout.orderSuccessMessage"));
 
-      // Mark cart session as converted
-      markSessionConverted();
+        // Mark cart session as converted
+        markSessionConverted();
+      }
     } catch (err: any) {
       // Better error messages for common issues
       let errorMessage = isRtl ? "فشل في إتمام الطلب" : "Failed to place order";
@@ -324,8 +370,19 @@ export default function CheckoutPage() {
 
       toast.error(errorMessage);
       console.error("Checkout error:", err);
+      // Don't set submitting false if we are redirecting (logic simplified here)
+      // Actually if redirecting we might unmount, but if error we stay.
+      // For redirects, we want to keep spinner.
+      if (selectedMethodId === "paypal" || selectedMethodId === "cashier") {
+        // If error occurred, stop spinner
+        setSubmitting(false);
+      } else {
+        setSubmitting(false);
+      }
     } finally {
-      setSubmitting(false);
+      if (selectedMethodId !== "paypal" && selectedMethodId !== "cashier") {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -600,8 +657,8 @@ export default function CheckoutPage() {
                                   field.type === "number"
                                     ? "number"
                                     : field.type === "email"
-                                    ? "email"
-                                    : "text"
+                                      ? "email"
+                                      : "text"
                                 }
                                 placeholder={placeholder}
                                 required={field.required}
@@ -634,17 +691,60 @@ export default function CheckoutPage() {
                     onValueChange={setSelectedMethodId}
                     className="space-y-3"
                   >
+                    {/* PayPal Option */}
+                    {gateways?.paypal?.isEnabled && (
+                      <div
+                        className={`rounded-xl border-2 transition-all overflow-hidden ${selectedMethodId === "paypal"
+                          ? "border-primary bg-primary/5"
+                          : "border-gray-200 hover:border-primary/50"
+                          }`}
+                        dir={isRtl ? "rtl" : "ltr"}
+                      >
+                        <label className="flex items-center gap-4 p-4 cursor-pointer">
+                          <RadioGroupItem value="paypal" id="paypal" />
+                          <Banknote className="h-6 w-6 text-blue-600" />
+                          <div>
+                            <p className="font-medium">PayPal</p>
+                            <p className="text-sm text-muted-foreground">
+                              {isRtl ? "الدفع الآمن عبر باي بال" : "Secure payment via PayPal"}
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                    )}
+
+                    {/* Cashier Option */}
+                    {gateways?.cashier?.isEnabled && (
+                      <div
+                        className={`rounded-xl border-2 transition-all overflow-hidden ${selectedMethodId === "cashier"
+                          ? "border-primary bg-primary/5"
+                          : "border-gray-200 hover:border-primary/50"
+                          }`}
+                        dir={isRtl ? "rtl" : "ltr"}
+                      >
+                        <label className="flex items-center gap-4 p-4 cursor-pointer">
+                          <RadioGroupItem value="cashier" id="cashier" />
+                          <CreditCardIcon className="h-6 w-6 text-purple-600" />
+                          <div>
+                            <p className="font-medium">{isRtl ? "بطاقة ائتمان / ميزة" : "Credit Card / Meeza"}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {isRtl ? "الدفع السريع بالبطاقات" : "Fast payment via Cards/Wallets"}
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                    )}
+
                     {manualPaymentMethods && manualPaymentMethods.length > 0 ? (
                       manualPaymentMethods
                         .filter((m) => m.isEnabled)
                         .map((method) => (
                           <div
                             key={method._id}
-                            className={`rounded-xl border-2 transition-all overflow-hidden ${
-                              selectedMethodId === method._id
-                                ? "border-primary bg-primary/5"
-                                : "border-gray-200 hover:border-primary/50"
-                            }`}
+                            className={`rounded-xl border-2 transition-all overflow-hidden ${selectedMethodId === method._id
+                              ? "border-primary bg-primary/5"
+                              : "border-gray-200 hover:border-primary/50"
+                              }`}
                             dir={isRtl ? "rtl" : "ltr"}
                           >
                             <label className="flex items-center gap-4 p-4 cursor-pointer">
@@ -659,7 +759,7 @@ export default function CheckoutPage() {
                                   className="w-10 h-10 object-contain"
                                 />
                               ) : (
-                                <CreditCard className="h-6 w-6 text-muted-foreground" />
+                                <CreditCardIcon className="h-6 w-6 text-muted-foreground" />
                               )}
                               <div>
                                 <p className="font-medium">
@@ -673,9 +773,8 @@ export default function CheckoutPage() {
 
                             {selectedMethodId === method._id && (
                               <div
-                                className={`px-4 pb-4 space-y-4 ${
-                                  isRtl ? "pr-12" : "pl-12"
-                                }`}
+                                className={`px-4 pb-4 space-y-4 ${isRtl ? "pr-12" : "pl-12"
+                                  }`}
                               >
                                 {method.instructions && (
                                   <div className="bg-white p-3 rounded border text-sm text-gray-600 whitespace-pre-wrap">
@@ -707,9 +806,8 @@ export default function CheckoutPage() {
                                         }
                                       >
                                         <Upload
-                                          className={`h-4 w-4 ${
-                                            isRtl ? "ml-2" : "mr-2"
-                                          }`}
+                                          className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"
+                                            }`}
                                         />
                                         {t("admin.payments.chooseFile")}
                                       </Button>
@@ -805,9 +903,8 @@ export default function CheckoutPage() {
                     {submitting ? (
                       <>
                         <Loader2
-                          className={`h-4 w-4 animate-spin ${
-                            isRtl ? "ml-2" : "mr-2"
-                          }`}
+                          className={`h-4 w-4 animate-spin ${isRtl ? "ml-2" : "mr-2"
+                            }`}
                         />
                         {t("checkout.processing")}
                       </>

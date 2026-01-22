@@ -8,7 +8,8 @@ import {
     ArrowRight,
     Check,
     Loader2,
-    CreditCard,
+    CreditCard as CreditCardIcon,
+    Banknote,
     Upload,
     Image as ImageIcon,
     User,
@@ -30,8 +31,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
     getManualPaymentMethodsThunk,
+    getPaymentGatewaysThunk,
 } from "@/store/services/settingsService";
-import { createCustomerManualPaymentThunk } from "@/store/services/paymentService";
+import {
+    createCustomerManualPaymentThunk,
+    createPaypalPaymentThunk,
+    createCashierPaymentThunk
+} from "@/store/services/paymentService";
 import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import { countries } from "@/constants/countries";
@@ -80,6 +86,7 @@ export default function CourseCheckoutPage() {
     const [paymentProof, setPaymentProof] = useState<File | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
+    const [gateways, setGateways] = useState<any>({});
 
     // Fetch course data
     useEffect(() => {
@@ -91,6 +98,7 @@ export default function CourseCheckoutPage() {
     // Initialize payment methods
     useEffect(() => {
         dispatch(getManualPaymentMethodsThunk());
+        dispatch(getPaymentGatewaysThunk()).unwrap().then(setGateways).catch(console.error);
     }, [dispatch]);
 
     // Pre-fill form with user data when logged in
@@ -202,7 +210,8 @@ export default function CourseCheckoutPage() {
         const selectedMethod = manualPaymentMethods.find(
             (m) => m._id === selectedMethodId
         );
-        if (selectedMethod?.requiresAttachment && !paymentProof) {
+        // Only check for manual methods
+        if (selectedMethodId !== "paypal" && selectedMethodId !== "cashier" && selectedMethod?.requiresAttachment && !paymentProof) {
             toast.error(t("admin.payments.paymentProof") + " is required");
             return;
         }
@@ -219,64 +228,103 @@ export default function CourseCheckoutPage() {
                 return;
             }
 
-            // Compress image if it's too large (> 2MB)
-            let processedProof = paymentProof;
-            if (paymentProof && paymentProof.size > 2 * 1024 * 1024) {
-                toast.loading(isRtl ? "جاري ضغط الصورة..." : "Compressing image...", {
-                    id: "compress",
-                });
-                try {
-                    processedProof = await compressImage(paymentProof);
-                    toast.dismiss("compress");
-                } catch (compressError) {
-                    toast.dismiss("compress");
-                    console.warn("Image compression failed, using original", compressError);
+            // 1. PayPal
+            if (selectedMethodId === "paypal") {
+                const response = await dispatch(createPaypalPaymentThunk({
+                    amount: currentCourse?.price || 0,
+                    currency: "USD",
+                    courseId,
+                })).unwrap();
+
+                if (response.approvalUrl) {
+                    window.location.href = response.approvalUrl;
+                    return;
+                } else if ((response as any).links) { // Fallback if structure differs
+                    const link = (response as any).links.find((l: any) => l.rel === 'approve');
+                    if (link) {
+                        window.location.href = link.href;
+                        return;
+                    }
                 }
             }
-
-            const paymentData = {
-                // Use courseId as productId for backend compatibility
-                productId: courseId,
-                serviceId: undefined,
-                pricingTierId: "course_enrollment",
-                manualPaymentMethodId: selectedMethodId,
-                paymentProof: processedProof || undefined,
-                billingInfo: {
-                    name: formData.name,
-                    email: formData.email,
-                    phone: formData.phone,
-                    address: formData.address || "",
-                    city: formData.city || "",
-                    country: formData.country,
+            // 2. Cashier
+            else if (selectedMethodId === "cashier") {
+                const response = await dispatch(createCashierPaymentThunk({
                     amount: currentCourse?.price || 0,
-                    items: [
-                        {
-                            productId: courseId,
-                            name: getLocalizedText(currentCourse?.title, "en"),
-                            price: currentCourse?.price || 0,
-                            quantity: 1,
-                        },
-                    ],
-                },
-                amount: currentCourse?.price || 0,
-                currency: "EGP",
-                // Add course-specific metadata
-                metadata: {
-                    type: "course",
-                    courseId: courseId,
-                    courseSlug: slug,
-                    courseName: getLocalizedText(currentCourse?.title, locale),
-                },
-            };
+                    currency: "EGP", // Cashier uses EGP
+                    courseId,
+                    customer: {
+                        name: formData.name,
+                        email: formData.email
+                    }
+                })).unwrap();
 
-            await dispatch(createCustomerManualPaymentThunk(paymentData)).unwrap();
+                if (response.checkoutUrl) {
+                    window.location.href = response.checkoutUrl;
+                    return;
+                }
+            }
+            // 3. Manual
+            else {
+                // Compress image if it's too large (> 2MB)
+                let processedProof = paymentProof;
+                if (paymentProof && paymentProof.size > 2 * 1024 * 1024) {
+                    toast.loading(isRtl ? "جاري ضغط الصورة..." : "Compressing image...", {
+                        id: "compress",
+                    });
+                    try {
+                        processedProof = await compressImage(paymentProof);
+                        toast.dismiss("compress");
+                    } catch (compressError) {
+                        toast.dismiss("compress");
+                        console.warn("Image compression failed, using original", compressError);
+                    }
+                }
 
-            setOrderSuccess(true);
-            toast.success(
-                isRtl
-                    ? "تم إرسال طلب الدفع بنجاح! ستتم مراجعته قريباً."
-                    : "Payment request submitted successfully! It will be reviewed soon."
-            );
+                const paymentData = {
+                    // Use courseId as productId for backend compatibility
+                    productId: courseId,
+                    serviceId: undefined,
+                    pricingTierId: "course_enrollment",
+                    manualPaymentMethodId: selectedMethodId,
+                    paymentProof: processedProof || undefined,
+                    billingInfo: {
+                        name: formData.name,
+                        email: formData.email,
+                        phone: formData.phone,
+                        address: formData.address || "",
+                        city: formData.city || "",
+                        country: formData.country,
+                        amount: currentCourse?.price || 0,
+                        items: [
+                            {
+                                productId: courseId,
+                                name: getLocalizedText(currentCourse?.title, "en"),
+                                price: currentCourse?.price || 0,
+                                quantity: 1,
+                            },
+                        ],
+                    },
+                    amount: currentCourse?.price || 0,
+                    currency: "EGP",
+                    // Add course-specific metadata
+                    metadata: {
+                        type: "course",
+                        courseId: courseId,
+                        courseSlug: slug,
+                        courseName: getLocalizedText(currentCourse?.title, locale),
+                    },
+                };
+
+                await dispatch(createCustomerManualPaymentThunk(paymentData)).unwrap();
+
+                setOrderSuccess(true);
+                toast.success(
+                    isRtl
+                        ? "تم إرسال طلب الدفع بنجاح! ستتم مراجعته قريباً."
+                        : "Payment request submitted successfully! It will be reviewed soon."
+                );
+            }
         } catch (err: any) {
             let errorMessage = isRtl
                 ? "فشل في إرسال طلب الدفع"
@@ -303,8 +351,15 @@ export default function CourseCheckoutPage() {
 
             toast.error(errorMessage);
             console.error("Checkout error:", err);
+            if (selectedMethodId === "paypal" || selectedMethodId === "cashier") {
+                setSubmitting(false);
+            } else {
+                setSubmitting(false);
+            }
         } finally {
-            setSubmitting(false);
+            if (selectedMethodId !== "paypal" && selectedMethodId !== "cashier") {
+                setSubmitting(false);
+            }
         }
     };
 
@@ -517,6 +572,50 @@ export default function CourseCheckoutPage() {
                                         onValueChange={setSelectedMethodId}
                                         className="space-y-3"
                                     >
+                                        {/* PayPal Option */}
+                                        {gateways?.paypal?.isEnabled && (
+                                            <div
+                                                className={`rounded-xl border-2 transition-all overflow-hidden ${selectedMethodId === "paypal"
+                                                    ? "border-primary bg-primary/5"
+                                                    : "border-gray-200 hover:border-primary/50"
+                                                    }`}
+                                                dir={isRtl ? "rtl" : "ltr"}
+                                            >
+                                                <label className="flex items-center gap-4 p-4 cursor-pointer">
+                                                    <RadioGroupItem value="paypal" id="paypal" />
+                                                    <Banknote className="h-6 w-6 text-blue-600" />
+                                                    <div>
+                                                        <p className="font-medium">PayPal</p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {isRtl ? "الدفع الآمن عبر باي بال" : "Secure payment via PayPal"}
+                                                        </p>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        )}
+
+                                        {/* Cashier Option */}
+                                        {gateways?.cashier?.isEnabled && (
+                                            <div
+                                                className={`rounded-xl border-2 transition-all overflow-hidden ${selectedMethodId === "cashier"
+                                                    ? "border-primary bg-primary/5"
+                                                    : "border-gray-200 hover:border-primary/50"
+                                                    }`}
+                                                dir={isRtl ? "rtl" : "ltr"}
+                                            >
+                                                <label className="flex items-center gap-4 p-4 cursor-pointer">
+                                                    <RadioGroupItem value="cashier" id="cashier" />
+                                                    <CreditCardIcon className="h-6 w-6 text-purple-600" />
+                                                    <div>
+                                                        <p className="font-medium">{isRtl ? "بطاقة ائتمان / ميزة" : "Credit Card / Meeza"}</p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {isRtl ? "الدفع السريع بالبطاقات" : "Fast payment via Cards/Wallets"}
+                                                        </p>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        )}
+
                                         {manualPaymentMethods && manualPaymentMethods.length > 0 ? (
                                             manualPaymentMethods
                                                 .filter((m) => m.isEnabled)
@@ -541,7 +640,7 @@ export default function CourseCheckoutPage() {
                                                                     className="w-10 h-10 object-contain"
                                                                 />
                                                             ) : (
-                                                                <CreditCard className="h-6 w-6 text-muted-foreground" />
+                                                                <CreditCardIcon className="h-6 w-6 text-muted-foreground" />
                                                             )}
                                                             <div>
                                                                 <p className="font-medium">

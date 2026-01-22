@@ -650,6 +650,25 @@ export class PaymentService {
       throw new ApiError(404, "Payment not found");
     }
 
+    // Verify Hash
+    // Re-calculate hash using our credentials and the incoming data
+    const calculatedHash = kashierService.generateHash({
+      orderId: merchantOrderId,
+      amount: payment.amount,
+      currency: payment.currency,
+      credentials: config.credentials
+    });
+
+    // Check if signature matches (assuming signature is passed in payload, usually 'hash' or 'signature')
+    // payload.signature or payload.hash
+    const incomingSignature = signature || payload.hash;
+
+    if (incomingSignature && calculatedHash !== incomingSignature) {
+      console.error("Cashier Hash Mismatch", { calculated: calculatedHash, received: incomingSignature });
+      // We might want to throw error, or just log and mark as suspicious
+      throw new ApiError(400, "Invalid Payment Signature");
+    }
+
     if (payment.status === "success") return payment;
 
     // Update status based on callback

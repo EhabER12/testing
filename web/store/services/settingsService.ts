@@ -478,8 +478,21 @@ export const getManualPaymentMethodsThunk = createAsyncThunk<
     const message =
       (error.response && error.response.data && error.response.data.message) ||
       error.message ||
-      error.toString();
     return thunkAPI.rejectWithValue(message);
+  }
+});
+
+// New thunk for fetching enabled gateways (PayPal, Cashier, etc.)
+export const getPaymentGatewaysThunk = createAsyncThunk<
+  any,
+  void,
+  { rejectValue: string }
+>("settings/getPaymentGateways", async (_, thunkAPI) => {
+  try {
+    const response = await axiosInstance.get("/settings/public");
+    return response.data.data?.paymentGateways;
+  } catch (error: any) {
+    return {};
   }
 });
 
