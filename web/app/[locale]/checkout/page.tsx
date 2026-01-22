@@ -251,8 +251,8 @@ export default function CheckoutPage() {
         if (response.approvalUrl) {
           window.location.href = response.approvalUrl;
           return;
-        } else if (response.links) { // Fallback if structure differs
-          const link = response.links.find((l: any) => l.rel === 'approve');
+        } else if ((response as any).links) { // Fallback if structure differs
+          const link = (response as any).links.find((l: any) => l.rel === 'approve');
           if (link) {
             window.location.href = link.href;
             return;
