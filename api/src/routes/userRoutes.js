@@ -8,6 +8,7 @@ import {
   deleteUser,
   approveTeacher,
   rejectTeacher,
+  updateUserPassword,
 } from "../controllers/userController.js";
 import { protect, authorize } from "../middlewares/authMiddleware.js";
 import { validate } from "../middlewares/validationMiddleware.js";
