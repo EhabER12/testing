@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, GraduationCap, User } from "lucide-react";
+import { Loader2, GraduationCap, User, Eye, EyeOff } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
@@ -56,6 +56,8 @@ export default function RegisterPage() {
     const { isLoading, isError, message, isSuccess } = useAppSelector(
         (state) => state.auth
     );
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -284,7 +286,26 @@ export default function RegisterPage() {
                                     <FormItem>
                                         <FormLabel>كلمة المرور - Password *</FormLabel>
                                         <FormControl>
-                                            <Input type="password" placeholder="••••••••" {...field} />
+                                            <div className="relative">
+                                                <Input
+                                                    type={showPassword ? "text" : "password"}
+                                                    placeholder="••••••••"
+                                                    {...field}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                >
+                                                    {showPassword ? (
+                                                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                                    ) : (
+                                                        <Eye className="h-4 w-4 text-muted-foreground" />
+                                                    )}
+                                                </Button>
+                                            </div>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -297,7 +318,26 @@ export default function RegisterPage() {
                                     <FormItem>
                                         <FormLabel>تأكيد كلمة المرور - Confirm *</FormLabel>
                                         <FormControl>
-                                            <Input type="password" placeholder="••••••••" {...field} />
+                                            <div className="relative">
+                                                <Input
+                                                    type={showConfirmPassword ? "text" : "password"}
+                                                    placeholder="••••••••"
+                                                    {...field}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                >
+                                                    {showConfirmPassword ? (
+                                                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                                    ) : (
+                                                        <Eye className="h-4 w-4 text-muted-foreground" />
+                                                    )}
+                                                </Button>
+                                            </div>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
