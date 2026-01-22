@@ -52,7 +52,7 @@ export default function StudentMembersPage() {
   const { t, isRtl } = useAdminLocale();
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
-  const { users, isLoading, error } = useAppSelector((state) => state.users);
+  const { users, isLoading } = useAppSelector((state) => state.userManagement);
   const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
@@ -89,7 +89,7 @@ export default function StudentMembersPage() {
   };
 
   // Filter only regular students (exclude admins and moderators)
-  const students = (users?.results || []).filter(
+  const students = (users || []).filter(
     (user: any) => user.role === "user" || (!user.role && !user.isAdmin)
   );
 
@@ -147,14 +147,6 @@ export default function StudentMembersPage() {
           </p>
         </div>
       </div>
-
-      {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <p className="text-red-800">{error}</p>
-          </CardContent>
-        </Card>
-      )}
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
