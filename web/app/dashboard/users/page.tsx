@@ -126,10 +126,15 @@ function UsersContent() {
   useEffect(() => {
     fetchUsers(page);
 
+    // Debug logging
+    if (users && users.length > 0) {
+      console.log("Users Data Debug:", users);
+    }
+
     return () => {
       dispatch(resetUserManagementStatus());
     };
-  }, [dispatch, fetchUsers, page]);
+  }, [dispatch, fetchUsers, page, users]);
 
   useEffect(() => {
     if (currentPage && currentPage !== page) {
@@ -538,7 +543,16 @@ function UsersContent() {
                       return "N/A";
                     })()}
                   </TableCell>
-                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      const email = user.email;
+                      if (typeof email === 'object' && email !== null) {
+                        // This logically shouldn't happen for email, but we must be defensive
+                        return (email as any).en || (email as any).ar || "N/A";
+                      }
+                      return email || "N/A";
+                    })()}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center">
                       <Badge variant="outline" className="flex gap-1 items-center">
