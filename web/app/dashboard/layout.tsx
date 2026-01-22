@@ -450,8 +450,8 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
                     <Button
                       variant={isChildActive ? "default" : "ghost"}
                       className={`w-full justify-between hover:bg-white/10 hover:text-genoun-gold gap-2 ${isChildActive
-                          ? "bg-genoun-gold text-genoun-black hover:bg-genoun-gold hover:text-genoun-black"
-                          : "text-white"
+                        ? "bg-genoun-gold text-genoun-black hover:bg-genoun-gold hover:text-genoun-black"
+                        : "text-white"
                         }`}
                       onClick={() =>
                         setOpenDropdowns((prev) => ({
@@ -502,8 +502,8 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
                                 }
                                 size="sm"
                                 className={`w-full justify-start hover:bg-white/10 hover:text-genoun-gold gap-2 ${isChildItemActive
-                                    ? "bg-genoun-gold text-genoun-black hover:bg-genoun-gold hover:text-genoun-black"
-                                    : "text-white/80"
+                                  ? "bg-genoun-gold text-genoun-black hover:bg-genoun-gold hover:text-genoun-black"
+                                  : "text-white/80"
                                   } `}
                               >
                                 {child.icon}
@@ -527,8 +527,8 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
                   <Button
                     variant={isActive ? "default" : "ghost"}
                     className={`w-full justify-start hover:bg-white/10 hover:text-genoun-gold gap-2 ${isActive
-                        ? "bg-genoun-gold text-genoun-black hover:bg-genoun-gold hover:text-genoun-black"
-                        : "text-white"
+                      ? "bg-genoun-gold text-genoun-black hover:bg-genoun-gold hover:text-genoun-black"
+                      : "text-white"
                       }`}
                   >
                     {item.icon}
@@ -542,9 +542,23 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
           <div className="pt-4 border-t border-white/20">
             <div className="flex items-center gap-2 px-4 py-2 text-sm text-white">
               <UserCircle className="h-4 w-4" />
-              <span>{user.name || user.email}</span>
+              <span>
+                {(() => {
+                  const name = user.name;
+                  if (typeof name === 'object' && name !== null) {
+                    return (name as any).en || (name as any).ar || "User";
+                  }
+                  return name || user.email;
+                })()}
+              </span>
               <span className="ml-auto rounded bg-white/20 px-1.5 py-0.5 text-xs capitalize text-white">
-                {user.role}
+                {(() => {
+                  const role = user.role;
+                  if (typeof role === 'object' && role !== null) {
+                    return (role as any).en || (role as any).ar || "user";
+                  }
+                  return role;
+                })()}
               </span>
             </div>
 
