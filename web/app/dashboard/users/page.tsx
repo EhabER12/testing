@@ -175,9 +175,21 @@ function UsersContent() {
   };
 
   const openEditDialog = (user: any) => {
+    // Helper to safely get name
+    let userName = "";
+    if (user.name) {
+      userName = user.name;
+    } else if (user.fullName) {
+      if (typeof user.fullName === 'string') {
+        userName = user.fullName;
+      } else {
+        userName = isRtl ? (user.fullName.ar || user.fullName.en || "") : (user.fullName.en || user.fullName.ar || "");
+      }
+    }
+
     setEditingUser({
       userId: user.id || user._id || "",
-      name: user.name || (isRtl ? user.fullName?.ar : user.fullName?.en) || (typeof user.fullName === 'string' ? user.fullName : "") || "",
+      name: userName,
       email: user.email || "",
       role: user.role || "user",
       status: user.status || "active",
