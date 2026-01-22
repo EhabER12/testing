@@ -10,14 +10,19 @@ class EmailTemplateService {
 
   // Get all templates
   async getAllTemplates() {
-    // Ensure system templates exist
-    const systemTemplates = ['email_verification', 'user_invitation', 'order_confirmation'];
+    try {
+      // Ensure system templates exist
+      const systemTemplates = ['email_verification', 'user_invitation', 'order_confirmation'];
 
-    for (const name of systemTemplates) {
-      const exists = await EmailTemplate.exists({ name });
-      if (!exists) {
-        await this.createDefaultTemplate(name);
+      for (const name of systemTemplates) {
+        const exists = await EmailTemplate.exists({ name });
+        if (!exists) {
+          await this.createDefaultTemplate(name);
+        }
       }
+    } catch (error) {
+      // Log error but don't fail the request
+      logger.error('Error in self-healing templates:', error);
     }
 
     return EmailTemplate.find().sort({ createdAt: -1 });
