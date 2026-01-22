@@ -542,8 +542,14 @@ function UsersContent() {
                   <TableCell>
                     <div className="flex items-center">
                       <Badge variant="outline" className="flex gap-1 items-center">
-                        {getRoleIcon(user.role)}
-                        {user.role}
+                        {getRoleIcon(typeof user.role === 'object' ? ((user.role as any).en || (user.role as any).ar) : user.role)}
+                        {(() => {
+                          const role = user.role;
+                          if (typeof role === 'object' && role !== null) {
+                            return (role as any).en || (role as any).ar || "user";
+                          }
+                          return role || "user";
+                        })()}
                       </Badge>
                     </div>
                   </TableCell>
@@ -558,7 +564,13 @@ function UsersContent() {
                       }
                       className={user.status === "active" ? "bg-green-600 hover:bg-green-700" : ""}
                     >
-                      {user.status || "active"}
+                      {(() => {
+                        const status = user.status;
+                        if (typeof status === 'object' && status !== null) {
+                          return (status as any).en || (status as any).ar || "active";
+                        }
+                        return status || "active";
+                      })()}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-end">
