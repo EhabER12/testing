@@ -281,6 +281,28 @@ function UsersContent() {
     );
   }
 
+
+  const safeRender = (value: any, fallback = "N/A") => {
+    if (!value) return fallback;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number') return String(value);
+    if (typeof value === 'object') {
+      return value.en || value.ar || fallback;
+    }
+    return fallback;
+  };
+
+  // Safe Rendering Component
+  const SafeBadge = ({ value, variant = "outline", className = "" }: any) => {
+    const text = safeRender(value, "");
+    if (!text) return null;
+    return (
+      <Badge variant={variant} className={className}>
+        {text}
+      </Badge>
+    );
+  };
+
   return (
     <div className="p-6" dir={isRtl ? "rtl" : "ltr"}>
       <div className={`mb-6 flex items-center justify-between`}>
@@ -363,7 +385,7 @@ function UsersContent() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit User Dialog */}
+        {/* Edit User Dialog - Using safeRender logic for initialization */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -497,14 +519,7 @@ function UsersContent() {
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            {(() => {
-              if (typeof message === 'object' && message !== null) {
-                return (message as any).en || (message as any).ar || "Error";
-              }
-              return message;
-            })()}
-          </AlertDescription>
+          <AlertDescription>{safeRender(message, "Error")}</AlertDescription>
         </Alert>
       )}
 
@@ -512,14 +527,7 @@ function UsersContent() {
         <Alert className="mb-6 bg-green-50 text-green-800 border-green-200">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertTitle>Success</AlertTitle>
-          <AlertDescription>
-            {(() => {
-              if (typeof message === 'object' && message !== null) {
-                return (message as any).en || (message as any).ar || "Success";
-              }
-              return message;
-            })()}
-          </AlertDescription>
+          <AlertDescription>{safeRender(message, "Success")}</AlertDescription>
         </Alert>
       )}
 
@@ -548,58 +556,28 @@ function UsersContent() {
               users.map((user) => (
                 <TableRow key={user.id || user._id}>
                   <TableCell className="font-medium">
-                    {(() => {
-                      if (user.name) return user.name;
-                      if (user.fullName) {
-                        if (typeof user.fullName === 'string') return user.fullName;
-                        return isRtl ? (user.fullName.ar || user.fullName.en) : (user.fullName.en || user.fullName.ar);
-                      }
-                      return "N/A";
-                    })()}
+                    {safeRender(user.name) || safeRender(user.fullName, "N/A")}
                   </TableCell>
                   <TableCell>
-                    {(() => {
-                      const email = user.email;
-                      if (typeof email === 'object' && email !== null) {
-                        // This logically shouldn't happen for email, but we must be defensive
-                        return (email as any).en || (email as any).ar || "N/A";
-                      }
-                      return email || "N/A";
-                    })()}
+                    {safeRender(user.email)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center">
-                      <Badge variant="outline" className="flex gap-1 items-center">
-                        {getRoleIcon(typeof user.role === 'object' ? ((user.role as any).en || (user.role as any).ar) : user.role)}
-                        {(() => {
-                          const role = user.role;
-                          if (typeof role === 'object' && role !== null) {
-                            return (role as any).en || (role as any).ar || "user";
-                          }
-                          return role || "user";
-                        })()}
-                      </Badge>
+                      <div className="flex gap-1 items-center border rounded-md px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-foreground">
+                        {getRoleIcon(safeRender(user.role, "user"))}
+                        {safeRender(user.role, "user")}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        user.status === "active"
-                          ? "default" // was "success" but not in standard UI
-                          : user.status === "invited"
-                            ? "secondary"
-                            : "destructive"
-                      }
-                      className={user.status === "active" ? "bg-green-600 hover:bg-green-700" : ""}
-                    >
-                      {(() => {
-                        const status = user.status;
-                        if (typeof status === 'object' && status !== null) {
-                          return (status as any).en || (status as any).ar || "active";
-                        }
-                        return status || "active";
-                      })()}
-                    </Badge>
+                    <div className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${user.status === "active"
+                        ? "border-transparent bg-green-600 text-white hover:bg-green-700"
+                        : user.status === "invited"
+                          ? "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                          : "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80"
+                      }`}>
+                      {safeRender(user.status, "active")}
+                    </div>
                   </TableCell>
                   <TableCell className="text-end">
                     <div className="flex justify-end gap-2">
