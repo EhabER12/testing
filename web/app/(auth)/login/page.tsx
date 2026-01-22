@@ -4,6 +4,9 @@ import { LoginForm } from "@/components/auth/login-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -11,6 +14,14 @@ function LoginContent() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <div className="absolute top-4 left-4 z-10">
+        <Button variant="ghost" asChild>
+          <Link href="/" className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Link>
+        </Button>
+      </div>
       <main className="flex flex-1 items-center justify-center p-4">
         <div className="w-full max-w-md space-y-4">
           {message === "teacher_pending" && (

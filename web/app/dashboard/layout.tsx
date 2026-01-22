@@ -36,6 +36,7 @@ import {
   FileQuestion,
   UserCheck,
   Mail,
+  Home,
 } from "lucide-react";
 import { User } from "@/store/slices/authSlice";
 import {
@@ -570,7 +571,18 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
 
             <Button
               variant="ghost"
-              className="mt-2 w-full justify-start gap-2 text-red-300 hover:bg-red-500/20 hover:text-red-200"
+              asChild
+              className="mt-2 w-full justify-start gap-2 hover:bg-white/10 hover:text-white"
+            >
+              <Link href="/">
+                <Home className="h-4 w-4" />
+                Go to Home
+              </Link>
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="mt-1 w-full justify-start gap-2 text-red-300 hover:bg-red-500/20 hover:text-red-200"
               onClick={() => {
                 localStorage.removeItem("user");
                 router.push("/login");
@@ -581,7 +593,7 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
             </Button>
           </div>
         </div>
-      </aside>
+      </aside >
       <main
         className={`${isRtl ? "lg:mr-64" : "lg:ml-64"
           } flex-1 bg-gray-50 pt-14 lg:pt-0`}
@@ -589,7 +601,7 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
       >
         {children}
       </main>
-    </div>
+    </div >
   );
 }
 
