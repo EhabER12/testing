@@ -497,7 +497,14 @@ function UsersContent() {
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{message}</AlertDescription>
+          <AlertDescription>
+            {(() => {
+              if (typeof message === 'object' && message !== null) {
+                return (message as any).en || (message as any).ar || "Error";
+              }
+              return message;
+            })()}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -505,7 +512,14 @@ function UsersContent() {
         <Alert className="mb-6 bg-green-50 text-green-800 border-green-200">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertTitle>Success</AlertTitle>
-          <AlertDescription>{message}</AlertDescription>
+          <AlertDescription>
+            {(() => {
+              if (typeof message === 'object' && message !== null) {
+                return (message as any).en || (message as any).ar || "Success";
+              }
+              return message;
+            })()}
+          </AlertDescription>
         </Alert>
       )}
 
