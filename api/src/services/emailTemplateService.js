@@ -116,7 +116,7 @@ class EmailTemplateService {
     if (name === 'order_confirmation') {
       return await this.saveTemplate({
         name: "order_confirmation",
-        type: "transaction",
+        type: "order_confirmation",
         subject: {
           ar: "تأكيد إتمام الدفع - طلب رقم {{orderId}}",
           en: "Payment Confirmation - Order #{{orderId}}",
