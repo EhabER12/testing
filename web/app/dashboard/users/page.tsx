@@ -528,6 +528,41 @@ function UsersContent() {
           </DialogContent>
         </Dialog>
 
+        {/* Change Password Dialog */}
+        <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>{t("admin.users.changePassword") || "Change Password"}</DialogTitle>
+              <DialogDescription>
+                {t("admin.users.changePasswordDesc") || "Enter the new password for this user."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Label htmlFor="new-password">{t("admin.users.password") || "Password"}</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="******"
+                className="mt-2"
+              />
+              {newPassword.length > 0 && newPassword.length < 6 && (
+                <p className="text-destructive text-xs mt-1">Password must be at least 6 characters</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>
+                {t("admin.common.cancel")}
+              </Button>
+              <Button onClick={handleUpdatePassword} disabled={isLoading || newPassword.length < 6}>
+                {isLoading && <Loader2 className="mx-2 h-4 w-4 animate-spin" />}
+                {t("admin.common.confirm") || "Update"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
 
       {isError && (
