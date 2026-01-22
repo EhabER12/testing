@@ -82,7 +82,12 @@ export const userManagementSlice = createSlice({
         state.totalUsers = action.payload.data.pagination.total;
         state.limit = action.payload.data.pagination.limit;
         if (action.payload.message) {
-          state.message = action.payload.message;
+          const msg = action.payload.message;
+          if (typeof msg === 'object' && msg !== null) {
+            state.message = (msg as any).en || (msg as any).ar || JSON.stringify(msg);
+          } else {
+            state.message = String(msg);
+          }
         }
       })
       .addCase(getAllUsers.rejected, (state, action) => {
