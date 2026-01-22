@@ -258,3 +258,32 @@ export const rejectTeacher = createAsyncThunk<
     return thunkAPI.rejectWithValue(message);
   }
 });
+
+// Update User Password (Admin)
+export const updateUserPassword = createAsyncThunk<
+  User,
+  UpdateUserPasswordPayload,
+  { rejectValue: string }
+>("users/updatePassword", async ({ userId, password }, thunkAPI) => {
+  try {
+    const state = thunkAPI.getState() as { auth: { user?: { token: string } } };
+    const token = state.auth.user?.token;
+    if (!token) return thunkAPI.rejectWithValue("Not authorized");
+
+    const response = await axiosInstance.put(`/users/${userId}/password`, {
+      password,
+    });
+    return response.data.data;
+  } catch (error: any) {
+    let message =
+      (error.response && error.response.data && error.response.data.message) ||
+      error.message ||
+      error.toString();
+
+    // Handle bilingual message objects
+    if (typeof message === 'object' && message !== null) {
+      message = message.en || message.ar || JSON.stringify(message);
+    }
+    return thunkAPI.rejectWithValue(message);
+  }
+});
