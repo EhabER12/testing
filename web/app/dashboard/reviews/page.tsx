@@ -268,9 +268,9 @@ export default function ReviewsDashboardPage() {
             {statusFilter === ""
               ? t("admin.reviews.noReviewsFound")
               : t("admin.reviews.noReviewsWithStatus").replace(
-                  "{status}",
-                  statusFilter
-                )}
+                "{status}",
+                statusFilter
+              )}
           </p>
           {statusFilter && (
             <Button
@@ -291,7 +291,7 @@ export default function ReviewsDashboardPage() {
       {/* Table and Pagination */}
       {reviews.length > 0 && (
         <>
-          <div className="rounded-lg border">
+          <div className="rounded-lg border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -567,11 +567,10 @@ export default function ReviewsDashboardPage() {
                     {[...Array(5)].map((_, i) => (
                       <CheckCircle
                         key={i}
-                        className={`h-4 w-4 ${
-                          i < viewReview.rating
+                        className={`h-4 w-4 ${i < viewReview.rating
                             ? "fill-current"
                             : "fill-gray-200"
-                        }`}
+                          }`}
                       />
                     ))}
                   </div>

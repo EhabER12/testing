@@ -746,8 +746,8 @@ export default function FinanceDashboardPage() {
                           ? "اختر من القائمة"
                           : "Select from list"
                         : isRtl
-                        ? "تصنيف مخصص"
-                        : "Custom category"}
+                          ? "تصنيف مخصص"
+                          : "Custom category"}
                     </Button>
                   </div>
                   {useCustomCategory ? (
@@ -832,8 +832,8 @@ export default function FinanceDashboardPage() {
                       ? "جاري الإضافة..."
                       : "Adding..."
                     : isRtl
-                    ? "إضافة"
-                    : "Add"}
+                      ? "إضافة"
+                      : "Add"}
                 </Button>
               </div>
             </DialogContent>
@@ -947,9 +947,8 @@ export default function FinanceDashboardPage() {
             </CardHeader>
             <CardContent>
               <div
-                className={`text-2xl font-bold ${
-                  summary.balanceUSD >= 0 ? "text-green-600" : "text-red-600"
-                }`}
+                className={`text-2xl font-bold ${summary.balanceUSD >= 0 ? "text-green-600" : "text-red-600"
+                  }`}
               >
                 {formatCurrency(
                   toDisplayCurrency(summary.balanceUSD),
@@ -1162,117 +1161,115 @@ export default function FinanceDashboardPage() {
               {isRtl ? "لا توجد معاملات" : "No transactions found"}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead
-                    className="text-start cursor-pointer hover:bg-muted/50 select-none"
-                    onClick={() => handleSort("transactionDate")}
-                  >
-                    <div className="flex items-center">
-                      {isRtl ? "التاريخ" : "Date"}
-                      {getSortIcon("transactionDate")}
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="text-start cursor-pointer hover:bg-muted/50 select-none"
-                    onClick={() => handleSort("type")}
-                  >
-                    <div className="flex items-center">
-                      {isRtl ? "النوع" : "Type"}
-                      {getSortIcon("type")}
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="text-start cursor-pointer hover:bg-muted/50 select-none"
-                    onClick={() => handleSort("category")}
-                  >
-                    <div className="flex items-center">
-                      {isRtl ? "التصنيف" : "Category"}
-                      {getSortIcon("category")}
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-start">
-                    {isRtl ? "الوصف" : "Description"}
-                  </TableHead>
-                  <TableHead
-                    className={`${
-                      isRtl ? "text-left" : "text-right"
-                    } cursor-pointer hover:bg-muted/50 select-none`}
-                    onClick={() => handleSort("amount")}
-                  >
-                    <div
-                      className={`flex items-center ${
-                        isRtl ? "justify-start" : "justify-end"
-                      }`}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead
+                      className="text-start cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort("transactionDate")}
                     >
-                      {isRtl ? "المبلغ" : "Amount"}
-                      {getSortIcon("amount")}
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-start">
-                    {isRtl ? "المصدر" : "Source"}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTransactions.map((tx) => (
-                  <TableRow key={tx.id}>
-                    <TableCell className="whitespace-nowrap">
-                      {new Date(tx.transactionDate).toLocaleDateString(
-                        isRtl ? "ar-SA" : "en-US"
-                      )}
-                    </TableCell>
-                    <TableCell>{getTypeBadge(tx.type)}</TableCell>
-                    <TableCell>
-                      {translateCategory(tx.category || "")}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {tx.description || "-"}
-                    </TableCell>
-                    <TableCell
-                      className={`${
-                        isRtl ? "text-left" : "text-right"
-                      } font-medium ${
-                        tx.type === "income"
-                          ? "text-green-600"
-                          : tx.type === "expense"
-                          ? "text-red-600"
-                          : "text-blue-600"
-                      }`}
-                    >
-                      <div>
-                        {tx.type === "expense" ? "-" : ""}
-                        {formatCurrency(
-                          convertCurrency(
-                            tx.amount,
-                            tx.currency,
-                            displayCurrency
-                          ),
-                          displayCurrency
-                        )}
+                      <div className="flex items-center">
+                        {isRtl ? "التاريخ" : "Date"}
+                        {getSortIcon("transactionDate")}
                       </div>
-                      {tx.currency !== displayCurrency && (
-                        <div className="text-xs text-muted-foreground">
-                          ({formatCurrency(tx.amount, tx.currency)})
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {tx.source === "payment_auto"
-                          ? isRtl
-                            ? "تلقائي"
-                            : "Auto"
-                          : isRtl
-                          ? "يدوي"
-                          : "Manual"}
-                      </Badge>
-                    </TableCell>
+                    </TableHead>
+                    <TableHead
+                      className="text-start cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort("type")}
+                    >
+                      <div className="flex items-center">
+                        {isRtl ? "النوع" : "Type"}
+                        {getSortIcon("type")}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="text-start cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort("category")}
+                    >
+                      <div className="flex items-center">
+                        {isRtl ? "التصنيف" : "Category"}
+                        {getSortIcon("category")}
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-start">
+                      {isRtl ? "الوصف" : "Description"}
+                    </TableHead>
+                    <TableHead
+                      className={`${isRtl ? "text-left" : "text-right"
+                        } cursor-pointer hover:bg-muted/50 select-none`}
+                      onClick={() => handleSort("amount")}
+                    >
+                      <div
+                        className={`flex items-center ${isRtl ? "justify-start" : "justify-end"
+                          }`}
+                      >
+                        {isRtl ? "المبلغ" : "Amount"}
+                        {getSortIcon("amount")}
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-start">
+                      {isRtl ? "المصدر" : "Source"}
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransactions.map((tx) => (
+                    <TableRow key={tx.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {new Date(tx.transactionDate).toLocaleDateString(
+                          isRtl ? "ar-SA" : "en-US"
+                        )}
+                      </TableCell>
+                      <TableCell>{getTypeBadge(tx.type)}</TableCell>
+                      <TableCell>
+                        {translateCategory(tx.category || "")}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {tx.description || "-"}
+                      </TableCell>
+                      <TableCell
+                        className={`${isRtl ? "text-left" : "text-right"
+                          } font-medium ${tx.type === "income"
+                            ? "text-green-600"
+                            : tx.type === "expense"
+                              ? "text-red-600"
+                              : "text-blue-600"
+                          }`}
+                      >
+                        <div>
+                          {tx.type === "expense" ? "-" : ""}
+                          {formatCurrency(
+                            convertCurrency(
+                              tx.amount,
+                              tx.currency,
+                              displayCurrency
+                            ),
+                            displayCurrency
+                          )}
+                        </div>
+                        {tx.currency !== displayCurrency && (
+                          <div className="text-xs text-muted-foreground">
+                            ({formatCurrency(tx.amount, tx.currency)})
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {tx.source === "payment_auto"
+                            ? isRtl
+                              ? "تلقائي"
+                              : "Auto"
+                            : isRtl
+                              ? "يدوي"
+                              : "Manual"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
 
           {/* Pagination */}
