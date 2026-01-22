@@ -33,7 +33,6 @@ interface UpdateUserPayload {
   name?: string;
   email?: string;
   role?: string;
-  role?: string;
   status?: string;
 }
 

@@ -7,7 +7,6 @@ import {
   deleteUser,
   updateUser,
   approveTeacher,
-  approveTeacher,
   rejectTeacher,
   updateUserPassword,
 } from "../services/userService";
