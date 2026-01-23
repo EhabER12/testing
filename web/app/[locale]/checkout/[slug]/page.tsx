@@ -31,8 +31,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
     getManualPaymentMethodsThunk,
-    getPaymentGatewaysThunk,
 } from "@/store/services/settingsService";
+import {
+    getPaymentMethodsThunk,
+} from "@/store/services/paymentMethodService";
 import {
     createCustomerManualPaymentThunk,
     createPaypalPaymentThunk,
@@ -86,7 +88,7 @@ export default function CourseCheckoutPage() {
     const [paymentProof, setPaymentProof] = useState<File | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
-    const [gateways, setGateways] = useState<any>({});
+    const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
 
     // Fetch course data
     useEffect(() => {
@@ -98,7 +100,14 @@ export default function CourseCheckoutPage() {
     // Initialize payment methods
     useEffect(() => {
         dispatch(getManualPaymentMethodsThunk());
-        dispatch(getPaymentGatewaysThunk()).unwrap().then(setGateways).catch(console.error);
+        // Fetch both active payment methods (PayPal, Cashier)
+        dispatch(getPaymentMethodsThunk({ includeInactive: false }))
+            .unwrap()
+            .then(setPaymentMethods)
+            .catch((err) => {
+                console.error("Failed to load payment methods:", err);
+                setPaymentMethods([]);
+            });
     }, [dispatch]);
 
     // Pre-fill form with user data when logged in
@@ -573,7 +582,7 @@ export default function CourseCheckoutPage() {
                                         className="space-y-3"
                                     >
                                         {/* PayPal Option */}
-                                        {gateways?.paypal?.isEnabled && (
+                                        {paymentMethods.find((m) => m.provider === "paypal" && m.isActive) && (
                                             <div
                                                 className={`rounded-xl border-2 transition-all overflow-hidden ${selectedMethodId === "paypal"
                                                     ? "border-primary bg-primary/5"
@@ -595,7 +604,7 @@ export default function CourseCheckoutPage() {
                                         )}
 
                                         {/* Cashier Option */}
-                                        {gateways?.cashier?.isEnabled && (
+                                        {paymentMethods.find((m) => m.provider === "cashier" && m.isActive) && (
                                             <div
                                                 className={`rounded-xl border-2 transition-all overflow-hidden ${selectedMethodId === "cashier"
                                                     ? "border-primary bg-primary/5"
