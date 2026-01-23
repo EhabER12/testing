@@ -335,6 +335,29 @@ export const capturePaypalOrder = async (req, res, next) => {
   }
 };
 
+
+
+// @desc    PayPal Webhook
+// @route   POST /api/payments/paypal/webhook
+// @access  Public
+export const paypalWebhook = async (req, res, next) => {
+  try {
+    // PayPal expects 200 OK immediately
+    await paymentService.handlePaypalWebhook(req.body);
+
+    res.status(200).json({
+      success: true,
+      message: "Webhook processed",
+    });
+  } catch (error) {
+    console.error("PayPal webhook error:", error.message);
+    res.status(200).json({
+      success: false,
+      message: "Webhook failed",
+    });
+  }
+};
+
 // ==================== Cashier ====================
 
 // @desc    Create Cashier payment

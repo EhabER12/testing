@@ -13,6 +13,7 @@ import {
   capturePaypalOrder,
   createCashierPayment,
   cashierCallback,
+  paypalWebhook,
 } from "../controllers/paymentController.js";
 import {
   protect,
@@ -53,6 +54,7 @@ router.post(
 // ==================== PayPal ====================
 router.post("/paypal/create", protect, createPaypalPayment);
 router.post("/paypal/capture/:orderId", protect, capturePaypalOrder);
+router.post("/paypal/webhook", paypalWebhook); // Public
 
 // ==================== Cashier ====================
 router.post("/cashier/create", protect, createCashierPayment);

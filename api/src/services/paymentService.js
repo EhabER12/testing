@@ -582,9 +582,41 @@ export class PaymentService {
           return payment;
         }
       }
-      return captureData;
     } catch (error) {
       throw error;
+    }
+  }
+
+  async handlePaypalWebhook(payload) {
+    try {
+      const eventType = payload.event_type;
+      const resource = payload.resource;
+
+      console.log(`🔔 PayPal Webhook Event: ${eventType}`);
+
+      if (eventType === "PAYMENT.CAPTURE.COMPLETED") {
+        const orderId = resource.supplementary_data?.related_ids?.order_id || resource.id;
+        // In some cases resource.id might be capture ID, need careful handling.
+        // Usually we track by custom_id or invoice_id if we set it, or simple search.
+        // Let's try to match by order ID if available in our DB.
+
+        // Strategy: 
+        // 1. Try to find payment by paypalOrderId (if we stored it)
+        // 2. Or by merchantOrderId (if we passed it as custom_id/invoice_id)
+
+        // For now, let's just log. Full implementation requires mapping PayPal resource back to Payment.
+        // Assuming we rely on frontend capture for now, this is a backup/verification.
+
+        console.log("✅ PayPal Payment Captured (Webhook)", JSON.stringify(resource, null, 2));
+      } else if (eventType === "PAYMENT.CAPTURE.DENIED") {
+        console.log("❌ PayPal Payment Denied (Webhook)", resource);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("PayPal Webhook Error:", error);
+      // Return true anyway to stop PayPal retries if it's an internal error we can't fix
+      return true;
     }
   }
 
