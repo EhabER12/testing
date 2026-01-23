@@ -18,7 +18,7 @@ export const uploadImage = async (file: File): Promise<string> => {
     formData.append("image", file);
 
     const response = await axiosInstance.post<UploadImageResponse>(
-        "/uploads/image",
+        "upload/image",
         formData,
         {
             headers: {

@@ -98,7 +98,7 @@ export default function EditCoursePage() {
                     en: currentCourse.shortDescription?.en || "",
                 },
                 thumbnail: currentCourse.thumbnail || "",
-                categoryId: typeof currentCourse.categoryId === "object"
+                categoryId: currentCourse.categoryId && typeof currentCourse.categoryId === "object"
                     ? (currentCourse.categoryId as any).id || (currentCourse.categoryId as any)._id || ""
                     : currentCourse.categoryId || "",
                 accessType: currentCourse.accessType || "free",
@@ -119,7 +119,7 @@ export default function EditCoursePage() {
         if (currentCourse && user) {
             // Check if teacher is trying to access someone else's course
             if (isTeacher() && !isAdmin()) {
-                const courseInstructorId = typeof currentCourse.instructorId === "object"
+                const courseInstructorId = currentCourse.instructorId && typeof currentCourse.instructorId === "object"
                     ? (currentCourse.instructorId as any)._id || (currentCourse.instructorId as any).id
                     : currentCourse.instructorId;
 
