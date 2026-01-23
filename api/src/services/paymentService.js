@@ -11,6 +11,7 @@ import Service from "../models/serviceModel.js";
 import logger from "../utils/logger.js";
 import * as paypalClient from "./paypal.js";
 import { kashierService } from "./cashierService.js";
+import PaymentMethod from "../models/paymentMethodSchema.js";
 
 export class PaymentService {
   constructor() {
@@ -490,12 +491,18 @@ export class PaymentService {
   // ==================== NEW: PayPal & Cashier Integration ====================
 
   async getGatewayConfig(gatewayName) {
-    const settings = await this.settingsRepository.getSettings();
-    const gateway = settings.paymentGateways[gatewayName];
-    if (!gateway || !gateway.isEnabled) {
+    const gateway = await PaymentMethod.findOne({ provider: gatewayName.toLowerCase() });
+
+    if (!gateway || !gateway.isActive) {
       throw new ApiError(400, `${gatewayName} payment is disabled or not configured`);
     }
-    return gateway; // Returns { isEnabled, mode, credentials, config }
+
+    return {
+      isEnabled: gateway.isActive,
+      mode: gateway.mode,
+      credentials: gateway.credentials,
+      config: gateway.config
+    };
   }
 
   // --- PayPal ---

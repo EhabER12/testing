@@ -318,7 +318,7 @@ export const createPaypalPayment = async (req, res, next) => {
 export const capturePaypalOrder = async (req, res, next) => {
   try {
     const { orderId } = req.params;
-    const userId = req.user._id;
+    const userId = req.user?._id; // Optional
 
     const payment = await paymentService.capturePaypalOrder({
       orderId,
@@ -365,12 +365,22 @@ export const paypalWebhook = async (req, res, next) => {
 // @access  Private
 export const createCashierPayment = async (req, res, next) => {
   try {
-    const { courseId, amount, currency = "EGP" } = req.body;
-    const userId = req.user._id;
+    const { courseId, amount, currency = "EGP", customer } = req.body;
+    const userId = req.user?._id;
     const user = req.user;
 
     if (!courseId || !amount) {
       return next(new ApiError(400, "Course ID and amount are required"));
+    }
+
+    // Determine customer info (use provided customer object or logged in user)
+    const finalCustomer = customer || {
+      name: user?.name?.en || user?.name?.ar || user?.fullName || "Guest Customer",
+      email: user?.email || "guest@genoun.com",
+    };
+
+    if (!finalCustomer.email) {
+      return next(new ApiError(400, "Customer email is required for payment"));
     }
 
     const payment = await paymentService.createCashierPayment({
@@ -378,10 +388,7 @@ export const createCashierPayment = async (req, res, next) => {
       courseId,
       amount,
       currency,
-      customer: {
-        name: user.name?.en || user.name?.ar || "Customer",
-        email: user.email,
-      },
+      customer: finalCustomer,
     });
 
     return ApiResponse.success(
