@@ -70,12 +70,12 @@ export default function PaymentMethodsPage() {
             if (paypalMethod) {
                 setPaypal(paypalMethod);
                 setPaypalForm({
-                    clientId: paypalMethod.credentials.clientId || "",
-                    clientSecret: paypalMethod.credentials.clientSecret || "",
-                    webhookId: paypalMethod.credentials.webhookId || "",
+                    clientId: paypalMethod.credentials?.clientId || "",
+                    clientSecret: paypalMethod.credentials?.clientSecret || "",
+                    webhookId: paypalMethod.credentials?.webhookId || "",
                     mode: paypalMethod.mode as "sandbox" | "live",
-                    returnUrl: paypalMethod.config.returnUrl || "",
-                    cancelUrl: paypalMethod.config.cancelUrl || "",
+                    returnUrl: paypalMethod.config?.returnUrl || "",
+                    cancelUrl: paypalMethod.config?.cancelUrl || "",
                     isActive: paypalMethod.isActive,
                 });
             }
@@ -83,13 +83,13 @@ export default function PaymentMethodsPage() {
             if (cashierMethod) {
                 setCashier(cashierMethod);
                 setCashierForm({
-                    mid: cashierMethod.credentials.mid || "",
-                    paymentApiKey: cashierMethod.credentials.paymentApiKey || "",
-                    secretKey: cashierMethod.credentials.secretKey || "",
+                    mid: cashierMethod.credentials?.mid || "",
+                    paymentApiKey: cashierMethod.credentials?.paymentApiKey || "",
+                    secretKey: cashierMethod.credentials?.secretKey || "",
                     mode: cashierMethod.mode as "sandbox" | "live",
-                    checkoutUrl: cashierMethod.config.checkoutUrl || "",
-                    callbackUrl: cashierMethod.config.callbackUrl || "",
-                    redirectUrl: cashierMethod.config.redirectUrl || "",
+                    checkoutUrl: cashierMethod.config?.checkoutUrl || "",
+                    callbackUrl: cashierMethod.config?.callbackUrl || "",
+                    redirectUrl: cashierMethod.config?.redirectUrl || "",
                     isActive: cashierMethod.isActive,
                 });
             }
