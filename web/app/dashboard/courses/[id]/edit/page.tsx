@@ -75,6 +75,10 @@ export default function EditCoursePage() {
         examQuizId: "",
     });
 
+    // Extract course data safely (handle array if it happens)
+    const courseDataRaw = Array.isArray(currentCourse) ? currentCourse[0] : currentCourse;
+    const isReady = courseDataRaw && (courseDataRaw.id || courseDataRaw._id) === id;
+
     useEffect(() => {
         dispatch(clearCurrentCourse());
         dispatch(getCategories({ active: true }));
@@ -85,36 +89,40 @@ export default function EditCoursePage() {
     }, [dispatch, id]);
 
     useEffect(() => {
-        if (currentCourse && (currentCourse.id || currentCourse._id) === id) {
+        if (courseDataRaw) {
             setFormData({
                 title: {
-                    ar: currentCourse.title?.ar || "",
-                    en: currentCourse.title?.en || "",
+                    ar: courseDataRaw.title?.ar || "",
+                    en: courseDataRaw.title?.en || "",
                 },
                 description: {
-                    ar: currentCourse.description?.ar || "",
-                    en: currentCourse.description?.en || "",
+                    ar: courseDataRaw.description?.ar || "",
+                    en: courseDataRaw.description?.en || "",
                 },
                 shortDescription: {
-                    ar: currentCourse.shortDescription?.ar || "",
-                    en: currentCourse.shortDescription?.en || "",
+                    ar: courseDataRaw.shortDescription?.ar || "",
+                    en: courseDataRaw.shortDescription?.en || "",
                 },
-                thumbnail: currentCourse.thumbnail || "",
-                categoryId: currentCourse.categoryId && typeof currentCourse.categoryId === "object"
-                    ? (currentCourse.categoryId as any).id || (currentCourse.categoryId as any)._id || ""
-                    : currentCourse.categoryId || "",
-                accessType: currentCourse.accessType || "free",
-                price: currentCourse.price?.toString() || "",
-                duration: currentCourse.duration?.toString() || "",
-                level: currentCourse.level || "beginner",
-                language: currentCourse.language || "ar",
-                certificateEnabled: currentCourse.certificateSettings?.enabled || false,
-                requiresExam: currentCourse.certificateSettings?.requiresExam || false,
-                passingScore: currentCourse.certificateSettings?.passingScore?.toString() || "",
-                examQuizId: currentCourse.certificateSettings?.examQuizId || "",
+                thumbnail: courseDataRaw.thumbnail || "",
+                categoryId: courseDataRaw.categoryId && typeof courseDataRaw.categoryId === "object"
+                    ? (courseDataRaw.categoryId as any).id || (courseDataRaw.categoryId as any)._id || ""
+                    : courseDataRaw.categoryId || "",
+                accessType: courseDataRaw.accessType || "free",
+                price: courseDataRaw.price?.toString() || "",
+                duration: courseDataRaw.duration?.toString() || "",
+                level: courseDataRaw.level || "beginner",
+                language: courseDataRaw.language || "ar",
+                certificateEnabled: courseDataRaw.certificateSettings?.enabled || false,
+                requiresExam: courseDataRaw.certificateSettings?.requiresExam || false,
+                passingScore: courseDataRaw.certificateSettings?.passingScore?.toString() || "",
+                examQuizId: courseDataRaw.certificateSettings?.examQuizId || "",
             });
+            // Update preview if thumbnail exists
+            if (courseDataRaw.thumbnail) {
+                setThumbnailPreview(courseDataRaw.thumbnail);
+            }
         }
-    }, [currentCourse, id]);
+    }, [courseDataRaw]);
 
     // Authorization check: Teachers can only edit their own courses
     useEffect(() => {
@@ -210,7 +218,7 @@ export default function EditCoursePage() {
         setThumbnailPreview(null);
     };
 
-    if (courseLoading || !currentCourse || (currentCourse.id || currentCourse._id) !== id) {
+    if (courseLoading || !isReady) {
         return (
             <div className="flex h-full items-center justify-center p-8">
                 <Loader2 className="h-16 w-16 animate-spin text-genoun-green" />
