@@ -23,8 +23,17 @@ import {
   TrendingUp,
   CheckCircle,
   Star,
+  Search,
 } from "lucide-react";
 import Image from "next/image";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function CoursesPage() {
   const params = useParams();
@@ -38,11 +47,28 @@ export default function CoursesPage() {
   const { categories } = useAppSelector((state) => state.categories);
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedAccess, setSelectedAccess] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
-    dispatch(getCourses());
+    const filters: any = { isPublished: true };
+    if (debouncedSearch) filters.search = debouncedSearch;
+    if (selectedCategory !== "all") filters.categoryId = selectedCategory;
+    if (selectedLevel !== "all") filters.level = selectedLevel;
+    if (selectedAccess !== "all") filters.accessType = selectedAccess;
+
+    dispatch(getCourses(filters));
     dispatch(getCategories({ active: true }));
-  }, [dispatch]);
+  }, [dispatch, debouncedSearch, selectedCategory, selectedLevel, selectedAccess]);
 
   const getTextValue = (value: any): string => {
     if (!value) return "";
@@ -68,20 +94,8 @@ export default function CoursesPage() {
     return isRtl ? types[accessType]?.ar || accessType : types[accessType]?.en || accessType;
   };
 
-  const filteredCourses = courses.filter((course) => {
-    if (!course.isPublished) return false;
-    if (selectedLevel !== "all" && course.level !== selectedLevel) return false;
-    
-    // Handle category filtering - categoryId can be a string or an object
-    if (selectedCategory !== "all") {
-      const courseCategoryId = typeof course.categoryId === "string" 
-        ? course.categoryId 
-        : (course.categoryId as any)?.id || (course.categoryId as any)?._id;
-      if (courseCategoryId !== selectedCategory) return false;
-    }
-    
-    return true;
-  });
+  // Courses are now filtered server-side
+  const filteredCourses = courses;
 
   const handleCourseClick = (slug: string | undefined) => {
     if (slug) {
@@ -117,44 +131,60 @@ export default function CoursesPage() {
 
       {/* Filters */}
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-wrap gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={isRtl ? "بحث بعنواين الدورات..." : "Search courses..."}
+              className={isRtl ? "pr-9" : "pl-9"}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
           {/* Category Filter */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {isRtl ? "التصنيف" : "Category"}
-            </label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-genoun-green min-w-[200px]"
-            >
-              <option value="all">{isRtl ? "جميع التصنيفات" : "All Categories"}</option>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger>
+              <SelectValue placeholder={isRtl ? "التصنيف" : "Category"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isRtl ? "جميع التصنيفات" : "All Categories"}</SelectItem>
               {categories
                 .filter((cat) => cat.isActive)
                 .map((category) => (
-                  <option key={category.id} value={category.id}>
+                  <SelectItem key={category.id} value={category.id}>
                     {getTextValue(category.name)}
-                  </option>
+                  </SelectItem>
                 ))}
-            </select>
-          </div>
+            </SelectContent>
+          </Select>
 
           {/* Level Filter */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              {isRtl ? "المستوى" : "Level"}
-            </label>
-            <select
-              value={selectedLevel}
-              onChange={(e) => setSelectedLevel(e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-genoun-green min-w-[200px]"
-            >
-              <option value="all">{isRtl ? "جميع المستويات" : "All Levels"}</option>
-              <option value="beginner">{isRtl ? "مبتدئ" : "Beginner"}</option>
-              <option value="intermediate">{isRtl ? "متوسط" : "Intermediate"}</option>
-              <option value="advanced">{isRtl ? "متقدم" : "Advanced"}</option>
-            </select>
-          </div>
+          <Select value={selectedLevel} onValueChange={setSelectedLevel}>
+            <SelectTrigger>
+              <SelectValue placeholder={isRtl ? "المستوى" : "Level"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isRtl ? "جميع المستويات" : "All Levels"}</SelectItem>
+              <SelectItem value="beginner">{isRtl ? "مبتدئ" : "Beginner"}</SelectItem>
+              <SelectItem value="intermediate">{isRtl ? "متوسط" : "Intermediate"}</SelectItem>
+              <SelectItem value="advanced">{isRtl ? "متقدم" : "Advanced"}</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Access Filter */}
+          <Select value={selectedAccess} onValueChange={setSelectedAccess}>
+            <SelectTrigger>
+              <SelectValue placeholder={isRtl ? "نوع الوصول" : "Access Type"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isRtl ? "الكل" : "All Access"}</SelectItem>
+              <SelectItem value="free">{isRtl ? "مجاني" : "Free"}</SelectItem>
+              <SelectItem value="paid">{isRtl ? "مدفوع" : "Paid"}</SelectItem>
+              <SelectItem value="byPackage">{isRtl ? "بالباقة" : "Package"}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Courses Grid */}
@@ -272,10 +302,10 @@ export default function CoursesPage() {
                         ? "سجل مجاناً"
                         : "Enroll Free"
                       : course.price
-                      ? `${course.price} ${isRtl ? (course.currency === 'EGP' ? 'ج.م' : course.currency) : course.currency}`
-                      : isRtl
-                      ? "عرض التفاصيل"
-                      : "View Details"}
+                        ? `${course.price} ${isRtl ? (course.currency === 'EGP' ? 'ج.م' : course.currency) : course.currency}`
+                        : isRtl
+                          ? "عرض التفاصيل"
+                          : "View Details"}
                   </Button>
                 </CardFooter>
               </Card>
