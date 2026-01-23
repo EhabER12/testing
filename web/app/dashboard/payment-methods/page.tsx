@@ -6,6 +6,7 @@ import {
     getPaymentMethodsThunk,
     updatePaymentMethodThunk,
     togglePaymentMethodThunk,
+    createPaymentMethodThunk,
     PaymentMethod,
 } from "@/store/services/paymentMethodService";
 import { Button } from "@/components/ui/button";
@@ -101,12 +102,11 @@ export default function PaymentMethodsPage() {
 
     const handlePayPalSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!paypal) return;
 
         try {
             setSaving(true);
 
-            const updateData: Partial<PaymentMethod> = {
+            const paymentData: Partial<PaymentMethod> = {
                 credentials: {
                     clientId: paypalForm.clientId,
                     clientSecret: paypalForm.clientSecret,
@@ -120,14 +120,34 @@ export default function PaymentMethodsPage() {
                 isActive: paypalForm.isActive,
             };
 
-            await dispatch(
-                updatePaymentMethodThunk({ id: paypal._id, data: updateData })
-            ).unwrap();
+            if (paypal) {
+                // Update existing PayPal method
+                await dispatch(
+                    updatePaymentMethodThunk({ id: paypal._id, data: paymentData })
+                ).unwrap();
+                toast.success("PayPal configuration updated successfully");
+            } else {
+                // Create new PayPal method
+                const createData = {
+                    ...paymentData,
+                    provider: "paypal" as const,
+                    displayName: {
+                        ar: "باي بال",
+                        en: "PayPal",
+                    },
+                    description: {
+                        ar: "الدفع عبر باي بال",
+                        en: "Pay with PayPal",
+                    },
+                    order: 1,
+                };
+                await dispatch(createPaymentMethodThunk(createData)).unwrap();
+                toast.success("PayPal configuration created successfully");
+            }
 
-            toast.success("PayPal configuration updated successfully");
             await loadPaymentMethods();
         } catch (error: any) {
-            toast.error(error || "Failed to update PayPal configuration");
+            toast.error(error || "Failed to save PayPal configuration");
         } finally {
             setSaving(false);
         }
@@ -135,12 +155,11 @@ export default function PaymentMethodsPage() {
 
     const handleCashierSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!cashier) return;
 
         try {
             setSaving(true);
 
-            const updateData: Partial<PaymentMethod> = {
+            const paymentData: Partial<PaymentMethod> = {
                 credentials: {
                     mid: cashierForm.mid,
                     paymentApiKey: cashierForm.paymentApiKey,
@@ -155,14 +174,34 @@ export default function PaymentMethodsPage() {
                 isActive: cashierForm.isActive,
             };
 
-            await dispatch(
-                updatePaymentMethodThunk({ id: cashier._id, data: updateData })
-            ).unwrap();
+            if (cashier) {
+                // Update existing Cashier method
+                await dispatch(
+                    updatePaymentMethodThunk({ id: cashier._id, data: paymentData })
+                ).unwrap();
+                toast.success("Cashier configuration updated successfully");
+            } else {
+                // Create new Cashier method
+                const createData = {
+                    ...paymentData,
+                    provider: "cashier" as const,
+                    displayName: {
+                        ar: "كاشير",
+                        en: "Cashier",
+                    },
+                    description: {
+                        ar: "الدفع عبر كاشير",
+                        en: "Pay with Cashier (Kashier)",
+                    },
+                    order: 2,
+                };
+                await dispatch(createPaymentMethodThunk(createData)).unwrap();
+                toast.success("Cashier configuration created successfully");
+            }
 
-            toast.success("Cashier configuration updated successfully");
             await loadPaymentMethods();
         } catch (error: any) {
-            toast.error(error || "Failed to update Cashier configuration");
+            toast.error(error || "Failed to save Cashier configuration");
         } finally {
             setSaving(false);
         }
@@ -319,9 +358,9 @@ export default function PaymentMethodsPage() {
                                     />
                                 </div>
 
-                                <Button type="submit" disabled={saving || !paypal}>
+                                <Button type="submit" disabled={saving}>
                                     {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                    Save PayPal Configuration
+                                    {paypal ? "Save PayPal Configuration" : "Create PayPal Configuration"}
                                 </Button>
                             </form>
                         </CardContent>
@@ -454,9 +493,9 @@ export default function PaymentMethodsPage() {
                                     />
                                 </div>
 
-                                <Button type="submit" disabled={saving || !cashier}>
+                                <Button type="submit" disabled={saving}>
                                     {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                    Save Cashier Configuration
+                                    {cashier ? "Save Cashier Configuration" : "Create Cashier Configuration"}
                                 </Button>
                             </form>
                         </CardContent>
