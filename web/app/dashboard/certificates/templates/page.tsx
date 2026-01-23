@@ -79,6 +79,7 @@ export default function CertificateDesignerPage() {
     backgroundImage: string;
     width: number;
     height: number;
+    orientation: "portrait" | "landscape";
     placeholders: {
       studentName: Placeholder;
       courseName: Placeholder;
@@ -93,6 +94,7 @@ export default function CertificateDesignerPage() {
     backgroundImage: "",
     width: 1200,
     height: 900,
+    orientation: "landscape",
     placeholders: {
       studentName: { x: 600, y: 400, fontSize: 40, fontFamily: "Cairo", color: "#000000", align: "center", fontWeight: "bold" },
       courseName: { x: 600, y: 500, fontSize: 30, fontFamily: "Cairo", color: "#000000", align: "center", fontWeight: "normal" },
@@ -121,6 +123,7 @@ export default function CertificateDesignerPage() {
       backgroundImage: template.backgroundImage,
       width: template.width,
       height: template.height,
+      orientation: (template as any).orientation || "landscape",
       placeholders: {
         studentName: template.placeholders.studentName,
         courseName: template.placeholders.courseName,
@@ -140,6 +143,7 @@ export default function CertificateDesignerPage() {
       backgroundImage: "",
       width: 1200,
       height: 900,
+      orientation: "landscape",
       placeholders: {
         studentName: { x: 600, y: 400, fontSize: 40, fontFamily: "Cairo", color: "#000000", align: "center", fontWeight: "bold" },
         courseName: { x: 600, y: 500, fontSize: 30, fontFamily: "Cairo", color: "#000000", align: "center", fontWeight: "normal" },
@@ -439,6 +443,43 @@ export default function CertificateDesignerPage() {
                 <Switch checked={design.isDefault} onCheckedChange={(val) => setDesign({ ...design, isDefault: val })} />
               </div>
 
+              {/* Orientation Switcher */}
+              <div className="space-y-2">
+                <Label>{isRtl ? "اتجاه الصفحة" : "Page Orientation"}</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={design.orientation === "landscape" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      const newOrientation = "landscape";
+                      // Swap width/height if changing from portrait to landscape
+                      const newWidth = design.orientation === "portrait" && design.width < design.height ? design.height : design.width;
+                      const newHeight = design.orientation === "portrait" && design.width < design.height ? design.width : design.height;
+                      setDesign({ ...design, orientation: newOrientation, width: newWidth, height: newHeight });
+                    }}
+                    className={design.orientation === "landscape" ? "bg-genoun-green hover:bg-genoun-green/90" : ""}
+                  >
+                    📄 {isRtl ? "أفقي" : "Landscape"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={design.orientation === "portrait" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      const newOrientation = "portrait";
+                      // Swap width/height if changing from landscape to portrait
+                      const newWidth = design.orientation === "landscape" && design.width > design.height ? design.height : design.width;
+                      const newHeight = design.orientation === "landscape" && design.width > design.height ? design.width : design.height;
+                      setDesign({ ...design, orientation: newOrientation, width: newWidth, height: newHeight });
+                    }}
+                    className={design.orientation === "portrait" ? "bg-genoun-green hover:bg-genoun-green/90" : ""}
+                  >
+                    📃 {isRtl ? "رأسي" : "Portrait"}
+                  </Button>
+                </div>
+              </div>
+
               <div className="border-t pt-4 flex flex-col gap-2">
                 <Button variant="outline" size="sm" onClick={addCustomText} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
@@ -510,9 +551,9 @@ export default function CertificateDesignerPage() {
                                 <SelectItem value="Tajawal">Tajawal - تجوال</SelectItem>
                                 <SelectItem value="Almarai">Almarai - المرعى</SelectItem>
                                 <SelectItem value="Noto Kufi Arabic">Noto Kufi Arabic</SelectItem>
-                                <SelectItem value="Changa">Changa - شانغا</SelectItem>
-                                <SelectItem value="Arial">Arial</SelectItem>
-                                <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                                <SelectItem value="Great Vibes">✍️ Great Vibes (Signature)</SelectItem>
+                                <SelectItem value="Dancing Script">✍️ Dancing Script (Signature)</SelectItem>
+                                <SelectItem value="Pacifico">✍️ Pacifico (Signature)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -600,9 +641,9 @@ export default function CertificateDesignerPage() {
                                   <SelectItem value="Tajawal">Tajawal - تجوال</SelectItem>
                                   <SelectItem value="Almarai">Almarai - المرعى</SelectItem>
                                   <SelectItem value="Noto Kufi Arabic">Noto Kufi Arabic</SelectItem>
-                                  <SelectItem value="Changa">Changa - شانغا</SelectItem>
-                                  <SelectItem value="Arial">Arial</SelectItem>
-                                  <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                                  <SelectItem value="Great Vibes">✍️ Great Vibes (Signature)</SelectItem>
+                                  <SelectItem value="Dancing Script">✍️ Dancing Script (Signature)</SelectItem>
+                                  <SelectItem value="Pacifico">✍️ Pacifico (Signature)</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>

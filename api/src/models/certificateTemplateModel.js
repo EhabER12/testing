@@ -49,6 +49,11 @@ const certificateTemplateSchema = new mongoose.Schema(
       type: Number,
       default: 900, // pixels
     },
+    orientation: {
+      type: String,
+      enum: ["portrait", "landscape"],
+      default: "landscape",
+    },
 
     // Text Placeholders Positions
     placeholders: {

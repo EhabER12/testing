@@ -44,9 +44,11 @@ class PDFGenerationService {
       "Amiri": "Amiri-Regular.ttf",
       "Tajawal": "Tajawal-Regular.ttf",
       "Almarai": "Almarai-Regular.ttf",
-      "Changa": "Changa-Regular.ttf",
       "Noto Kufi Arabic": "NotoKufiArabic-Regular.ttf",
-      "Noto Sans Arabic": "NotoSansArabic-Regular.ttf",
+      // Signature Fonts
+      "Great Vibes": "GreatVibes-Regular.ttf",
+      "Dancing Script": "DancingScript-Regular.ttf",
+      "Pacifico": "Pacifico-Regular.ttf",
     };
 
     return fontMap[fontFamily] || "Cairo-Regular.ttf";
@@ -86,10 +88,20 @@ class PDFGenerationService {
       pdfDoc.registerFontkit(fontkit);
 
       // Set page size based on template
-      const page = pdfDoc.addPage([
-        template.width || 1200,
-        template.height || 900,
-      ]);
+      // Support orientation: swap width/height for portrait
+      let pageWidth = template.width || 1200;
+      let pageHeight = template.height || 900;
+
+      // If orientation is portrait and width > height, swap them
+      if (template.orientation === 'portrait' && pageWidth > pageHeight) {
+        [pageWidth, pageHeight] = [pageHeight, pageWidth];
+      }
+      // If orientation is landscape and height > width, swap them
+      else if (template.orientation === 'landscape' && pageHeight > pageWidth) {
+        [pageWidth, pageHeight] = [pageHeight, pageWidth];
+      }
+
+      const page = pdfDoc.addPage([pageWidth, pageHeight]);
 
       const { width, height } = page.getSize();
 

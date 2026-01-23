@@ -57,6 +57,7 @@ export interface CertificateTemplate {
   backgroundImage: string;
   width: number;
   height: number;
+  orientation?: "portrait" | "landscape";
   placeholders: {
     studentName: Placeholder;
     courseName: Placeholder;
