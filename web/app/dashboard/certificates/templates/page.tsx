@@ -63,6 +63,9 @@ import { toast } from "react-hot-toast";
 import axios from "@/lib/axios";
 import Link from "next/link";
 
+// Google Fonts URL for all required fonts
+const GOOGLE_FONTS_URL = "https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@200..1000&family=Changa:wght@200..800&family=Dancing+Script:wght@400..700&family=Great+Vibes&family=Noto+Kufi+Arabic:wght@100..900&family=Pacifico&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap";
+
 export default function CertificateDesignerPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -111,6 +114,9 @@ export default function CertificateDesignerPage() {
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const [previewScale, setPreviewScale] = useState(0.5);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Dragging State
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     dispatch(getAllTemplates());
@@ -311,20 +317,80 @@ export default function CertificateDesignerPage() {
     });
   };
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>, type: "standard" | "custom" | "image", indexOrKey: string | number) => {
+    e.stopPropagation();
     if (!containerRef.current) return;
 
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = Math.round((e.clientX - rect.left) / previewScale);
-    const y = Math.round((e.clientY - rect.top) / previewScale);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetX = (e.clientX - rect.left) / previewScale;
+    const offsetY = (e.clientY - rect.top) / previewScale;
+
+    setDragOffset({ x: offsetX, y: offsetY });
+    setIsDragging(true);
+
+    if (type === "standard") {
+      setActiveType("standard");
+      setActivePlaceholder(indexOrKey as string);
+    } else if (type === "custom") {
+      setActiveType("custom");
+      setActiveIndex(indexOrKey as number);
+    } else if (type === "image") {
+      setActiveType("image");
+      setActiveIndex(indexOrKey as number);
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || !containerRef.current) return;
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+    // Calculate mouse position relative to container
+    const mouseX = (e.clientX - containerRect.left) / previewScale;
+    const mouseY = (e.clientY - containerRect.top) / previewScale;
+
+    // Calculate new element position (top-left) by subtracting offset
+    // Note: This assumes we want to move the top-left of the element to mouse position minus offset
+    // Which effectively keeps the mouse at the same relative point on the element
+    // wait, I only have the offset from the element top-left.
+    // So new_x = mouseX - dragOffset.x? No. dragOffset was clicked point relative to element top-left?
+    // Let's refine:
+    // We need element current x,y.
+    // Actually simpler:
+    // Update X/Y to (mouseX) - (dragOffset from element origin).
+    // In handleMouseDown, offsetX/Y is relative to element.
+    // So NewX = MouseXInContainer - OffsetX.
+
+    // MousePosInContainer
+    const currentX = Math.round(mouseX);
+    const currentY = Math.round(mouseY);
+
+    // We need the internal offset calculated in MouseDown.
+    // Let's correct handleMouseDown to calculate offset from ELEMENT top-left.
+    // e.currentTarget is the ELEMENT. rect is element rect.
+    // So offsetX/Y IS correct.
+
+    const newX = Math.round(mouseX - dragOffset.x);
+    const newY = Math.round(mouseY - dragOffset.y);
 
     if (activeType === "standard") {
-      updatePlaceholder(activePlaceholder, { x, y });
+      updatePlaceholder(activePlaceholder, { x: newX, y: newY });
     } else if (activeType === "custom") {
-      updatePlaceholder("", { x, y }, "custom", activeIndex);
+      updatePlaceholder("", { x: newX, y: newY }, "custom", activeIndex);
     } else if (activeType === "image") {
-      updateImage(activeIndex, { x, y });
+      updateImage(activeIndex, { x: newX, y: newY });
     }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Disable simple click-to-move for cleaner UX, or keep it for background click?
+  // Let's keep background click for deselecting or moving if needed, but dragging is primary.
+  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only move if we weren't just dragging
+    // Implementation of drag usually prevents click.
+    // We can just rely on drag.
   };
 
   if (isLoading && !isEditing) {
@@ -337,6 +403,7 @@ export default function CertificateDesignerPage() {
 
   return (
     <div className={`flex-1 space-y-4 p-8 pt-6 ${isRtl ? "text-right" : ""}`} dir={isRtl ? "rtl" : "ltr"}>
+      <link href={GOOGLE_FONTS_URL} rel="stylesheet" />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
@@ -728,8 +795,10 @@ export default function CertificateDesignerPage() {
             <CardContent className="flex-1 overflow-auto p-8 flex items-start justify-center">
               <div
                 ref={containerRef}
-                onClick={handleCanvasClick}
-                className="relative bg-white shadow-2xl transition-all cursor-crosshair shrink-0"
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                className="relative bg-white shadow-2xl transition-all cursor-default shrink-0"
                 style={{
                   width: design.width,
                   height: design.height,
@@ -754,12 +823,8 @@ export default function CertificateDesignerPage() {
                   return (
                     <div
                       key={k}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveType("standard");
-                        setActivePlaceholder(k);
-                      }}
-                      className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-pointer ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
+                      onMouseDown={(e) => handleMouseDown(e, "standard", k)}
+                      className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
                         top: p.y,
                         left: p.align === "center" ? 0 : p.align === "right" ? "auto" : p.x,
@@ -788,12 +853,8 @@ export default function CertificateDesignerPage() {
                   return (
                     <div
                       key={`custom-${idx}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveType("custom");
-                        setActiveIndex(idx);
-                      }}
-                      className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-pointer ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
+                      onMouseDown={(e) => handleMouseDown(e, "custom", idx)}
+                      className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
                         top: p.y,
                         left: p.align === "center" ? 0 : p.align === "right" ? "auto" : p.x,
@@ -819,12 +880,8 @@ export default function CertificateDesignerPage() {
                   return (
                     <div
                       key={`img-${idx}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveType("image");
-                        setActiveIndex(idx);
-                      }}
-                      className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-pointer ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
+                      onMouseDown={(e) => handleMouseDown(e, "image", idx)}
+                      className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
                         top: img.y,
                         left: img.x,
