@@ -11,7 +11,9 @@ export const getAllPaymentMethods = async (req, res, next) => {
         const isAdmin = req.user?.role === "admin" || req.user?.role === "moderator";
 
         const filter = {};
-        if (!isAdmin || !includeInactive) {
+        // Only filter inactive if user is not admin OR if admin didn't explicitly request inactive ones
+        const shouldFilterInactive = !isAdmin || (isAdmin && !includeInactive);
+        if (shouldFilterInactive) {
             filter.isActive = true;
         }
 
