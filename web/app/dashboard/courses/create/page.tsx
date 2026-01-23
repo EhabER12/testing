@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Upload, X, Loader2 } from "lucide-react";
+import { uploadImage } from "@/store/services/uploadService";
 import {
   Card,
   CardContent,
@@ -44,6 +45,8 @@ export default function CreateCoursePage() {
   const { t, isRtl, locale } = useAdminLocale();
   const { categories } = useAppSelector((state) => state.categories);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
 
   useEffect(() => {
     dispatch(getCategories({ active: true }));
@@ -122,6 +125,36 @@ export default function CreateCoursePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setThumbnailPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      const imageUrl = await uploadImage(file);
+      setFormData({ ...formData, thumbnail: imageUrl });
+    } catch (err: any) {
+      setError(err.message || "Failed to upload image");
+      setThumbnailPreview(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeThumbnail = () => {
+    setFormData({ ...formData, thumbnail: "" });
+    setThumbnailPreview(null);
   };
 
   return (
@@ -261,14 +294,54 @@ export default function CreateCoursePage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="thumbnail">{isRtl ? "رابط الصورة" : "Thumbnail URL"}</Label>
-                <Input
-                  id="thumbnail"
-                  type="url"
-                  placeholder="https://..."
-                  value={formData.thumbnail}
-                  onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
-                />
+                <Label htmlFor="thumbnail">{isRtl ? "صورة الدورة" : "Course Thumbnail"}</Label>
+                <div className="flex flex-col gap-4">
+                  {thumbnailPreview || formData.thumbnail ? (
+                    <div className="relative aspect-video w-full max-w-[300px] overflow-hidden rounded-lg border">
+                      <img
+                        src={thumbnailPreview || formData.thumbnail}
+                        alt="Thumbnail"
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeThumbnail}
+                        className="absolute right-2 top-2 rounded-full bg-red-500 p-1 text-white shadow-md hover:bg-red-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => document.getElementById("thumbnail")?.click()}
+                      className="flex aspect-video w-full max-w-[300px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 transition-colors hover:border-genoun-green/50 hover:bg-muted/50"
+                    >
+                      {uploading ? (
+                        <Loader2 className="h-8 w-8 animate-spin text-genoun-green" />
+                      ) : (
+                        <>
+                          <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            {isRtl ? "اضغط لرفع صورة" : "Click to upload image"}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <Input
+                    id="thumbnail"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleThumbnailUpload}
+                    disabled={uploading}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {isRtl
+                      ? "يفضل استخدام صورة بنسبة 16:9 (مثلاً 1280x720 بكسل)"
+                      : "Recommended ratio 16:9 (e.g. 1280x720 px)"}
+                  </p>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="categoryId">{isRtl ? "التصنيف (اختياري)" : "Category (Optional)"}</Label>

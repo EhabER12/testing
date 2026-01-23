@@ -11,7 +11,7 @@ const router = express.Router();
 router.post(
   "/image",
   protect,
-  authorize("admin", "moderator"),
+  authorize("admin", "moderator", "teacher"),
   upload.single("image"),
   asyncHandler(async (req, res) => {
     if (!req.file) {
