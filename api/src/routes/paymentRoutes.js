@@ -52,12 +52,12 @@ router.post(
 );
 
 // ==================== PayPal ====================
-router.post("/paypal/create", protect, createPaypalPayment);
-router.post("/paypal/capture/:orderId", protect, capturePaypalOrder);
+router.post("/paypal/create", optionalAuth, createPaypalPayment);
+router.post("/paypal/capture/:orderId", optionalAuth, capturePaypalOrder);
 router.post("/paypal/webhook", paypalWebhook); // Public
 
 // ==================== Cashier ====================
-router.post("/cashier/create", protect, createCashierPayment);
+router.post("/cashier/create", optionalAuth, createCashierPayment);
 router.post("/cashier/callback", cashierCallback); // Public - called by Cashier
 
 export default router;
