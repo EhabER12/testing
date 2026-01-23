@@ -34,6 +34,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import {
   Table,
   TableBody,
   TableCell,
@@ -61,21 +69,37 @@ import {
   CheckCircle,
   XCircle,
   Layers,
+  Search,
 } from "lucide-react";
 import Link from "next/link";
 
 export default function CoursesPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const { t, isRtl, locale } = useAdminLocale();
+  const { isRtl, locale } = useAdminLocale();
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
+  // Filter state
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedAccess, setSelectedAccess] = useState("all");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
   const { courses, isLoading, error } = useAppSelector((state) => state.courses);
   const { categories } = useAppSelector((state) => state.categories);
   const { user } = useAppSelector((state) => state.auth);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     if (!isAuthenticated() || !user) {
@@ -88,21 +112,25 @@ export default function CoursesPage() {
       return;
     }
 
+    const filters: any = {};
+    if (debouncedSearch) filters.search = debouncedSearch;
+    if (selectedCategory !== "all") filters.categoryId = selectedCategory;
+    if (selectedAccess !== "all") filters.accessType = selectedAccess;
+
+    // Status handling
+    if (selectedStatus !== "all") {
+      if (selectedStatus === "published") filters.isPublished = true;
+      else if (selectedStatus === "draft") filters.isPublished = false;
+      else filters.status = selectedStatus;
+    }
+
     if (isTeacher()) {
-      dispatch(getMyTeachingCourses());
+      dispatch(getMyTeachingCourses(filters));
     } else {
-      dispatch(getCourses());
+      dispatch(getCourses(filters));
     }
     dispatch(getCategories({ active: true }));
-  }, [dispatch, user, router]);
-
-  // Debug: log courses to check _id
-  useEffect(() => {
-    if (courses.length > 0) {
-      console.log("Courses data:", courses);
-      console.log("First course _id:", courses[0]._id);
-    }
-  }, [courses]);
+  }, [dispatch, user, router, debouncedSearch, selectedCategory, selectedStatus, selectedAccess]);
 
   const handleDelete = async (id: string) => {
     if (confirm(isRtl ? "هل أنت متأكد من حذف هذه الدورة؟" : "Are you sure you want to delete this course?")) {
@@ -118,11 +146,7 @@ export default function CoursesPage() {
   };
 
   const handlePublishToggle = async (id: string, isPublished: boolean) => {
-    console.log("Toggle publish - ID:", id, "isPublished:", isPublished);
-    if (!id) {
-      console.error("No course ID provided");
-      return;
-    }
+    if (!id) return;
     try {
       if (isPublished) {
         await dispatch(unpublishCourse(id)).unwrap();
@@ -151,7 +175,6 @@ export default function CoursesPage() {
     }
   };
 
-  // Get localized text helper
   const getLocalizedText = (
     text: { ar: string; en: string } | string | undefined,
     locale: string
@@ -209,6 +232,58 @@ export default function CoursesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Filters UI */}
+          <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={isRtl ? "بحث..." : "Search..."}
+                className={isRtl ? "pr-9" : "pl-9"}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder={isRtl ? "التصنيف" : "Category"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isRtl ? "جميع التصنيفات" : "All Categories"}</SelectItem>
+                {categories.map((cat: any) => (
+                  <SelectItem key={cat.id || cat._id} value={cat.id || cat._id}>
+                    {getLocalizedText(cat.name, locale)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder={isRtl ? "الحالة" : "Status"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isRtl ? "جميع الحالات" : "All Status"}</SelectItem>
+                <SelectItem value="published">{isRtl ? "منشور" : "Published"}</SelectItem>
+                <SelectItem value="draft">{isRtl ? "مسودة" : "Draft"}</SelectItem>
+                <SelectItem value="pending">{isRtl ? "في انتظار الموافقة" : "Pending Approval"}</SelectItem>
+                <SelectItem value="rejected">{isRtl ? "مرفوض" : "Rejected"}</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedAccess} onValueChange={setSelectedAccess}>
+              <SelectTrigger>
+                <SelectValue placeholder={isRtl ? "نوع الوصول" : "Access Type"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isRtl ? "الكل" : "All Access"}</SelectItem>
+                <SelectItem value="free">{isRtl ? "مجاني" : "Free"}</SelectItem>
+                <SelectItem value="paid">{isRtl ? "مدفوع" : "Paid"}</SelectItem>
+                <SelectItem value="byPackage">{isRtl ? "بالباقة" : "Package"}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {courses.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="mx-auto h-12 w-12 text-gray-400" />
@@ -243,7 +318,7 @@ export default function CoursesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {courses.map((course, index) => (
+                  {courses.map((course: any, index: number) => (
                     <TableRow key={course.id || course._id || index}>
                       <TableCell className="font-medium">
                         {getLocalizedText(course.title, locale)}
@@ -268,16 +343,10 @@ export default function CoursesPage() {
                         {course.level ? (
                           <Badge variant="outline">
                             {course.level === "beginner"
-                              ? isRtl
-                                ? "مبتدئ"
-                                : "Beginner"
+                              ? isRtl ? "مبتدئ" : "Beginner"
                               : course.level === "intermediate"
-                                ? isRtl
-                                  ? "متوسط"
-                                  : "Intermediate"
-                                : isRtl
-                                  ? "متقدم"
-                                  : "Advanced"}
+                                ? isRtl ? "متوسط" : "Intermediate"
+                                : isRtl ? "متقدم" : "Advanced"}
                           </Badge>
                         ) : (
                           "-"
@@ -294,16 +363,10 @@ export default function CoursesPage() {
                           }
                         >
                           {course.accessType === "free"
-                            ? isRtl
-                              ? "مجاني"
-                              : "Free"
+                            ? isRtl ? "مجاني" : "Free"
                             : course.accessType === "paid"
-                              ? isRtl
-                                ? "مدفوع"
-                                : "Paid"
-                              : isRtl
-                                ? "بالباقة"
-                                : "Package"}
+                              ? isRtl ? "مدفوع" : "Paid"
+                              : isRtl ? "بالباقة" : "Package"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -312,12 +375,12 @@ export default function CoursesPage() {
                             <CheckCircle className="h-3 w-3 mr-1" />
                             {isRtl ? "منشور" : "Published"}
                           </Badge>
-                        ) : course.publishRequestedAt || (course as any).approvalStatus?.status === 'pending' ? (
+                        ) : course.publishRequestedAt || course.approvalStatus?.status === 'pending' ? (
                           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
                             <MoreHorizontal className="h-3 w-3 mr-1 animate-pulse" />
                             {isRtl ? "في انتظار الموافقة" : "Pending Approval"}
                           </Badge>
-                        ) : (course as any).approvalStatus?.status === 'rejected' ? (
+                        ) : course.approvalStatus?.status === 'rejected' ? (
                           <Badge variant="destructive">
                             <XCircle className="h-3 w-3 mr-1" />
                             {isRtl ? "مرفوض" : "Rejected"}
@@ -343,9 +406,7 @@ export default function CoursesPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>
-                              {isRtl ? "الإجراءات" : "Actions"}
-                            </DropdownMenuLabel>
+                            <DropdownMenuLabel>{isRtl ? "الإجراءات" : "Actions"}</DropdownMenuLabel>
                             <DropdownMenuItem asChild>
                               <Link href={`/dashboard/courses/builder?courseId=${course.id || course._id}`}>
                                 <Layers className="h-4 w-4 mr-2" />
@@ -365,11 +426,7 @@ export default function CoursesPage() {
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handlePublishToggle((course.id || course._id)!, course.isPublished)
-                              }
-                            >
+                            <DropdownMenuItem onClick={() => handlePublishToggle((course.id || course._id)!, course.isPublished)}>
                               {course.isPublished ? (
                                 <>
                                   <XCircle className="h-4 w-4 mr-2" />
@@ -382,7 +439,7 @@ export default function CoursesPage() {
                                 </>
                               )}
                             </DropdownMenuItem>
-                            {isAdmin() && !course.isPublished && (course.publishRequestedAt || (course as any).approvalStatus?.status === 'pending') && (
+                            {isAdmin() && !course.isPublished && (course.publishRequestedAt || course.approvalStatus?.status === 'pending') && (
                               <DropdownMenuItem
                                 className="text-orange-600"
                                 onClick={() => {
@@ -404,12 +461,8 @@ export default function CoursesPage() {
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   {deleteLoading === (course.id || course._id)
-                                    ? isRtl
-                                      ? "جاري الحذف..."
-                                      : "Deleting..."
-                                    : isRtl
-                                      ? "حذف"
-                                      : "Delete"}
+                                    ? isRtl ? "جاري الحذف..." : "Deleting..."
+                                    : isRtl ? "حذف" : "Delete"}
                                 </DropdownMenuItem>
                               </>
                             )}
@@ -420,11 +473,11 @@ export default function CoursesPage() {
                   ))}
                 </TableBody>
               </Table>
-            </div>)}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Reject Dialog */}
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <DialogContent dir={isRtl ? "rtl" : "ltr"}>
           <DialogHeader>

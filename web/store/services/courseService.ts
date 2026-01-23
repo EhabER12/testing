@@ -84,9 +84,9 @@ export interface CreateCourseData {
 // Get all courses
 export const getCourses = createAsyncThunk(
   "courses/getAll",
-  async (_, { rejectWithValue }) => {
+  async (params: any = {}, { rejectWithValue }) => {
     try {
-      const response = await axios.get("/courses");
+      const response = await axios.get("/courses", { params });
       return response.data.data;
     } catch (error: any) {
       return rejectWithValue(
@@ -264,9 +264,9 @@ export const getEnrolledCourses = createAsyncThunk(
 // Get my teaching courses (for teachers)
 export const getMyTeachingCourses = createAsyncThunk(
   "courses/teaching",
-  async (_, { rejectWithValue }) => {
+  async (params: any = {}, { rejectWithValue }) => {
     try {
-      const response = await axios.get("/courses/my/teaching");
+      const response = await axios.get("/courses/my/teaching", { params });
       return response.data.data;
     } catch (error: any) {
       return rejectWithValue(
