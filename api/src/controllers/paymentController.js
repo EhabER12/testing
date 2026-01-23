@@ -288,7 +288,7 @@ export const cancelPayment = async (req, res, next) => {
 export const createPaypalPayment = async (req, res, next) => {
   try {
     const { courseId, amount, currency = "USD" } = req.body;
-    const userId = req.user._id;
+    const userId = req.user?._id; // Optional - may be undefined for guest checkout
 
     if (!courseId || !amount) {
       return next(new ApiError(400, "Course ID and amount are required"));
