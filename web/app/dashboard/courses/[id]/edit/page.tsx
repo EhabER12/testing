@@ -9,6 +9,7 @@ import { getCategories } from "@/store/slices/categorySlice";
 import { getQuizzesByCourse } from "@/store/services/quizService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
 import { isAdmin, isTeacher } from "@/store/services/authService";
+import { clearCurrentCourse } from "@/store/slices/courseSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,6 +76,7 @@ export default function EditCoursePage() {
     });
 
     useEffect(() => {
+        dispatch(clearCurrentCourse());
         dispatch(getCategories({ active: true }));
         if (id) {
             dispatch(getCourse(id));
@@ -208,7 +210,7 @@ export default function EditCoursePage() {
         setThumbnailPreview(null);
     };
 
-    if (courseLoading && !currentCourse) {
+    if (courseLoading || !currentCourse || (currentCourse.id || currentCourse._id) !== id) {
         return (
             <div className="flex h-full items-center justify-center p-8">
                 <Loader2 className="h-16 w-16 animate-spin text-genoun-green" />
