@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  getAllUsers,
-  deleteUser,
-  assignStudentToTeacher,
-} from "@/store/services/userService";
-import { getAllTeachersWithStats } from "@/store/services/teacherGroupService";
+  getStudentMembers,
+  deleteStudentMember,
+  importStudentMembers,
+  StudentMember,
+} from "@/store/services/studentMemberService";
+
 import { isAuthenticated, isAdmin } from "@/store/services/authService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -57,24 +60,31 @@ import {
   Edit,
   Trash2,
   Users,
-  Mail,
+  Upload,
   UserCircle,
   Calendar,
+  Phone,
+  FileText,
+  AlertCircle,
+  Download,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { toast } from "react-hot-toast";
 
 export default function StudentMembersPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { t, isRtl } = useAdminLocale();
-  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [selectedStudentForAssign, setSelectedStudentForAssign] = useState<any>(null);
-  const [selectedTeacherId, setSelectedTeacherId] = useState("");
 
-  const { users, isLoading } = useAppSelector((state) => state.userManagement);
-  const { teachersWithStats } = useAppSelector((state) => state.teacherGroups);
+
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importResult, setImportResult] = useState<any>(null);
+
+  const { studentMembers, isLoading } = useAppSelector((state) => state.studentMembers);
   const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
@@ -88,55 +98,58 @@ export default function StudentMembersPage() {
       return;
     }
 
-    dispatch(getAllUsers());
-    dispatch(getAllTeachersWithStats());
+    dispatch(getStudentMembers());
   }, [dispatch, user, router]);
 
   const handleDelete = async (id: string) => {
     if (
       confirm(
         isRtl
-          ? "هل أنت متأكد من حذف هذا المستخدم؟"
-          : "Are you sure you want to delete this user?"
+          ? "هل أنت متأكد من حذف هذا الطالب؟"
+          : "Are you sure you want to delete this student?"
       )
     ) {
       setDeleteLoading(id);
       try {
-        await dispatch(deleteUser(id)).unwrap();
+        await dispatch(deleteStudentMember(id)).unwrap();
+        toast.success(isRtl ? "تم حذف الطالب بنجاح" : "Student deleted successfully");
+        dispatch(getStudentMembers());
       } catch (err) {
-        console.error("Failed to delete user:", err);
+        console.error("Failed to delete student:", err);
+        toast.error(isRtl ? "فشل حذف الطالب" : "Failed to delete student");
       } finally {
         setDeleteLoading(null);
       }
     }
-  }
+  };
 
+  const handleImport = async () => {
+    if (!importFile) return;
 
-  const handleAssignTeacher = async () => {
-    if (!selectedStudentForAssign || !selectedTeacherId) return;
+    setImportLoading(true);
     try {
-      const studentId = selectedStudentForAssign.id || selectedStudentForAssign._id;
-      await dispatch(assignStudentToTeacher({
-        teacherId: selectedTeacherId,
-        studentId
-      })).unwrap();
-      setIsAssignDialogOpen(false);
-      setSelectedStudentForAssign(null);
-      setSelectedTeacherId("");
-      dispatch(getAllUsers());
-    } catch (err) {
-      console.error("Failed to assign teacher:", err);
+      const result = await dispatch(importStudentMembers(importFile)).unwrap();
+      setImportResult(result.data); // Assuming backend returns { data: { success: n, failed: n, errors: [] } }
+      dispatch(getStudentMembers());
+      toast.success(isRtl ? "تم استيراد الملف" : "File imported");
+    } catch (err: any) {
+      console.error("Import failed:", err);
+      toast.error(typeof err === 'string' ? err : "Import failed");
+    } finally {
+      setImportLoading(false);
     }
   };
 
-  const openAssignDialog = (student: any) => {
-    setSelectedStudentForAssign(student);
-    if (student.studentInfo?.assignedTeacher) {
-      setSelectedTeacherId(student.studentInfo.assignedTeacher);
-    } else {
-      setSelectedTeacherId("");
-    }
-    setIsAssignDialogOpen(true);
+  const downloadTemplate = () => {
+    const headers = ["name", "phone", "plan", "start time", "billingDay"];
+    const csvContent = "data:text/csv;charset=utf-8," + headers.join(",");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "students_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getTextValue = (value: any): string => {
@@ -145,41 +158,22 @@ export default function StudentMembersPage() {
     return (isRtl ? value.ar : value.en) || value.en || value.ar || "";
   };
 
-  // Filter only regular students (exclude admins and moderators)
-  const students = (users || []).filter(
-    (user: any) => user.role === "user" || (!user.role && !user.isAdmin)
-  );
-
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case "admin":
-        return (
-          <Badge className="bg-red-100 text-red-800">
-            {isRtl ? "مدير" : "Admin"}
-          </Badge>
-        );
-      case "moderator":
-        return (
-          <Badge className="bg-blue-100 text-blue-800">
-            {isRtl ? "مشرف" : "Moderator"}
-          </Badge>
-        );
-      case "teacher":
-        return (
-          <Badge className="bg-purple-100 text-purple-800">
-            {isRtl ? "معلم" : "Teacher"}
-          </Badge>
-        );
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-100 text-green-800">{isRtl ? "نشط" : "Active"}</Badge>;
+      case "due_soon":
+        return <Badge className="bg-yellow-100 text-yellow-800">{isRtl ? "تجديد قريباً" : "Due Soon"}</Badge>;
+      case "overdue":
+        return <Badge className="bg-red-100 text-red-800">{isRtl ? "متأخر" : "Overdue"}</Badge>;
+      case "paused":
+        return <Badge className="bg-gray-100 text-gray-800">{isRtl ? "موقف" : "Paused"}</Badge>;
       default:
-        return (
-          <Badge className="bg-green-100 text-green-800">
-            {isRtl ? "طالب" : "Student"}
-          </Badge>
-        );
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  if (isLoading) {
+  if (isLoading && studentMembers.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-8">
         <div className="h-16 w-16 animate-spin rounded-full border-4 border-genoun-green border-t-transparent"></div>
@@ -195,13 +189,23 @@ export default function StudentMembersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {isRtl ? "الطلاب المسجلين" : "Registered Students"}
+            {isRtl ? "طلاب الباقات" : "Package Students"}
           </h2>
           <p className="text-muted-foreground">
             {isRtl
-              ? "إدارة حسابات الطلاب المسجلين في المنصة"
-              : "Manage registered student accounts"}
+              ? "إدارة الطلاب المشتركين في الباقات بنظام منفصل"
+              : "Manage package-based students"}
           </p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => {
+            setImportDialogOpen(true);
+            setImportResult(null);
+            setImportFile(null);
+          }} className="bg-blue-600 hover:bg-blue-700">
+            <Upload className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+            {isRtl ? "استيراد CSV" : "Import CSV"}
+          </Button>
         </div>
       </div>
 
@@ -214,27 +218,7 @@ export default function StudentMembersPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{students.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {isRtl ? "طلاب جدد (هذا الشهر)" : "New This Month"}
-            </CardTitle>
-            <UserCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {students.filter((s: any) => {
-                const createdAt = new Date(s.createdAt);
-                const now = new Date();
-                return (
-                  createdAt.getMonth() === now.getMonth() &&
-                  createdAt.getFullYear() === now.getFullYear()
-                );
-              }).length}
-            </div>
+            <div className="text-2xl font-bold">{studentMembers.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -242,11 +226,24 @@ export default function StudentMembersPage() {
             <CardTitle className="text-sm font-medium">
               {isRtl ? "طلاب نشطين" : "Active Students"}
             </CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
+            <UserCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {students.filter((s: any) => s.status === "active" || !s.status).length}
+            <div className="text-2xl font-bold text-green-600">
+              {studentMembers.filter((s) => s.status === "active").length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {isRtl ? "متأخرين بالدفع" : "Overdue Payment"}
+            </CardTitle>
+            <AlertCircle className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {studentMembers.filter((s) => s.status === "overdue").length}
             </div>
           </CardContent>
         </Card>
@@ -254,24 +251,17 @@ export default function StudentMembersPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{isRtl ? "جميع الطلاب" : "All Students"}</CardTitle>
-          <CardDescription>
-            {isRtl
-              ? `${students.length} طالب مسجل`
-              : `${students.length} students registered`}
-          </CardDescription>
+          <CardTitle>{isRtl ? "قائمة الطلاب" : "Students List"}</CardTitle>
         </CardHeader>
         <CardContent>
-          {students.length === 0 ? (
+          {studentMembers.length === 0 ? (
             <div className="text-center py-12">
               <Users className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-semibold text-gray-900">
-                {isRtl ? "لا يوجد طلاب" : "No students"}
+                {isRtl ? "لا يوجد طلاب باقات" : "No package students found"}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {isRtl
-                  ? "لم يتم تسجيل أي طلاب بعد"
-                  : "No students have registered yet"}
+                {isRtl ? "قم باستيراد ملف لملء القائمة" : "Import a file to populate the list"}
               </p>
             </div>
           ) : (
@@ -280,55 +270,40 @@ export default function StudentMembersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>{isRtl ? "الاسم" : "Name"}</TableHead>
-                    <TableHead>{isRtl ? "البريد الإلكتروني" : "Email"}</TableHead>
-                    <TableHead>{isRtl ? "الدور" : "Role"}</TableHead>
-                    <TableHead>{isRtl ? "المعلم" : "Teacher"}</TableHead>
-                    <TableHead>{isRtl ? "تاريخ التسجيل" : "Registered"}</TableHead>
+                    <TableHead>{isRtl ? "رقم الهاتف" : "Phone"}</TableHead>
+                    <TableHead>{isRtl ? "الباقة" : "Plan"}</TableHead>
+                    <TableHead>{isRtl ? "تاريخ البداية" : "Start Date"}</TableHead>
+                    <TableHead>{isRtl ? "التجديد القادم" : "Next Due"}</TableHead>
+                    <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
                     <TableHead className="text-right">
                       {isRtl ? "الإجراءات" : "Actions"}
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {students.map((student: any, index: number) => (
-                    <TableRow key={`student-${student.id || student._id || index}`}>
+                  {studentMembers.map((student, index) => (
+                    <TableRow key={student.id || student._id || index}>
                       <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <UserCircle className="h-4 w-4 text-muted-foreground" />
-                          {getTextValue(student.name || student.fullName) || (isRtl ? "غير معروف" : "Unknown")}
-                        </div>
+                        {getTextValue(student.studentName || student.name)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          {student.email}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getRoleBadge(student.role || "user")}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {student.studentInfo?.assignedTeacher ? (
-                            <>
-                              <UserCircle className="h-4 w-4 text-purple-600" />
-                              <span className="text-sm">
-                                {getTextValue(student.studentInfo.assignedTeacher.fullName)}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">
-                              {isRtl ? "غير معين" : "Unassigned"}
-                            </span>
-                          )}
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span dir="ltr">{student.phone || student.whatsappNumber}</span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {student.createdAt
-                            ? format(new Date(student.createdAt), "yyyy-MM-dd")
-                            : isRtl ? "غير معروف" : "Unknown"}
-                        </div>
+                        <Badge variant="secondary">
+                          {student.packageId ? getTextValue(student.packageId.name) : (isRtl ? "غير محدد" : "N/A")}
+                        </Badge>
                       </TableCell>
+                      <TableCell>
+                        {student.startDate ? format(new Date(student.startDate), "yyyy-MM-dd") : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {student.nextDueDate ? format(new Date(student.nextDueDate), "yyyy-MM-dd") : "-"}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(student.status)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -341,31 +316,18 @@ export default function StudentMembersPage() {
                               {isRtl ? "الإجراءات" : "Actions"}
                             </DropdownMenuLabel>
                             <DropdownMenuItem asChild>
-                              <Link
-                                href={`/dashboard/users/${student.id || student._id}/edit`}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                {isRtl ? "تعديل" : "Edit"}
+                              <Link href={`/dashboard/student-members/${student.id || student._id}`}>
+                                <FileText className="h-4 w-4 mr-2" />
+                                {isRtl ? "التفاصيل" : "Details"}
                               </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openAssignDialog(student)}>
-                              <UserCircle className="h-4 w-4 mr-2" />
-                              {isRtl ? "تعيين معلم" : "Assign Teacher"}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-red-600"
-                              onClick={() => handleDelete((student.id || student._id)!)}
-                              disabled={deleteLoading === (student.id || student._id)}
+                              onClick={() => handleDelete(student.id || student._id || "")}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
-                              {deleteLoading === (student.id || student._id)
-                                ? isRtl
-                                  ? "جاري الحذف..."
-                                  : "Deleting..."
-                                : isRtl
-                                  ? "حذف"
-                                  : "Delete"}
+                              {isRtl ? "حذف" : "Delete"}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -379,52 +341,66 @@ export default function StudentMembersPage() {
         </CardContent>
       </Card>
 
-
-      {/* Assign Teacher Dialog */}
-      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent>
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{isRtl ? "تعيين معلم للطالب" : "Assign Teacher to Student"}</DialogTitle>
+            <DialogTitle>{isRtl ? "استيراد طلاب (CSV)" : "Import Students (CSV)"}</DialogTitle>
             <DialogDescription>
-              {isRtl ? "اختر المعلم الذي تريد تعيينه لهذا الطالب" : "Select the teacher you want to assign to this student"}
+              {isRtl ? "قم برفع ملف CSV يحتوي على: الاسم، الهاتف، الخطة" : "Upload a CSV file containing: name, phone, plan"}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div className="space-y-2">
-              <Label>{isRtl ? "الطالب" : "Student"}</Label>
-              <div className="p-2 border rounded-md bg-muted/20">
-                {getTextValue(selectedStudentForAssign?.name || selectedStudentForAssign?.fullName) || "Unknown"}
+
+          <div className="space-y-4 py-4">
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" size="sm" onClick={downloadTemplate} className="w-fit">
+                <Download className="h-4 w-4 mr-2" />
+                {isRtl ? "تحميل نموذج CSV" : "Download Template"}
+              </Button>
+            </div>
+
+            <div className="grid w-full max-w-sm items-center gap-1.5">
+              <Label htmlFor="csv-file">{isRtl ? "ملف CSV" : "CSV File"}</Label>
+              <Input id="csv-file" type="file" accept=".csv" onChange={(e) => setImportFile(e.target.files?.[0] || null)} />
+            </div>
+
+            {importResult && (
+              <div className={`p-4 rounded-md text-sm ${importResult.failed > 0 ? "bg-red-50" : "bg-green-50"}`}>
+                <p className="font-bold">
+                  {isRtl ? "نتيجة الاستيراد:" : "Import Result:"}
+                </p>
+                <p className="text-green-700">
+                  {isRtl ? `ناجح: ${importResult.success}` : `Success: ${importResult.success}`}
+                </p>
+                {importResult.failed > 0 && (
+                  <div className="mt-2 text-red-700">
+                    <p>{isRtl ? `فشل: ${importResult.failed}` : `Failed: ${importResult.failed}`}</p>
+                    <ul className="list-disc list-inside mt-1 max-h-32 overflow-y-auto">
+                      {importResult.errors.map((err: any, i: number) => (
+                        <li key={i}>
+                          {isRtl ? `صف ${err.row}: ${err.error}` : `Row ${err.row}: ${err.error}`}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{isRtl ? "المعلم" : "Teacher"}</Label>
-              <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={isRtl ? "اختر معلم" : "Select Teacher"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {teachersWithStats.map((teacher: any) => {
-                    const teacherId = teacher.id || teacher._id;
-                    return (
-                      <SelectItem key={teacherId} value={teacherId}>
-                        {getTextValue(teacher.fullName)}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
+            )}
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
-              {isRtl ? "إلغاء" : "Cancel"}
+            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
+              {isRtl ? "إغلاق" : "Close"}
             </Button>
-            <Button className="bg-genoun-green hover:bg-genoun-green/90" onClick={handleAssignTeacher} disabled={!selectedTeacherId}>
-              {isRtl ? "حفظ" : "Save"}
+            <Button
+              onClick={handleImport}
+              disabled={!importFile || importLoading}
+              className="bg-genoun-green hover:bg-genoun-green/90"
+            >
+              {importLoading ? (isRtl ? "جاري الرفع..." : "Uploading...") : (isRtl ? "استيراد" : "Import")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div >
+    </div>
   );
 }

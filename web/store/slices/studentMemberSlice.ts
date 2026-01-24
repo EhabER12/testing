@@ -7,6 +7,7 @@ import {
   updateStudentMember,
   deleteStudentMember,
   renewSubscription,
+  importStudentMembers,
   StudentMember,
 } from "../services/studentMemberService";
 
@@ -141,6 +142,20 @@ const studentMemberSlice = createSlice({
         state.currentStudentMember = action.payload;
       })
       .addCase(renewSubscription.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      // Import student members
+      .addCase(importStudentMembers.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(importStudentMembers.fulfilled, (state) => {
+        state.isLoading = false;
+        // We don't necessarily update the list here because we might want to refresh explicitly or append. 
+        // Usually, a fresh fetch is safer after bulk import.
+      })
+      .addCase(importStudentMembers.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

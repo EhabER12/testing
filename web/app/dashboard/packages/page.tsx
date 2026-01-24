@@ -73,8 +73,8 @@ export default function PackagesPage() {
   const [formData, setFormData] = useState<CreatePackageData>({
     name: { ar: "", en: "" },
     description: { ar: "", en: "" },
-    name: { ar: "", en: "" },
-    description: { ar: "", en: "" },
+    type: "tahfeez",
+
     price: 0,
     currency: "EGP",
     duration: { value: 1, unit: "month" },
@@ -107,8 +107,8 @@ export default function PackagesPage() {
       setFormData({
         name: pkg.name,
         description: pkg.description || { ar: "", en: "" },
-        name: pkg.name,
-        description: pkg.description || { ar: "", en: "" },
+        type: pkg.type,
+
         price: pkg.price,
         currency: pkg.currency,
         duration: pkg.duration,
@@ -123,8 +123,8 @@ export default function PackagesPage() {
       setFormData({
         name: { ar: "", en: "" },
         description: { ar: "", en: "" },
-        name: { ar: "", en: "" },
-        description: { ar: "", en: "" },
+        type: "tahfeez",
+
         price: 0,
         currency: "EGP",
         duration: { value: 1, unit: "month" },
@@ -445,6 +445,27 @@ export default function PackagesPage() {
               </Button>
             </div>
 
+            {/* Package Type */}
+            <div className="grid gap-2">
+              <Label>{t("admin.packages.type") || "Package Type"}</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value: any) =>
+                  setFormData({ ...formData, type: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tahfeez">{t("admin.packages.types.tahfeez") || "Tahfeez"}</SelectItem>
+                  <SelectItem value="group">{t("admin.packages.types.group") || "Group"}</SelectItem>
+                  <SelectItem value="individual">{t("admin.packages.types.individual") || "Individual"}</SelectItem>
+                  <SelectItem value="custom">{t("admin.packages.types.custom") || "Custom"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Package Name */}
             <div className="grid gap-2">
               <Label>
@@ -742,6 +763,6 @@ export default function PackagesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 }

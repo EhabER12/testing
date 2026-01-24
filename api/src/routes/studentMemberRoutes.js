@@ -12,7 +12,11 @@ import {
   updateStatuses,
   getStatistics,
   getMySubscriptions,
+  importMembers,
 } from "../controllers/studentMemberController.js";
+import multer from "multer";
+
+const upload = multer();
 import { protect, authorize } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
@@ -35,6 +39,7 @@ router.get("/due-soon", getMembersDueSoon);
 // Bulk operations
 router.post("/bulk-reminders", sendBulkReminders);
 router.post("/update-statuses", authorize("admin"), updateStatuses);
+router.post("/import", authorize("admin"), upload.single("file"), importMembers);
 
 // CRUD operations
 router.route("/")

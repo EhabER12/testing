@@ -91,22 +91,10 @@ export default function CertificatesPage() {
   });
   const [verifyResult, setVerifyResult] = useState<any>(null);
 
-  const { certificates, isLoading, error, isSuccess } = useAppSelector(
+  const { certificates, templates, isLoading, error, isSuccess } = useAppSelector(
     (state) => state.certificates
   );
-  // We need local state for templates because they might not be in a specific "templates" slice property utilized here, 
-  // or we can fetch them into a local state if the slice doesn't export them conveniently or if we want to ensure fresh data.
-  // However, looking at certificateService.ts, `getAllTemplates` returns data. The slice probably handles it.
-  // Let's check certificateSlice? I haven't seen it but I can assume standard pattern. 
-  // If not, I'll just use local state for templates to be safe, or select from state if I knew the structure.
-  // Given I see `state.certificates`, maybe templates are there?
-  // Let's assume for now I'll fetch them and store them locally or use a selector if exists. 
-  // Actually, usually `state.certificates` might have `templates`. 
-  // Let's check `certificateSlice`? No I don't want to waste a turn.
-  // I'll fetch them on mount using the service dispatch and assuming there is a selector. 
-  // Wait, if I don't know the selector I can't use `useAppSelector`.
-  // I'll add `const [templates, setTemplates] = useState<any[]>([]);` and fetch them directly or via dispatch then unwrap.
-  const [templates, setTemplates] = useState<any[]>([]);
+
   const { courses } = useAppSelector((state) => state.courses);
   const { users } = useAppSelector((state) => state.userManagement);
   const { user } = useAppSelector((state) => state.auth);
@@ -123,9 +111,9 @@ export default function CertificatesPage() {
     }
 
     dispatch(getCertificates());
-    dispatch(getCourses());
+    dispatch(getCourses({}));
     dispatch(getAllUsers());
-    dispatch(getAllTemplates() as any).unwrap().then((data: any) => setTemplates(data)).catch(console.error);
+    dispatch(getAllTemplates());
   }, [dispatch, user, router]);
 
   useEffect(() => {
@@ -620,13 +608,7 @@ export default function CertificatesPage() {
             >
               {isRtl ? "إلغاء" : "Cancel"}
             </Button>
-  /* import getAllTemplates (added above in previous tool call ideally, but assuming it needs to be added or is already there? No, I need to add it to imports first) */
-          // Actually, I'll do a MultiReplace to handle imports and the UI changes in one go or separate if needed.
-          // Wait, I need to check if getAllTemplates is imported. It was NOT imported in the original file I viewed.
-          // I will assume I need to import it.
 
-          // Let's use MultiReplaceFileContent to handle both imports and the component logic.
-          // This tool call is just for the replace_file_content so I'll cancel and use multi_replace.
 
           </DialogFooter>
         </DialogContent>

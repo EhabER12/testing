@@ -4,10 +4,72 @@ import { ApiError } from "../utils/apiError.js";
 import { WhatsappNotificationService } from "./whatsappNotificationService.js";
 import logger from "../utils/logger.js";
 import { differenceInDays, addDays } from "date-fns";
+import Package from "../models/packageModel.js";
+import { parse } from 'csv-parse/sync';
 
 export class StudentMemberService {
   constructor() {
     this.whatsappService = new WhatsappNotificationService();
+  }
+
+  // Import members from CSV
+  async importMembers(fileBuffer, createdBy) {
+    const records = parse(fileBuffer, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true
+    });
+
+    const results = {
+      total: records.length,
+      success: 0,
+      failed: 0,
+      errors: []
+    };
+
+    const packages = await Package.find({});
+
+    for (const [index, record] of records.entries()) {
+      try {
+        // Validation
+        if (!record.name || !record.phone || !record.plan) {
+          throw new Error('Missing required fields: name, phone, or plan');
+        }
+
+        // Find package
+        const pkg = packages.find(p =>
+          (p.name?.ar === record.plan || p.name?.en === record.plan)
+        );
+
+        if (!pkg) {
+          throw new Error(`Package not found: ${record.plan}`);
+        }
+
+        // Prepare data
+        const memberData = {
+          name: { ar: record.name, en: record.name }, // Assuming single name for now
+          phone: record.phone,
+          packageId: pkg._id,
+          startDate: record['start time'] ? new Date(record['start time']) : new Date(),
+          billingDay: record.billingDay || new Date().getDate(),
+          packagePrice: pkg.price // Store current price
+        };
+
+        // Create member
+        await this.createMember(memberData, createdBy);
+        results.success++;
+
+      } catch (error) {
+        results.failed++;
+        results.errors.push({
+          row: index + 2, // 1-based index + header
+          name: record.name,
+          error: error.message
+        });
+      }
+    }
+
+    return results;
   }
 
   // Get all student members with filters

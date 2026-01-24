@@ -5,20 +5,18 @@ import { BilingualText } from "./courseService";
 export interface StudentMember {
   id: string;
   _id?: string;
-  userId: {
+  userId?: {
     id: string;
     _id?: string;
     fullName: BilingualText;
     email: string;
   };
-  studentName: BilingualText;
-  whatsappNumber: string;
-  subscriptionStartDate: string;
-  subscriptionEndDate: string;
-  status: "active" | "expired" | "cancelled" | "due_soon" | "overdue" | "paused";
-  remindersSent: number;
-  lastReminderDate?: string;
-  notes?: string;
+  name: BilingualText;
+  phone: string;
+  startDate: string;
+  billingDay: number;
+  nextDueDate: string;
+  status: "active" | "due_soon" | "overdue" | "paused" | "cancelled";
   packageId?: {
     id: string;
     _id?: string;
@@ -26,8 +24,17 @@ export interface StudentMember {
     type: string;
   };
   packagePrice?: number;
+  renewalHistory: any[];
+  lastReminderSent?: string;
+  reminderCount: number;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
+  // Legacy or optional
+  studentName?: BilingualText;
+  whatsappNumber?: string;
+  subscriptionStartDate?: string;
+  subscriptionEndDate?: string;
 }
 
 export interface CreateStudentMemberData {
@@ -148,6 +155,27 @@ export const renewSubscription = createAsyncThunk(
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to renew subscription"
+      );
+    }
+  }
+);
+// Import student members from CSV
+export const importStudentMembers = createAsyncThunk(
+  "studentMembers/import",
+  async (file: File, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await axios.post("/student-members/import", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to import student members"
       );
     }
   }

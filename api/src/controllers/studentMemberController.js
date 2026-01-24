@@ -266,3 +266,26 @@ export const getStatistics = async (req, res, next) => {
     next(error);
   }
 };
+// @desc    Import members from CSV
+// @route   POST /api/student-members/import
+// @access  Private (Admin)
+export const importMembers = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      throw new Error('No file uploaded');
+    }
+
+    const result = await studentMemberService.importMembers(
+      req.file.buffer,
+      req.user._id
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Import processed: ${result.success} succeeded, ${result.failed} failed`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
