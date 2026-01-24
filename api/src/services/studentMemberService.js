@@ -36,9 +36,13 @@ export class StudentMemberService {
           throw new Error('Missing required fields: name, phone, or plan');
         }
 
-        // Find package
+        // Find package (Case insensitive and trimmed)
+        const normalize = (str) => str?.trim().toLowerCase() || "";
+        const recordPlan = normalize(record.plan);
+
         const pkg = packages.find(p =>
-          (p.name?.ar === record.plan || p.name?.en === record.plan)
+          normalize(p.name?.ar) === recordPlan ||
+          normalize(p.name?.en) === recordPlan
         );
 
         if (!pkg) {
