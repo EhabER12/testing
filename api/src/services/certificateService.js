@@ -77,9 +77,9 @@ class CertificateService {
     try {
       await Progress.findOneAndUpdate(
         { userId, courseId },
-        { 
-          certificateIssued: true, 
-          certificateId: certificate._id 
+        {
+          certificateIssued: true,
+          certificateId: certificate._id
         }
       );
     } catch (progressErr) {
@@ -210,7 +210,7 @@ class CertificateService {
   // Get certificates by user email (public)
   async getCertificatesByEmail(email) {
     // Find user by email
-    const user = await User.findOne({ 
+    const user = await User.findOne({
       $or: [
         { email: email.toLowerCase() },
         { email: email }
@@ -222,9 +222,9 @@ class CertificateService {
     }
 
     // Get all issued certificates for this user
-    const certificates = await Certificate.find({ 
+    const certificates = await Certificate.find({
       userId: user._id,
-      status: "issued" 
+      status: "issued"
     })
       .populate("courseId", "title slug thumbnail certificateSettings")
       .sort({ issuedAt: -1 });
@@ -282,16 +282,16 @@ class CertificateService {
   async getCertificateEligibility(userId) {
     const enrollments = await Progress.find({ userId })
       .populate("courseId", "title slug thumbnail certificateSettings");
-    
+
     const results = [];
-    
+
     for (const enrollment of enrollments) {
       const course = enrollment.courseId;
       if (!course) continue;
 
       // Check if certificate already exists
       const existing = await Certificate.findOne({ userId, courseId: course._id });
-      
+
       if (existing) {
         results.push({
           courseId: course._id,
@@ -399,21 +399,43 @@ class CertificateService {
 
     // Get template (use default if not specified)
     let template = null;
+
+    // 1. Try to use the template explicitly assigned to the certificate
     if (certificate.templateId) {
       template = await CertificateTemplate.findById(certificate.templateId);
     }
 
+    // 2. If no template assigned (or not found), look at the course settings
+    if (!template && certificate.courseId && certificate.courseId.certificateSettings?.templateId) {
+      console.log(`Certificate ${certificate.certificateNumber} has no template. Falling back to course template.`);
+      template = await CertificateTemplate.findById(certificate.courseId.certificateSettings.templateId);
+
+      // If found, update the certificate to link to this template for future use
+      if (template) {
+        certificate.templateId = template._id;
+        // detailed log
+        console.log(`Linked certificate ${certificate.certificateNumber} to course template ${template.name} (${template._id})`);
+      }
+    }
+
+    // 3. If still no template, try to find a system default
     if (!template) {
       // Get default template
       template = await CertificateTemplate.findOne({ isDefault: true });
+      if (template) {
+        console.log(`Using system default template for certificate ${certificate.certificateNumber}`);
+      }
     }
 
+    // 4. Last resort: internal default structure
     if (!template) {
+      console.warn(`No template found for certificate ${certificate.certificateNumber}. Using hardcoded fallback.`);
       // Use system default template
       template = {
         width: 1200,
         height: 900,
         placeholders: {},
+        isFallback: true
       };
     }
 
@@ -460,7 +482,7 @@ class CertificateService {
       // 2. PDF URL is missing, OR
       // 3. PDF file doesn't exist on disk
       const shouldRegenerate = !certificate.pdfGenerated || !certificate.pdfUrl;
-      
+
       if (shouldRegenerate) {
         console.log(`Regenerating PDF for certificate ${certificate.certificateNumber}`);
         const { pdfBuffer } = await this.generateCertificatePDF(certificateId);

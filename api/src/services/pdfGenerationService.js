@@ -97,23 +97,24 @@ class PDFGenerationService {
       if (!certificateData) {
         throw new Error('Certificate data is required');
       }
-      
+
       if (!template) {
         throw new Error('Template is required');
       }
-      
+
       console.log('Generating certificate PDF with template:', {
         templateId: template._id,
         templateName: template.name,
         hasPlaceholders: !!template.placeholders,
         placeholdersKeys: template.placeholders ? Object.keys(template.placeholders) : [],
+        isFallback: template.isFallback,
         certificateData: {
           certificateNumber: certificateData.certificateNumber,
           studentName: certificateData.studentName,
           courseName: certificateData.courseName
         }
       });
-      
+
       // Create a new PDF document
       const pdfDoc = await PDFDocument.create();
 
@@ -175,7 +176,7 @@ class PDFGenerationService {
             height,
             color: rgb(0.95, 0.95, 0.95), // Light gray background
           });
-          
+
           // Draw border
           page.drawRectangle({
             x: 20,
@@ -195,7 +196,7 @@ class PDFGenerationService {
           height,
           color: rgb(0.98, 0.98, 0.98), // Very light gray
         });
-        
+
         // Draw decorative border
         page.drawRectangle({
           x: 30,
@@ -265,29 +266,29 @@ class PDFGenerationService {
 
       // Get text values
       const locale = "ar"; // Default to Arabic for Quran platform
-      
+
       // Handle student name (could be string or object with ar/en)
       let studentName = "Student";
       if (typeof certificateData.studentName === "string") {
         studentName = certificateData.studentName;
       } else if (certificateData.studentName && typeof certificateData.studentName === "object") {
-        studentName = certificateData.studentName[locale] || 
-                     certificateData.studentName.en || 
-                     certificateData.studentName.ar || 
-                     "Student";
+        studentName = certificateData.studentName[locale] ||
+          certificateData.studentName.en ||
+          certificateData.studentName.ar ||
+          "Student";
       }
-      
+
       // Handle course name (could be string or object with ar/en)
       let courseName = "Course";
       if (typeof certificateData.courseName === "string") {
         courseName = certificateData.courseName;
       } else if (certificateData.courseName && typeof certificateData.courseName === "object") {
-        courseName = certificateData.courseName[locale] || 
-                    certificateData.courseName.en || 
-                    certificateData.courseName.ar || 
-                    "Course";
+        courseName = certificateData.courseName[locale] ||
+          certificateData.courseName.en ||
+          certificateData.courseName.ar ||
+          "Course";
       }
-      
+
       console.log('Resolved text values:', {
         studentName,
         courseName,
@@ -302,7 +303,7 @@ class PDFGenerationService {
 
       // Draw certificate elements based on template placeholders
       const placeholders = template.placeholders || {};
-      
+
       console.log('Processing placeholders:', {
         studentName: placeholders.studentName,
         courseName: placeholders.courseName,
@@ -400,7 +401,7 @@ class PDFGenerationService {
       const shouldUseDefaultLayout = !drewAnyPlaceholder;
       const forceDefaultLayout = process.env.DEBUG_CERTIFICATE_TEMPLATES === 'true';
       const alwaysUseDefaultLayout = process.env.ALWAYS_USE_DEFAULT_CERTIFICATE_LAYOUT === 'true';
-      
+
       if (shouldUseDefaultLayout || forceDefaultLayout || alwaysUseDefaultLayout) {
         console.log('Using default layout. shouldUseDefaultLayout:', shouldUseDefaultLayout, 'forceDefaultLayout:', forceDefaultLayout, 'alwaysUseDefaultLayout:', alwaysUseDefaultLayout);
         const font = defaultFont;
@@ -414,17 +415,17 @@ class PDFGenerationService {
           height: 3,
           color: rgb(0.2, 0.4, 0.2),
         });
-        
+
         // Title - "CERTIFICATE OF COMPLETION"
         const title = "CERTIFICATE OF COMPLETION";
         const titleFontSize = 42;
         const titleWidth = font.widthOfTextAtSize(title, titleFontSize);
         const titleX = centerX - titleWidth / 2;
         const titleY = height - 180;
-        
+
         // Ensure title is within bounds
         const safeTitleX = Math.max(20, Math.min(titleX, width - titleWidth - 20));
-        
+
         page.drawText(title, {
           x: safeTitleX,
           y: titleY,
@@ -439,9 +440,9 @@ class PDFGenerationService {
         const arTitleWidth = font.widthOfTextAtSize(certTitleAr, arTitleFontSize);
         const arTitleX = centerX - arTitleWidth / 2;
         const arTitleY = height - 200;
-        
+
         const safeArTitleX = Math.max(20, Math.min(arTitleX, width - arTitleWidth - 20));
-        
+
         page.drawText(certTitleAr, {
           x: safeArTitleX,
           y: arTitleY,
@@ -456,9 +457,9 @@ class PDFGenerationService {
         const headerWidth = font.widthOfTextAtSize(studentHeader, headerFontSize);
         const headerX = centerX - headerWidth / 2;
         const headerY = height - 280;
-        
+
         const safeHeaderX = Math.max(20, Math.min(headerX, width - headerWidth - 20));
-        
+
         page.drawText(studentHeader, {
           x: safeHeaderX,
           y: headerY,
@@ -466,16 +467,16 @@ class PDFGenerationService {
           font: font,
           color: rgb(0.3, 0.3, 0.3),
         });
-        
+
         // Student name
         const sNameProcessed = this.reshapeArabic(studentName);
         const studentFontSize = 36;
         const studentWidth = font.widthOfTextAtSize(sNameProcessed, studentFontSize);
         const studentX = centerX - studentWidth / 2;
         const studentY = height - 340;
-        
+
         const safeStudentX = Math.max(20, Math.min(studentX, width - studentWidth - 20));
-        
+
         page.drawText(sNameProcessed, {
           x: safeStudentX,
           y: studentY,
@@ -483,7 +484,7 @@ class PDFGenerationService {
           font: font,
           color: rgb(0, 0, 0),
         });
-        
+
         // Decorative line under student name
         page.drawRectangle({
           x: centerX - 100,
@@ -499,9 +500,9 @@ class PDFGenerationService {
         const courseHeaderWidth = font.widthOfTextAtSize(courseHeader, courseHeaderFontSize);
         const courseHeaderX = centerX - courseHeaderWidth / 2;
         const courseHeaderY = height - 420;
-        
+
         const safeCourseHeaderX = Math.max(20, Math.min(courseHeaderX, width - courseHeaderWidth - 20));
-        
+
         page.drawText(courseHeader, {
           x: safeCourseHeaderX,
           y: courseHeaderY,
@@ -509,16 +510,16 @@ class PDFGenerationService {
           font: font,
           color: rgb(0.3, 0.3, 0.3),
         });
-        
+
         // Course name
         const cNameProcessed = this.reshapeArabic(courseName);
         const courseFontSize = 28;
         const courseWidth = font.widthOfTextAtSize(cNameProcessed, courseFontSize);
         const courseX = centerX - courseWidth / 2;
         const courseY = height - 480;
-        
+
         const safeCourseX = Math.max(20, Math.min(courseX, width - courseWidth - 20));
-        
+
         page.drawText(cNameProcessed, {
           x: safeCourseX,
           y: courseY,
@@ -535,14 +536,14 @@ class PDFGenerationService {
           height: 1,
           color: rgb(0.7, 0.7, 0.7),
         });
-        
+
         // Issue date
         const dateLabel = this.reshapeArabic("تاريخ الإصدار:");
         const dateLabelFontSize = 16;
         const dateLabelWidth = font.widthOfTextAtSize(dateLabel, dateLabelFontSize);
         const dateLabelX = centerX - 150;
         const dateLabelY = height - 680;
-        
+
         page.drawText(dateLabel, {
           x: dateLabelX,
           y: dateLabelY,
@@ -550,13 +551,13 @@ class PDFGenerationService {
           font: font,
           color: rgb(0.2, 0.2, 0.2),
         });
-        
+
         const dateValue = this.reshapeArabic(issuedDate);
         const dateValueFontSize = 16;
         const dateValueWidth = font.widthOfTextAtSize(dateValue, dateValueFontSize);
         const dateValueX = centerX + 50;
         const dateValueY = height - 680;
-        
+
         page.drawText(dateValue, {
           x: dateValueX,
           y: dateValueY,
@@ -571,7 +572,7 @@ class PDFGenerationService {
         const certNoLabelWidth = font.widthOfTextAtSize(certNoLabel, certNoLabelFontSize);
         const certNoLabelX = centerX - 150;
         const certNoLabelY = height - 720;
-        
+
         page.drawText(certNoLabel, {
           x: certNoLabelX,
           y: certNoLabelY,
@@ -579,13 +580,13 @@ class PDFGenerationService {
           font: font,
           color: rgb(0.2, 0.2, 0.2),
         });
-        
+
         const certNoValue = this.reshapeArabic(certificateData.certificateNumber);
         const certNoValueFontSize = 14;
         const certNoValueWidth = font.widthOfTextAtSize(certNoValue, certNoValueFontSize);
         const certNoValueX = centerX + 50;
         const certNoValueY = height - 720;
-        
+
         page.drawText(certNoValue, {
           x: certNoValueX,
           y: certNoValueY,
@@ -593,7 +594,7 @@ class PDFGenerationService {
           font: font,
           color: rgb(0, 0, 0),
         });
-        
+
         // Footer decoration
         page.drawRectangle({
           x: 50,
