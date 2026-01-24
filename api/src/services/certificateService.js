@@ -206,6 +206,51 @@ class CertificateService {
     return certificate;
   }
 
+  // Get certificates by user email (public)
+  async getCertificatesByEmail(email) {
+    // Find user by email
+    const user = await User.findOne({ 
+      $or: [
+        { email: email.toLowerCase() },
+        { email: email }
+      ]
+    });
+
+    if (!user) {
+      throw new Error("No user found with this email");
+    }
+
+    // Get all issued certificates for this user
+    const certificates = await Certificate.find({ 
+      userId: user._id,
+      status: "issued" 
+    })
+      .populate("courseId", "title slug thumbnail")
+      .sort({ issuedAt: -1 });
+
+    if (certificates.length === 0) {
+      throw new Error("No certificates found for this email");
+    }
+
+    // Return certificates with user info
+    return {
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email
+      },
+      certificates: certificates.map(cert => ({
+        id: cert._id,
+        certificateNumber: cert.certificateNumber,
+        course: cert.courseId,
+        issuedAt: cert.issuedAt,
+        studentName: cert.studentName,
+        pdfUrl: cert.pdfUrl,
+        pdfGenerated: cert.pdfGenerated
+      }))
+    };
+  }
+
   // Get user's certificates
   async getUserCertificates(userId) {
     const certificates = await Certificate.find({ userId })

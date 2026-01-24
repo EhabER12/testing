@@ -1358,5 +1358,24 @@
       "fixed": "سعر ثابت",
       "tiers": "باقات"
     }
+  },
+  "certificates": {
+    "downloadTitle": "تحميل الشهادات",
+    "downloadDescription": "أدخل بريدك الإلكتروني لعرض وتحميل شهاداتك",
+    "enterEmail": "أدخل البريد الإلكتروني",
+    "emailLabel": "البريد الإلكتروني",
+    "emailPlaceholder": "your@email.com",
+    "searchCertificates": "بحث عن الشهادات",
+    "loading": "جارٍ البحث...",
+    "studentInfo": "معلومات الطالب",
+    "name": "الاسم",
+    "email": "البريد الإلكتروني",
+    "foundCertificates": "تم العثور على {count} شهادة",
+    "selectToDownload": "اختر الشهادة التي تريد تحميلها",
+    "downloadCertificate": "تحميل الشهادة",
+    "generatingPdf": "جاري إنشاء PDF...",
+    "pdfNotReady": "ملف PDF قيد الإنشاء. يرجى المحاولة لاحقاً.",
+    "searchAnother": "بحث عن شهادات أخرى",
+    "tryAgain": "حاول مرة أخرى"
   }
 }

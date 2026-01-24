@@ -1358,5 +1358,24 @@
       "fixed": "Fixed Price",
       "tiers": "Pricing Tiers"
     }
+  },
+  "certificates": {
+    "downloadTitle": "Download Certificates",
+    "downloadDescription": "Enter your email to view and download your certificates",
+    "enterEmail": "Enter Email",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "your@email.com",
+    "searchCertificates": "Search for Certificates",
+    "loading": "Searching...",
+    "studentInfo": "Student Information",
+    "name": "Name",
+    "email": "Email",
+    "foundCertificates": "Found {count} certificate(s)",
+    "selectToDownload": "Select the certificate you want to download",
+    "downloadCertificate": "Download Certificate",
+    "generatingPdf": "Generating PDF...",
+    "pdfNotReady": "PDF file is being generated. Please try again later.",
+    "searchAnother": "Search for other certificates",
+    "tryAgain": "Try Again"
   }
 }

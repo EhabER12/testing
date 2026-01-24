@@ -3,6 +3,7 @@ import {
   getCertificates,
   getCertificate,
   verifyCertificate,
+  getCertificatesByEmail,
   revokeCertificate,
   issueCertificate,
   getAllTemplates,
@@ -40,6 +41,8 @@ interface CertificateState {
   currentCertificate: Certificate | null;
   currentTemplate: CertificateTemplate | null;
   verifiedCertificate: Certificate | null;
+  publicCertificates: any[]; // For public certificate lookup
+  publicUser: any | null; // For public certificate lookup
   isLoading: boolean;
   isSuccess: boolean;
   error: string | null;
@@ -52,6 +55,8 @@ const initialState: CertificateState = {
   currentCertificate: null,
   currentTemplate: null,
   verifiedCertificate: null,
+  publicCertificates: [],
+  publicUser: null,
   isLoading: false,
   isSuccess: false,
   error: null,
@@ -72,6 +77,10 @@ const certificateSlice = createSlice({
     },
     clearCurrentTemplate: (state) => {
       state.currentTemplate = null;
+    },
+    clearPublicCertificates: (state) => {
+      state.publicCertificates = [];
+      state.publicUser = null;
     },
     resetStatus: (state) => {
       state.isLoading = false;
@@ -119,6 +128,22 @@ const certificateSlice = createSlice({
       .addCase(verifyCertificate.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      })
+      // Get certificates by email (public)
+      .addCase(getCertificatesByEmail.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(getCertificatesByEmail.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.publicCertificates = action.payload.certificates;
+        state.publicUser = action.payload.user;
+      })
+      .addCase(getCertificatesByEmail.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.publicCertificates = [];
+        state.publicUser = null;
       })
       // Issue certificate
       .addCase(issueCertificate.pending, (state) => {
@@ -277,6 +302,7 @@ export const {
   clearCurrentCertificate,
   clearVerifiedCertificate,
   clearCurrentTemplate,
+  clearPublicCertificates,
   resetStatus,
 } = certificateSlice.actions;
 export default certificateSlice.reducer;

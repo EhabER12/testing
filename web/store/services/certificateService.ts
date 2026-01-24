@@ -140,6 +140,21 @@ export const verifyCertificate = createAsyncThunk(
   }
 );
 
+// Get certificates by email (public)
+export const getCertificatesByEmail = createAsyncThunk(
+  "certificates/getByEmail",
+  async (email: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`/certificates/by-email`, { email });
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch certificates"
+      );
+    }
+  }
+);
+
 // Revoke certificate
 export const revokeCertificate = createAsyncThunk(
   "certificates/revoke",

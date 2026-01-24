@@ -86,6 +86,30 @@ export const verifyCertificate = async (req, res, next) => {
   }
 };
 
+// Get certificates by email (public)
+export const getCertificatesByEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required"
+      });
+    }
+
+    const result = await certificateService.getCertificatesByEmail(email);
+
+    res.status(200).json({
+      success: true,
+      message: "Certificates retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get user's certificates
 export const getUserCertificates = async (req, res, next) => {
   try {

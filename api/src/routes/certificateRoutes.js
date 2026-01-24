@@ -4,6 +4,7 @@ import {
   bulkIssueCertificates,
   getCertificateById,
   verifyCertificate,
+  getCertificatesByEmail,
   getUserCertificates,
   getCourseCertificates,
   revokeCertificate,
@@ -24,8 +25,9 @@ const router = express.Router();
 
 // ============ CERTIFICATE ROUTES ============
 
-// Public route - verify certificate
+// Public routes
 router.get("/verify/:certificateNumber", verifyCertificate);
+router.post("/by-email", getCertificatesByEmail);
 
 // Student routes
 router.get("/my-certificates", protect, getUserCertificates);
