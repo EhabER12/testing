@@ -8,7 +8,7 @@ import CertificateTemplate from "../models/certificateTemplateModel.js";
 export const getAllCertificates = async (req, res, next) => {
   try {
     const { status, courseId, userId } = req.query;
-    
+
     const query = {};
     if (status) query.status = status;
     if (courseId) query.courseId = courseId;
@@ -32,14 +32,15 @@ export const getAllCertificates = async (req, res, next) => {
 // Issue certificate to a user
 export const issueCertificate = async (req, res, next) => {
   try {
-    const { userId, courseId } = req.body;
+    const { userId, courseId, templateId } = req.body;
     const issuerUserId = req.user._id;
 
     const certificate = await certificateService.issueCertificate(
       userId,
       courseId,
       issuerUserId,
-      true // Manual override allowed for Admin/Teacher
+      true, // Manual override allowed for Admin/Teacher
+      templateId // Pass manual template ID
     );
 
     res.status(201).json({
@@ -117,7 +118,7 @@ export const verifyCertificate = async (req, res, next) => {
 export const getCertificatesByEmail = async (req, res, next) => {
   try {
     const { email } = req.body;
-    
+
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -160,7 +161,7 @@ export const downloadCertificatePublic = async (req, res, next) => {
         message: "Certificate not found"
       });
     }
-    
+
     if (!certificate) {
       return res.status(404).json({
         success: false,
@@ -348,7 +349,7 @@ export const generateCertificatePDF = async (req, res, next) => {
 // Regenerate all certificates PDFs (Admin only)
 export const regenerateAllCertificatesPDFs = async (req, res, next) => {
   try {
-    const certificates = await Certificate.find({ 
+    const certificates = await Certificate.find({
       $or: [
         { pdfGenerated: false },
         { pdfGenerated: { $exists: false } },
@@ -392,9 +393,9 @@ export const regenerateAllCertificatesPDFs = async (req, res, next) => {
 export const getCertificateTemplateInfo = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     const certificate = await certificateService.getCertificateById(id);
-    
+
     // Get template info
     let templateInfo = null;
     if (certificate.templateId) {
@@ -412,7 +413,7 @@ export const getCertificateTemplateInfo = async (req, res, next) => {
         };
       }
     }
-    
+
     // Get default template if no specific template
     let defaultTemplate = null;
     if (!templateInfo) {
@@ -428,7 +429,7 @@ export const getCertificateTemplateInfo = async (req, res, next) => {
         };
       }
     }
-    
+
     res.status(200).json({
       success: true,
       data: {

@@ -21,10 +21,15 @@ class CertificateService {
   }
 
   // Issue certificate to a single user
-  async issueCertificate(userId, courseId, issuerUserId, overrideEligibility = false) {
+  async issueCertificate(userId, courseId, issuerUserId, overrideEligibility = false, manualTemplateId = null) {
     // Check if user already has certificate
     const existing = await Certificate.findOne({ userId, courseId });
     if (existing) {
+      // If manual template provided and existing certificate has different template (or none),
+      // we might want to update it? But current behavior returns existing.
+      // For now, let's respect existing behavior but log if we're "re-issuing".
+      // Actually, standard behavior is usually "return existing". 
+      // User can use "Reissue" (revoke then issue) if they want a new one.
       return existing;
     }
 
@@ -52,8 +57,8 @@ class CertificateService {
     // Generate certificate
     const certificateNumber = this.generateCertificateNumber();
 
-    // Get template from course settings
-    let templateId = course.certificateSettings?.templateId || null;
+    // Get template: Use manual if provided, otherwise fallback to course settings
+    let templateId = manualTemplateId || course.certificateSettings?.templateId || null;
 
     const certificate = await Certificate.create({
       userId,
