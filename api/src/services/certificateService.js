@@ -446,32 +446,38 @@ class CertificateService {
    * Get certificate PDF (generate if not exists)
    */
   async getCertificatePDF(certificateId) {
-    const certificate = await Certificate.findById(certificateId);
-
-    if (!certificate) {
-      throw new Error("Certificate not found");
-    }
-
-    // Generate PDF if not generated yet
-    if (!certificate.pdfGenerated || !certificate.pdfUrl) {
-      const { pdfBuffer } = await this.generateCertificatePDF(certificateId);
-      return pdfBuffer;
-    }
-
-    // Read existing PDF
     try {
-      const pdfPath = path.join(
-        process.cwd(),
-        "uploads",
-        "certificates",
-        `${certificate.certificateNumber}.pdf`
-      );
-      const pdfBuffer = await fs.readFile(pdfPath);
-      return pdfBuffer;
+      const certificate = await Certificate.findById(certificateId);
+
+      if (!certificate) {
+        throw new Error("Certificate not found");
+      }
+
+      // Generate PDF if not generated yet
+      if (!certificate.pdfGenerated || !certificate.pdfUrl) {
+        const { pdfBuffer } = await this.generateCertificatePDF(certificateId);
+        return pdfBuffer;
+      }
+
+      // Read existing PDF
+      try {
+        const pdfPath = path.join(
+          process.cwd(),
+          "uploads",
+          "certificates",
+          `${certificate.certificateNumber}.pdf`
+        );
+        const pdfBuffer = await fs.readFile(pdfPath);
+        return pdfBuffer;
+      } catch (error) {
+        console.error('Error reading existing PDF:', error.message);
+        // Regenerate if file not found
+        const { pdfBuffer } = await this.generateCertificatePDF(certificateId);
+        return pdfBuffer;
+      }
     } catch (error) {
-      // Regenerate if file not found
-      const { pdfBuffer } = await this.generateCertificatePDF(certificateId);
-      return pdfBuffer;
+      console.error('Error in getCertificatePDF:', error);
+      throw error;
     }
   }
 

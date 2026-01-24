@@ -50,6 +50,7 @@ export default function CertificatesTab({ locale }: CertificatesTabProps) {
       
       toast.success(isArabic ? "جاري تحميل الشهادة..." : "Downloading certificate...");
     } catch (error: any) {
+      console.error('Download error:', error);
       toast.error(isArabic ? "فشل تحميل الشهادة" : "Failed to download certificate");
     }
   };

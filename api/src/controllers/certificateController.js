@@ -115,8 +115,24 @@ export const downloadCertificatePublic = async (req, res, next) => {
   try {
     const { certificateNumber } = req.params;
 
+    if (!certificateNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "Certificate number is required"
+      });
+    }
+
     // Find certificate by number
-    const certificate = await certificateService.verifyCertificate(certificateNumber);
+    let certificate;
+    try {
+      certificate = await certificateService.verifyCertificate(certificateNumber);
+    } catch (error) {
+      console.error('Certificate not found:', error.message);
+      return res.status(404).json({
+        success: false,
+        message: "Certificate not found"
+      });
+    }
     
     if (!certificate) {
       return res.status(404).json({
@@ -126,7 +142,8 @@ export const downloadCertificatePublic = async (req, res, next) => {
     }
 
     // Get or generate PDF
-    const pdfBuffer = await certificateService.getCertificatePDF(certificate._id || certificate.id);
+    const certId = certificate._id || certificate.id;
+    const pdfBuffer = await certificateService.getCertificatePDF(certId);
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
@@ -135,7 +152,13 @@ export const downloadCertificatePublic = async (req, res, next) => {
     );
     res.send(pdfBuffer);
   } catch (error) {
-    next(error);
+    console.error('Error downloading certificate:', error);
+    // Send a more informative error response
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate certificate PDF",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

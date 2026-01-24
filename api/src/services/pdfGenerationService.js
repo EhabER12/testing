@@ -67,9 +67,21 @@ class PDFGenerationService {
     } catch (error) {
       // Fallback to Cairo if font not found
       console.warn(`Font ${fontFamily} (${filename}) not found, falling back to Cairo`);
-      const fallbackPath = path.join(__dirname, "..", "assets", "fonts", "Cairo-Regular.ttf");
-      const fallbackBytes = await fs.readFile(fallbackPath);
-      return await pdfDoc.embedFont(fallbackBytes);
+      try {
+        const fallbackPath = path.join(__dirname, "..", "assets", "fonts", "Cairo-Regular.ttf");
+        const fallbackBytes = await fs.readFile(fallbackPath);
+        return await pdfDoc.embedFont(fallbackBytes);
+      } catch (fallbackError) {
+        console.warn("Cairo font not found, using default font");
+        // If no Cairo font exists, create a simple fallback
+        try {
+          // Try to embed a standard font (Helvetica is usually available in PDF viewers)
+          return await pdfDoc.embedFont(pdfDoc.StandardFonts.Helvetica);
+        } catch (finalError) {
+          // Last resort - create a basic font embedding
+          return await pdfDoc.embedFont(pdfDoc.StandardFonts.Helvetica);
+        }
+      }
     }
   }
 
@@ -275,7 +287,7 @@ class PDFGenerationService {
         !placeholders.issuedDate &&
         !placeholders.certificateNumber
       ) {
-        const font = customFont;
+        const font = defaultFont;
 
         // Title
         const title = "CERTIFICATE OF COMPLETION";
