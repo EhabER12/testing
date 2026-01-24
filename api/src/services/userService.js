@@ -382,4 +382,49 @@ export class UserService {
 
     return updatedUser;
   }
+
+  async assignStudentToTeacher(studentId, teacherId) {
+    const student = await this.userRepository.findById(studentId);
+    if (!student) throw new ApiError(404, "Student not found");
+
+    const teacher = await this.userRepository.findById(teacherId);
+    if (!teacher) throw new ApiError(404, "Teacher not found");
+    if (teacher.role !== "teacher") throw new ApiError(400, "Assigned user is not a teacher");
+
+    return this.userRepository.update(studentId, {
+      "studentInfo.assignedTeacher": teacherId
+    });
+  }
+
+  async removeStudentFromTeacher(studentId) {
+    const student = await this.userRepository.findById(studentId);
+    if (!student) throw new ApiError(404, "Student not found");
+
+    return this.userRepository.update(studentId, {
+      "studentInfo.assignedTeacher": null
+    });
+  }
+
+  async getTeacherStudents(teacherId, queryParams = {}) {
+    const teacher = await this.userRepository.findById(teacherId);
+    if (!teacher) throw new ApiError(404, "Teacher not found");
+
+    const { page, limit, search } = queryParams;
+    const filter = {
+      "studentInfo.assignedTeacher": teacherId
+    };
+
+    const options = {
+      page,
+      limit,
+      filter,
+      select: "-password"
+    };
+
+    if (search) {
+      return this.userRepository.search(search, options);
+    }
+
+    return this.userRepository.findAll(options);
+  }
 }

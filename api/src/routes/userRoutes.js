@@ -8,6 +8,9 @@ import {
   deleteUser,
   approveTeacher,
   rejectTeacher,
+  assignStudent,
+  removeStudent,
+  getTeacherStudents,
   updateUserPassword,
 } from "../controllers/userController.js";
 import { protect, authorize } from "../middlewares/authMiddleware.js";
@@ -44,6 +47,26 @@ router.post(
   protect,
   authorize("admin"),
   rejectTeacher
+);
+
+// Teacher student management routes
+router.post(
+  "/:id/assign-student",
+  protect,
+  authorize("admin"),
+  assignStudent
+);
+router.post(
+  "/:id/remove-student",
+  protect,
+  authorize("admin"),
+  removeStudent
+);
+router.get(
+  "/:id/students",
+  protect,
+  authorize("admin", "teacher"),
+  getTeacherStudents
 );
 
 export default router;

@@ -150,3 +150,50 @@ export const rejectTeacher = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Assign student to teacher
+// @route   POST /api/users/:id/assign-student
+// @access  Private/Admin
+export const assignStudent = async (req, res, next) => {
+  try {
+    const { id: teacherId } = req.params;
+    const { studentId } = req.body;
+
+    const result = await userService.assignStudentToTeacher(studentId, teacherId);
+
+    return ApiResponse.success(res, result, "Student assigned successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Remove student from teacher
+// @route   POST /api/users/:id/remove-student
+// @access  Private/Admin
+export const removeStudent = async (req, res, next) => {
+  try {
+    const { studentId } = req.body;
+
+    await userService.removeStudentFromTeacher(studentId);
+
+    return ApiResponse.success(res, null, "Student removed successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get teacher students
+// @route   GET /api/users/:id/students
+// @access  Private/Admin, Teacher
+export const getTeacherStudents = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { page, limit, search } = req.query;
+
+    const students = await userService.getTeacherStudents(id, { page, limit, search });
+
+    return ApiResponse.success(res, students);
+  } catch (error) {
+    next(error);
+  }
+};

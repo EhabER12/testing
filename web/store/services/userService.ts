@@ -287,3 +287,78 @@ export const updateUserPassword = createAsyncThunk<
     return thunkAPI.rejectWithValue(message);
   }
 });
+
+export const assignStudentToTeacher = createAsyncThunk<
+  any,
+  { teacherId: string; studentId: string },
+  { rejectValue: string }
+>("users/assignStudent", async ({ teacherId, studentId }, thunkAPI) => {
+  try {
+    const state = thunkAPI.getState() as { auth: { user?: { token: string } } };
+    const token = state.auth.user?.token;
+    if (!token) return thunkAPI.rejectWithValue("Not authorized");
+
+    const response = await axiosInstance.post(`/users/${teacherId}/assign-student`, { studentId });
+    return response.data;
+  } catch (error: any) {
+    let message =
+      (error.response && error.response.data && error.response.data.message) ||
+      error.message ||
+      error.toString();
+
+    if (typeof message === 'object' && message !== null) {
+      message = message.en || message.ar || JSON.stringify(message);
+    }
+    return thunkAPI.rejectWithValue(message);
+  }
+});
+
+export const removeStudentFromTeacher = createAsyncThunk<
+  any,
+  { teacherId: string; studentId: string },
+  { rejectValue: string }
+>("users/removeStudent", async ({ teacherId, studentId }, thunkAPI) => {
+  try {
+    const state = thunkAPI.getState() as { auth: { user?: { token: string } } };
+    const token = state.auth.user?.token;
+    if (!token) return thunkAPI.rejectWithValue("Not authorized");
+
+    const response = await axiosInstance.post(`/users/${teacherId}/remove-student`, { studentId });
+    return response.data;
+  } catch (error: any) {
+    let message =
+      (error.response && error.response.data && error.response.data.message) ||
+      error.message ||
+      error.toString();
+
+    if (typeof message === 'object' && message !== null) {
+      message = message.en || message.ar || JSON.stringify(message);
+    }
+    return thunkAPI.rejectWithValue(message);
+  }
+});
+
+export const getTeacherStudents = createAsyncThunk<
+  GetUsersResponse,
+  { teacherId: string; params?: any },
+  { rejectValue: string }
+>("users/getTeacherStudents", async ({ teacherId, params }, thunkAPI) => {
+  try {
+    const state = thunkAPI.getState() as { auth: { user?: { token: string } } };
+    const token = state.auth.user?.token;
+    if (!token) return thunkAPI.rejectWithValue("Not authorized");
+
+    const response = await axiosInstance.get(`/users/${teacherId}/students`, { params });
+    return response.data;
+  } catch (error: any) {
+    let message =
+      (error.response && error.response.data && error.response.data.message) ||
+      error.message ||
+      error.toString();
+
+    if (typeof message === 'object' && message !== null) {
+      message = message.en || message.ar || JSON.stringify(message);
+    }
+    return thunkAPI.rejectWithValue(message);
+  }
+});

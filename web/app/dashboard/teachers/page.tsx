@@ -14,6 +14,11 @@ import {
   updateStudentStatus,
   TeacherGroup,
 } from "@/store/services/teacherGroupService";
+import {
+  assignStudentToTeacher,
+  removeStudentFromTeacher,
+  getTeacherStudents,
+} from "@/store/services/userService";
 import { getStudentMembers } from "@/store/services/studentMemberService";
 import { isAuthenticated, isAdmin, isTeacher } from "@/store/services/authService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
@@ -89,6 +94,9 @@ export default function TeachersManagementPage() {
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<TeacherGroup | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  const [isManageStudentsOpen, setIsManageStudentsOpen] = useState(false);
+  const [selectedTeacherForStudents, setSelectedTeacherForStudents] = useState<any>(null);
+  const [teacherStudents, setTeacherStudents] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     teacherId: "",
@@ -216,6 +224,61 @@ export default function TeachersManagementPage() {
     }
   };
 
+  const fetchTeacherStudents = async (teacherId: string) => {
+    try {
+      const response = await dispatch(getTeacherStudents({ teacherId })).unwrap();
+      if (response && response.data && response.data.results) {
+        setTeacherStudents(response.data.results);
+      }
+    } catch (err) {
+      console.error("Failed to fetch teacher students:", err);
+    }
+  };
+
+  const handleAssignStudentToTeacher = async () => {
+    if (!selectedTeacherForStudents || !selectedStudentId) return;
+    try {
+      const teacherId = selectedTeacherForStudents.id || selectedTeacherForStudents._id;
+      await dispatch(assignStudentToTeacher({
+        teacherId,
+        studentId: selectedStudentId
+      })).unwrap();
+      await fetchTeacherStudents(teacherId);
+      setSelectedStudentId("");
+    } catch (err) {
+      console.error("Failed to assign student:", err);
+    }
+  };
+
+  const handleRemoveStudentFromTeacher = async (studentId: string) => {
+    if (!selectedTeacherForStudents) return;
+    if (confirm(t("admin.teachers.confirmRemoveStudent"))) {
+      try {
+        const teacherId = selectedTeacherForStudents.id || selectedTeacherForStudents._id;
+        await dispatch(removeStudentFromTeacher({
+          teacherId,
+          studentId
+        })).unwrap();
+        await fetchTeacherStudents(teacherId);
+      } catch (err) {
+        console.error("Failed to remove student:", err);
+      }
+    }
+  };
+
+  const handleOpenManageStudents = (teacher: any) => {
+    setSelectedTeacherForStudents(teacher);
+    fetchTeacherStudents((teacher.id || teacher._id)!);
+    setIsManageStudentsOpen(true);
+  };
+
+  useEffect(() => {
+    if (isTeacher() && user) {
+      setSelectedTeacherForStudents(user);
+      fetchTeacherStudents((user._id || user.id)!);
+    }
+  }, [user]);
+
   const resetForm = () => {
     setFormData({
       teacherId: "",
@@ -301,6 +364,7 @@ export default function TeachersManagementPage() {
       <Tabs defaultValue="groups" className="space-y-4">
         <TabsList>
           <TabsTrigger value="groups">{t("admin.teachers.teacherGroups")}</TabsTrigger>
+          {isTeacher() && <TabsTrigger value="my-students">{t("admin.teachers.myStudents")}</TabsTrigger>}
           {isAdmin() && <TabsTrigger value="teachers">{t("admin.teachers.allTeachers")}</TabsTrigger>}
         </TabsList>
 
@@ -499,6 +563,67 @@ export default function TeachersManagementPage() {
           </Card>
         </TabsContent>
 
+        {/* My Students Tab */}
+        {isTeacher() && (
+          <TabsContent value="my-students">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>{t("admin.teachers.myStudents")}</CardTitle>
+                    <CardDescription>{teacherStudents.length} {t("admin.teachers.totalStudents")}</CardDescription>
+                  </div>
+                  <Button onClick={() => setIsManageStudentsOpen(true)}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    {t("admin.teachers.addStudent")}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("admin.teachers.studentName")}</TableHead>
+                      <TableHead>{t("admin.teachers.whatsapp")}</TableHead>
+                      <TableHead>{t("admin.teachers.email")}</TableHead>
+                      <TableHead className="text-right">{t("admin.teachers.actions")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {teacherStudents.map((student) => {
+                      const studentId = student.id || student._id;
+                      return (
+                        <TableRow key={studentId}>
+                          <TableCell className="font-medium">{getTextValue(student.fullName)}</TableCell>
+                          <TableCell>{student.whatsappNumber || "-"}</TableCell>
+                          <TableCell>{student.email}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleRemoveStudentFromTeacher(studentId)}
+                            >
+                              <UserMinus className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {teacherStudents.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          {t("admin.teachers.noStudents")}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
         {/* Teachers List Tab */}
         <TabsContent value="teachers">
           <Card>
@@ -513,60 +638,66 @@ export default function TeachersManagementPage() {
                   return (
                     <Card key={teacherId} className="overflow-hidden hover:shadow-md transition-shadow">
                       <CardHeader className="bg-muted/30 pb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-full bg-genoun-green/10 flex items-center justify-center text-genoun-green font-bold text-lg">
-                          {getTextValue(teacher.fullName).charAt(0)}
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-full bg-genoun-green/10 flex items-center justify-center text-genoun-green font-bold text-lg">
+                            {getTextValue(teacher.fullName).charAt(0)}
+                          </div>
+                          <div>
+                            <CardTitle className="text-base">{getTextValue(teacher.fullName)}</CardTitle>
+                            <CardDescription className="text-xs truncate max-w-[150px]">{teacher.email}</CardDescription>
+                          </div>
                         </div>
-                        <div>
-                          <CardTitle className="text-base">{getTextValue(teacher.fullName)}</CardTitle>
-                          <CardDescription className="text-xs truncate max-w-[150px]">{teacher.email}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-4 grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-muted-foreground uppercase">{t("admin.teachers.totalStudents")}</p>
+                          <p className="font-bold">{teacher.statistics.totalStudents}</p>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-4 grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <p className="text-[10px] text-muted-foreground uppercase">{t("admin.teachers.totalStudents")}</p>
-                        <p className="font-bold">{teacher.statistics.totalStudents}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[10px] text-muted-foreground uppercase">{t("admin.teachers.activeStudents")}</p>
-                        <p className="font-bold text-green-600">{teacher.statistics.activeStudents}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[10px] text-muted-foreground uppercase">{t("admin.teachers.totalGroups")}</p>
-                        <p className="font-bold">{teacher.statistics.totalGroups}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[10px] text-muted-foreground uppercase">{t("admin.teachers.expectedRevenue")}</p>
-                        <p className="font-bold text-genoun-green">{formatMoney(teacher.statistics.expectedRevenue, "EGP")}</p>
-                      </div>
-                      <div className="col-span-2 pt-2 border-t flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {teacher.teacherInfo?.isApproved ? (
-                            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                              <ShieldCheck className="h-3 w-3 mr-1" />
-                              {t("admin.teachers.approved")}
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive">
-                              <ShieldAlert className="h-3 w-3 mr-1" />
-                              {t("admin.teachers.notApproved")}
-                            </Badge>
-                          )}
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-muted-foreground uppercase">{t("admin.teachers.activeStudents")}</p>
+                          <p className="font-bold text-green-600">{teacher.statistics.activeStudents}</p>
                         </div>
-                        <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
-                          <Link href={`/dashboard/users?search=${teacher.email}`}>
-                            <Settings className="h-3 w-3 mr-1" />
-                            {t("admin.teachers.actions")}
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </CardContent>
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-muted-foreground uppercase">{t("admin.teachers.totalGroups")}</p>
+                          <p className="font-bold">{teacher.statistics.totalGroups}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-muted-foreground uppercase">{t("admin.teachers.expectedRevenue")}</p>
+                          <p className="font-bold text-genoun-green">{formatMoney(teacher.statistics.expectedRevenue, "EGP")}</p>
+                        </div>
+                        <div className="col-span-2 pt-2 border-t flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {teacher.teacherInfo?.isApproved ? (
+                              <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                                <ShieldCheck className="h-3 w-3 mr-1" />
+                                {t("admin.teachers.approved")}
+                              </Badge>
+                            ) : (
+                              <Badge variant="destructive">
+                                <ShieldAlert className="h-3 w-3 mr-1" />
+                                {t("admin.teachers.notApproved")}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => handleOpenManageStudents(teacher)}>
+                              <Users className="h-3 w-3 mr-1" />
+                              {t("admin.teachers.students")}
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
+                              <Link href={`/dashboard/users?search=${teacher.email}`}>
+                                <Settings className="h-3 w-3 mr-1" />
+                                {t("admin.teachers.actions")}
+                              </Link>
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
@@ -675,7 +806,7 @@ export default function TeachersManagementPage() {
             {/* Pricing Section */}
             <div className="border p-4 rounded-lg space-y-4">
               <h4 className="font-bold text-sm border-b pb-2">{t("admin.teachers.pricing")}</h4>
-              
+
               {formData.groupType === "individual" ? (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
@@ -800,6 +931,83 @@ export default function TeachersManagementPage() {
               {t("admin.teachers.addStudent")}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isManageStudentsOpen} onOpenChange={setIsManageStudentsOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {isTeacher() ? t("admin.teachers.myStudents") : `${t("admin.teachers.manageStudents")} - ${getTextValue(selectedTeacherForStudents?.fullName || "")}`}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <div className="flex items-end gap-4 p-4 border rounded-lg bg-muted/20">
+              <div className="flex-1 space-y-2">
+                <Label>{t("admin.teachers.addStudent")}</Label>
+                <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("admin.teachers.selectStudent")} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {studentMembers.map((student) => {
+                      const studentId = student.id || student._id;
+                      const isAssigned = teacherStudents.some(s => (s.id || s._id) === studentId);
+                      if (isAssigned) return null;
+                      return (
+                        <SelectItem key={studentId} value={studentId!}>
+                          {getTextValue(student.studentName)} ({student.whatsappNumber})
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleAssignStudentToTeacher} disabled={!selectedStudentId}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                {t("admin.teachers.addStudent")}
+              </Button>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("admin.teachers.studentName")}</TableHead>
+                  <TableHead>{t("admin.teachers.whatsapp")}</TableHead>
+                  <TableHead className="text-right">{t("admin.teachers.actions")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {teacherStudents.map((student) => {
+                  const studentId = student.id || student._id;
+                  return (
+                    <TableRow key={studentId}>
+                      <TableCell className="font-medium">{getTextValue(student.fullName)}</TableCell>
+                      <TableCell>{student.whatsappNumber || "-"}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleRemoveStudentFromTeacher(studentId)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+                {teacherStudents.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                      {t("admin.teachers.noStudents")}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
