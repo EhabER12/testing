@@ -300,7 +300,7 @@ class PDFGenerationService {
         { year: "numeric", month: "long", day: "numeric" }
       );
 
-      // Draw certificate elements
+      // Draw certificate elements based on template placeholders
       const placeholders = template.placeholders || {};
       
       console.log('Processing placeholders:', {
@@ -312,55 +312,63 @@ class PDFGenerationService {
         images: placeholders.images
       });
 
+      // Track if we drew any placeholder successfully
+      let drewAnyPlaceholder = false;
+
       // Student Name
-      if (placeholders.studentName) {
+      if (placeholders.studentName && placeholders.studentName.x !== undefined && placeholders.studentName.y !== undefined) {
         console.log('Drawing student name:', studentName, 'at position:', placeholders.studentName);
         await drawText(studentName, placeholders.studentName, height - 300);
+        drewAnyPlaceholder = true;
       } else {
-        console.log('No student name placeholder found');
+        console.log('No valid student name placeholder found');
       }
 
       // Course Name
-      if (placeholders.courseName) {
+      if (placeholders.courseName && placeholders.courseName.x !== undefined && placeholders.courseName.y !== undefined) {
         console.log('Drawing course name:', courseName, 'at position:', placeholders.courseName);
         await drawText(courseName, placeholders.courseName, height - 450);
+        drewAnyPlaceholder = true;
       } else {
-        console.log('No course name placeholder found');
+        console.log('No valid course name placeholder found');
       }
 
       // Issue Date
-      if (placeholders.issuedDate) {
+      if (placeholders.issuedDate && placeholders.issuedDate.x !== undefined && placeholders.issuedDate.y !== undefined) {
         console.log('Drawing issued date:', issuedDate, 'at position:', placeholders.issuedDate);
         await drawText(issuedDate, placeholders.issuedDate, height - 600);
+        drewAnyPlaceholder = true;
       } else {
-        console.log('No issued date placeholder found');
+        console.log('No valid issued date placeholder found');
       }
 
       // Certificate Number
-      if (placeholders.certificateNumber) {
+      if (placeholders.certificateNumber && placeholders.certificateNumber.x !== undefined && placeholders.certificateNumber.y !== undefined) {
         console.log('Drawing certificate number:', certificateData.certificateNumber, 'at position:', placeholders.certificateNumber);
         await drawText(
           certificateData.certificateNumber,
           placeholders.certificateNumber,
           height - 750
         );
+        drewAnyPlaceholder = true;
       } else {
-        console.log('No certificate number placeholder found');
+        console.log('No valid certificate number placeholder found');
       }
 
       // Custom Text Elements
-      if (placeholders.customText && Array.isArray(placeholders.customText)) {
+      if (placeholders.customText && Array.isArray(placeholders.customText) && placeholders.customText.length > 0) {
         console.log('Drawing custom text elements:', placeholders.customText.length);
         for (const custom of placeholders.customText) {
-          if (custom.text) {
+          if (custom.text && custom.x !== undefined && custom.y !== undefined) {
             console.log('Drawing custom text:', custom.text, 'at position:', custom);
             await drawText(custom.text, custom, height / 2);
+            drewAnyPlaceholder = true;
           }
         }
       }
 
       // Additional Images
-      if (placeholders.images && Array.isArray(placeholders.images)) {
+      if (placeholders.images && Array.isArray(placeholders.images) && placeholders.images.length > 0) {
         console.log('Drawing additional images:', placeholders.images.length);
         for (const imgConfig of placeholders.images) {
           try {
@@ -385,17 +393,12 @@ class PDFGenerationService {
         }
       }
 
-      // Default layout if no placeholders configured or if template fails
-      const shouldUseDefaultLayout = 
-        !placeholders.studentName && 
-        !placeholders.courseName && 
-        !placeholders.issuedDate && 
-        !placeholders.certificateNumber;
-      
-      // Also use default layout if we're debugging template issues
+      // Decide whether to use default layout
+      // Use default layout only if:
+      // 1. No placeholders were drawn at all, OR
+      // 2. Force flags are enabled
+      const shouldUseDefaultLayout = !drewAnyPlaceholder;
       const forceDefaultLayout = process.env.DEBUG_CERTIFICATE_TEMPLATES === 'true';
-      
-      // Force default layout if environment variable is set to always use it
       const alwaysUseDefaultLayout = process.env.ALWAYS_USE_DEFAULT_CERTIFICATE_LAYOUT === 'true';
       
       if (shouldUseDefaultLayout || forceDefaultLayout || alwaysUseDefaultLayout) {

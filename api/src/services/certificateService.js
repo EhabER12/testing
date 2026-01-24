@@ -455,13 +455,19 @@ class CertificateService {
         throw new Error("Certificate not found");
       }
 
-      // Generate PDF if not generated yet
-      if (!certificate.pdfGenerated || !certificate.pdfUrl) {
+      // Always regenerate PDF if:
+      // 1. PDF was never generated, OR
+      // 2. PDF URL is missing, OR
+      // 3. PDF file doesn't exist on disk
+      const shouldRegenerate = !certificate.pdfGenerated || !certificate.pdfUrl;
+      
+      if (shouldRegenerate) {
+        console.log(`Regenerating PDF for certificate ${certificate.certificateNumber}`);
         const { pdfBuffer } = await this.generateCertificatePDF(certificateId);
         return pdfBuffer;
       }
 
-      // Read existing PDF
+      // Try to read existing PDF
       try {
         const pdfPath = path.join(
           process.cwd(),
@@ -470,10 +476,12 @@ class CertificateService {
           `${certificate.certificateNumber}.pdf`
         );
         const pdfBuffer = await fs.readFile(pdfPath);
+        console.log(`Using existing PDF for certificate ${certificate.certificateNumber}`);
         return pdfBuffer;
       } catch (error) {
         console.error('Error reading existing PDF:', error.message);
         // Regenerate if file not found
+        console.log(`Regenerating PDF for certificate ${certificate.certificateNumber} due to file read error`);
         const { pdfBuffer } = await this.generateCertificatePDF(certificateId);
         return pdfBuffer;
       }

@@ -345,6 +345,49 @@ export const generateCertificatePDF = async (req, res, next) => {
   }
 };
 
+// Regenerate all certificates PDFs (Admin only)
+export const regenerateAllCertificatesPDFs = async (req, res, next) => {
+  try {
+    const certificates = await Certificate.find({ 
+      $or: [
+        { pdfGenerated: false },
+        { pdfGenerated: { $exists: false } },
+        { pdfUrl: null },
+        { pdfUrl: { $exists: false } }
+      ]
+    });
+
+    const results = {
+      total: certificates.length,
+      success: 0,
+      failed: 0,
+      errors: []
+    };
+
+    for (const cert of certificates) {
+      try {
+        await certificateService.generateCertificatePDF(cert._id);
+        results.success++;
+      } catch (error) {
+        results.failed++;
+        results.errors.push({
+          certificateId: cert._id,
+          certificateNumber: cert.certificateNumber,
+          error: error.message
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Regenerated ${results.success} certificates. ${results.failed} failed.`,
+      data: results,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Diagnostic endpoint to check template data
 export const getCertificateTemplateInfo = async (req, res, next) => {
   try {

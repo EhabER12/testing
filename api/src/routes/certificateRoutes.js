@@ -13,6 +13,7 @@ import {
   reissueCertificate,
   downloadCertificate,
   generateCertificatePDF,
+  regenerateAllCertificatesPDFs,
   getCertificateTemplateInfo,
   createTemplate,
   getTemplateById,
@@ -45,6 +46,26 @@ router.get("/download/:certificateNumber", downloadCertificatePublic);
 router.get("/my-certificates", protect, getUserCertificates);
 router.get("/my-eligibility", protect, getMyCertificatesEligibility);
 router.post("/claim", protect, claimCertificate);
+
+// Admin bulk operations (must be before /:id routes)
+router.post(
+  "/regenerate-all-pdfs",
+  protect,
+  authorize("admin"),
+  regenerateAllCertificatesPDFs
+);
+router.post(
+  "/issue",
+  protect,
+  authorize("admin", "moderator"),
+  issueCertificate
+);
+router.post(
+  "/bulk-issue",
+  protect,
+  authorize("admin", "moderator"),
+  bulkIssueCertificates
+);
 
 // ============ CERTIFICATE TEMPLATE ROUTES ============
 
@@ -86,18 +107,6 @@ router.get("/:id/download", protect, downloadCertificate);
 router.get("/:id/template-info", protect, getCertificateTemplateInfo);
 
 // Admin/Moderator routes
-router.post(
-  "/issue",
-  protect,
-  authorize("admin", "moderator"),
-  issueCertificate
-);
-router.post(
-  "/bulk-issue",
-  protect,
-  authorize("admin", "moderator"),
-  bulkIssueCertificates
-);
 router.get(
   "/course/:courseId",
   protect,
