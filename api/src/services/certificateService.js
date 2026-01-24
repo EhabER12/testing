@@ -161,6 +161,7 @@ class CertificateService {
           issuedAt: new Date(),
           issuedBy: issuerUserId,
           status: "issued",
+          templateId: course.certificateSettings?.templateId || null,
         });
 
         results.success.push(newCert);
@@ -179,7 +180,7 @@ class CertificateService {
   async getCertificateById(certificateId) {
     const certificate = await Certificate.findById(certificateId)
       .populate("userId", "fullName email avatar")
-      .populate("courseId", "title slug thumbnail")
+      .populate("courseId", "title slug thumbnail certificateSettings")
       .populate("issuedBy", "fullName");
 
     if (!certificate) {
@@ -193,7 +194,7 @@ class CertificateService {
   async verifyCertificate(certificateNumber) {
     const certificate = await Certificate.findOne({ certificateNumber })
       .populate("userId", "fullName")
-      .populate("courseId", "title");
+      .populate("courseId", "title certificateSettings");
 
     if (!certificate) {
       throw new Error("Certificate not found");
@@ -225,7 +226,7 @@ class CertificateService {
       userId: user._id,
       status: "issued" 
     })
-      .populate("courseId", "title slug thumbnail")
+      .populate("courseId", "title slug thumbnail certificateSettings")
       .sort({ issuedAt: -1 });
 
     if (certificates.length === 0) {
@@ -254,7 +255,7 @@ class CertificateService {
   // Get user's certificates
   async getUserCertificates(userId) {
     const certificates = await Certificate.find({ userId })
-      .populate("courseId", "title slug thumbnail")
+      .populate("courseId", "title slug thumbnail certificateSettings")
       .sort({ issuedAt: -1 });
 
     return certificates;
@@ -271,6 +272,7 @@ class CertificateService {
     const certificates = await Certificate.find(query)
       .populate("userId", "fullName email")
       .populate("issuedBy", "fullName")
+      .populate("courseId", "title slug thumbnail certificateSettings")
       .sort({ issuedAt: -1 });
 
     return certificates;
@@ -389,7 +391,7 @@ class CertificateService {
   async generateCertificatePDF(certificateId) {
     const certificate = await Certificate.findById(certificateId)
       .populate("userId", "fullName")
-      .populate("courseId", "title");
+      .populate("courseId", "title certificateSettings");
 
     if (!certificate) {
       throw new Error("Certificate not found");
