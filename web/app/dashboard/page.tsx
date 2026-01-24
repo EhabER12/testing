@@ -613,11 +613,10 @@ export default function DashboardPage() {
                             <div
                               className="h-2 rounded-full bg-primary"
                               style={{
-                                width: `${
-                                  (country.users /
+                                width: `${(country.users /
                                     (stats.analytics?.users || 1)) *
                                   100
-                                }%`,
+                                  }%`,
                               }}
                             />
                           </div>
@@ -839,9 +838,9 @@ export default function DashboardPage() {
                 <CardDescription>
                   {formSubmissions > 0
                     ? t("admin.dashboard.sections.submissionsCount").replace(
-                        "{count}",
-                        String(formSubmissions)
-                      )
+                      "{count}",
+                      String(formSubmissions)
+                    )
                     : t("admin.dashboard.sections.noSubmissions")}
                 </CardDescription>
               </CardHeader>
@@ -863,9 +862,8 @@ export default function DashboardPage() {
                         return (
                           <div
                             key={form._id}
-                            className={`flex items-center ${
-                              isRtl ? "flex-row-reverse" : ""
-                            }`}
+                            className={`flex items-center ${isRtl ? "flex-row-reverse" : ""
+                              }`}
                           >
                             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-genoun-green/10">
                               <ClipboardList className="h-4 w-4 text-genoun-green" />
@@ -878,29 +876,27 @@ export default function DashboardPage() {
                               </p>
                               <p className="text-sm text-muted-foreground">
                                 {latestSubmission && latestSubmission.summary
-                                  ? `${
-                                      Object.keys(
-                                        latestSubmission.data.summary
-                                      )[0]
-                                    }: ${String(
-                                      Object.values(
-                                        latestSubmission.data.summary
-                                      )[0]
-                                    ).substring(0, 30)}...`
+                                  ? `${Object.keys(
+                                    latestSubmission.data.summary
+                                  )[0]
+                                  }: ${String(
+                                    Object.values(
+                                      latestSubmission.data.summary
+                                    )[0]
+                                  ).substring(0, 30)}...`
                                   : t(
-                                      "admin.dashboard.messages.submissionReceived"
-                                    )}
+                                    "admin.dashboard.messages.submissionReceived"
+                                  )}
                               </p>
                             </div>
                             <div
-                              className={`text-xs text-muted-foreground ${
-                                isRtl ? "mr-auto" : "ml-auto"
-                              }`}
+                              className={`text-xs text-muted-foreground ${isRtl ? "mr-auto" : "ml-auto"
+                                }`}
                             >
                               {latestSubmission.submittedAt
                                 ? new Date(
-                                    latestSubmission.submittedAt
-                                  ).toLocaleDateString()
+                                  latestSubmission.submittedAt
+                                ).toLocaleDateString()
                                 : t("admin.dashboard.messages.recent")}
                             </div>
                           </div>
@@ -964,9 +960,8 @@ export default function DashboardPage() {
                 </div>
                 <div className="rounded-md border">
                   <div
-                    className={`grid grid-cols-5 gap-4 p-4 font-medium ${
-                      isRtl ? "text-right" : ""
-                    }`}
+                    className={`grid grid-cols-5 gap-4 p-4 font-medium ${isRtl ? "text-right" : ""
+                      }`}
                   >
                     <div>{t("admin.dashboard.table.formName")}</div>
                     <div>{t("admin.dashboard.table.fields")}</div>
@@ -980,9 +975,8 @@ export default function DashboardPage() {
                       forms.map((form) => (
                         <div
                           key={form.id || form._id}
-                          className={`grid grid-cols-5 gap-4 p-4 ${
-                            isRtl ? "text-right" : ""
-                          }`}
+                          className={`grid grid-cols-5 gap-4 p-4 ${isRtl ? "text-right" : ""
+                            }`}
                         >
                           <div className="font-medium">
                             {getTextValue(form.title)}
@@ -993,33 +987,29 @@ export default function DashboardPage() {
                           </div>
                           <div>
                             <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                form.status === "published"
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${form.status === "published"
                                   ? "bg-green-100 text-green-800"
                                   : "bg-yellow-100 text-yellow-800"
-                              }`}
+                                }`}
                             >
                               {form.status || "draft"}
                             </span>
                           </div>
                           <div
-                            className={`flex gap-2 ${
-                              isRtl ? "justify-start" : "justify-end"
-                            }`}
+                            className={`flex gap-2 ${isRtl ? "justify-start" : "justify-end"
+                              }`}
                           >
                             <Link
-                              href={`/dashboard/forms/${
-                                form.id || form._id
-                              }/edit`}
+                              href={`/dashboard/forms/${form.id || form._id
+                                }/edit`}
                             >
                               <Button variant="outline" size="sm">
                                 {t("admin.dashboard.actions.edit")}
                               </Button>
                             </Link>
                             <Link
-                              href={`/dashboard/forms/${
-                                form.id || form._id
-                              }/responses`}
+                              href={`/dashboard/forms/${form.id || form._id
+                                }/responses`}
                             >
                               <Button variant="outline" size="sm">
                                 {t("admin.dashboard.actions.responses")}
@@ -1055,9 +1045,8 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 <div className="rounded-md border">
                   <div
-                    className={`grid grid-cols-5 gap-4 p-4 font-medium ${
-                      isRtl ? "text-right" : ""
-                    }`}
+                    className={`grid grid-cols-5 gap-4 p-4 font-medium ${isRtl ? "text-right" : ""
+                      }`}
                   >
                     <div>{t("admin.dashboard.table.name")}</div>
                     <div>{t("admin.dashboard.table.rating")}</div>
@@ -1069,27 +1058,24 @@ export default function DashboardPage() {
                   </div>
                   <div className="divide-y">
                     {!loading &&
-                    Array.isArray(reviews) &&
-                    reviews.length > 0 ? (
+                      Array.isArray(reviews) &&
+                      reviews.length > 0 ? (
                       reviews.map((review) => (
                         <div
                           key={review._id || review.id}
-                          className={`grid grid-cols-5 gap-4 p-4 ${
-                            isRtl ? "text-right" : ""
-                          }`}
+                          className={`grid grid-cols-5 gap-4 p-4 ${isRtl ? "text-right" : ""
+                            }`}
                         >
                           <div className="font-medium">{review.name}</div>
                           <div
-                            className={`flex text-yellow-400 ${
-                              isRtl ? "flex-row-reverse justify-end" : ""
-                            }`}
+                            className={`flex text-yellow-400 ${isRtl ? "flex-row-reverse justify-end" : ""
+                              }`}
                           >
                             {[...Array(5)].map((_, i) => (
                               <Star
                                 key={i}
-                                className={`h-4 w-4 ${
-                                  i < review.rating ? "fill-current" : ""
-                                }`}
+                                className={`h-4 w-4 ${i < review.rating ? "fill-current" : ""
+                                  }`}
                               />
                             ))}
                           </div>
@@ -1098,21 +1084,19 @@ export default function DashboardPage() {
                           </div>
                           <div>
                             <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                review.status === "approved"
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${review.status === "approved"
                                   ? "bg-green-100 text-green-800"
                                   : review.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
                             >
                               {review.status}
                             </span>
                           </div>
                           <div
-                            className={`flex gap-2 ${
-                              isRtl ? "justify-start" : "justify-end"
-                            }`}
+                            className={`flex gap-2 ${isRtl ? "justify-start" : "justify-end"
+                              }`}
                           >
                             {review.status === "pending" && (
                               <>
@@ -1332,9 +1316,8 @@ function TeacherDashboard({ stats }: { stats: TeacherStats }) {
                 stats.recentCourses.map((course) => (
                   <div
                     key={course.id}
-                    className={`flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors ${
-                      isRtl ? "flex-row-reverse" : ""
-                    }`}
+                    className={`flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors ${isRtl ? "flex-row-reverse" : ""
+                      }`}
                   >
                     <div className="flex items-center gap-4">
                       {course.thumbnail && (
@@ -1397,8 +1380,8 @@ function TeacherDashboard({ stats }: { stats: TeacherStats }) {
                         <User2 className="h-4 w-4 text-genoun-green" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{student.name}</p>
-                        <p className="text-xs text-muted-foreground">{student.groupName}</p>
+                        <p className="text-sm font-medium">{getTextValue(student.name)}</p>
+                        <p className="text-xs text-muted-foreground">{getTextValue(student.groupName)}</p>
                       </div>
                     </div>
                     <Badge variant={student.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">
