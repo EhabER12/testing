@@ -78,12 +78,11 @@ export interface PackageStats {
 // Get all packages
 export const getPackages = createAsyncThunk(
   "packages/getAll",
-  async (filters: { type?: string; isActive?: boolean } | undefined, { rejectWithValue }) => {
+  async (filters: { isActive?: boolean } | undefined, { rejectWithValue }) => {
     try {
       const params = new URLSearchParams();
-      if (filters?.type) params.append("type", filters.type);
       if (filters?.isActive !== undefined) params.append("isActive", String(filters.isActive));
-      
+
       const response = await axios.get(`/packages?${params.toString()}`);
       return response.data.data;
     } catch (error: any) {

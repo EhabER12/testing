@@ -73,7 +73,8 @@ export default function PackagesPage() {
   const [formData, setFormData] = useState<CreatePackageData>({
     name: { ar: "", en: "" },
     description: { ar: "", en: "" },
-    type: "tahfeez",
+    name: { ar: "", en: "" },
+    description: { ar: "", en: "" },
     price: 0,
     currency: "EGP",
     duration: { value: 1, unit: "month" },
@@ -106,7 +107,8 @@ export default function PackagesPage() {
       setFormData({
         name: pkg.name,
         description: pkg.description || { ar: "", en: "" },
-        type: pkg.type,
+        name: pkg.name,
+        description: pkg.description || { ar: "", en: "" },
         price: pkg.price,
         currency: pkg.currency,
         duration: pkg.duration,
@@ -121,7 +123,8 @@ export default function PackagesPage() {
       setFormData({
         name: { ar: "", en: "" },
         description: { ar: "", en: "" },
-        type: "tahfeez",
+        name: { ar: "", en: "" },
+        description: { ar: "", en: "" },
         price: 0,
         currency: "EGP",
         duration: { value: 1, unit: "month" },
@@ -155,7 +158,7 @@ export default function PackagesPage() {
     if (
       confirm(
         t("admin.packages.confirmDelete") ||
-          "Are you sure you want to delete this package?"
+        "Are you sure you want to delete this package?"
       )
     ) {
       try {
@@ -321,7 +324,6 @@ export default function PackagesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("admin.packages.packageName") || "Package Name"}</TableHead>
-                <TableHead>{t("admin.packages.packageType") || "Type"}</TableHead>
                 <TableHead>{t("admin.packages.price") || "Price"}</TableHead>
                 <TableHead>{t("admin.packages.duration") || "Duration"}</TableHead>
                 <TableHead>{t("admin.packages.enrolledCount") || "Enrolled"}</TableHead>
@@ -344,10 +346,15 @@ export default function PackagesPage() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {t(`admin.packages.types.${pkg.type}`) || pkg.type}
-                    </Badge>
+                  <TableCell className="font-medium">
+                    <div>
+                      {getTextValue(pkg.name)}
+                      {pkg.isPopular && (
+                        <Badge className="ml-2 bg-yellow-100 text-yellow-800">
+                          {t("admin.packages.isPopular") || "Popular"}
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>{formatCurrency(pkg.price, pkg.currency)}</TableCell>
                   <TableCell>
@@ -479,34 +486,7 @@ export default function PackagesPage() {
               />
             </div>
 
-            {/* Type */}
-            <div className="grid gap-2">
-              <Label>{t("admin.packages.packageType") || "Package Type"}</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, type: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem key="tahfeez" value="tahfeez">
-                    {t("admin.packages.types.tahfeez") || "Tahfeez"}
-                  </SelectItem>
-                  <SelectItem key="group" value="group">
-                    {t("admin.packages.types.group") || "Group"}
-                  </SelectItem>
-                  <SelectItem key="individual" value="individual">
-                    {t("admin.packages.types.individual") || "Individual"}
-                  </SelectItem>
-                  <SelectItem key="custom" value="custom">
-                    {t("admin.packages.types.custom") || "Custom"}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
 
             {/* Price & Currency */}
             <div className="grid grid-cols-2 gap-4">

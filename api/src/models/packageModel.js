@@ -20,13 +20,6 @@ const packageSchema = new mongoose.Schema(
       en: { type: String },
     },
 
-    // Package Type
-    type: {
-      type: String,
-      enum: ["tahfeez", "group", "individual", "custom"],
-      required: [true, "Package type is required"],
-    },
-
     // Pricing
     price: {
       type: Number,
@@ -141,7 +134,7 @@ const packageSchema = new mongoose.Schema(
 );
 
 // Indexes
-packageSchema.index({ type: 1, isActive: 1 });
+packageSchema.index({ isActive: 1 });
 packageSchema.index({ displayOrder: 1 });
 
 // Virtual: Monthly price (for comparison)
