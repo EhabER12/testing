@@ -110,6 +110,35 @@ export const getCertificatesByEmail = async (req, res, next) => {
   }
 };
 
+// Download certificate PDF (public - by certificate number)
+export const downloadCertificatePublic = async (req, res, next) => {
+  try {
+    const { certificateNumber } = req.params;
+
+    // Find certificate by number
+    const certificate = await certificateService.verifyCertificate(certificateNumber);
+    
+    if (!certificate) {
+      return res.status(404).json({
+        success: false,
+        message: "Certificate not found"
+      });
+    }
+
+    // Get or generate PDF
+    const pdfBuffer = await certificateService.getCertificatePDF(certificate._id || certificate.id);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=certificate-${certificate.certificateNumber}.pdf`
+    );
+    res.send(pdfBuffer);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get user's certificates
 export const getUserCertificates = async (req, res, next) => {
   try {

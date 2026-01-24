@@ -5,6 +5,7 @@ import {
   getCertificateById,
   verifyCertificate,
   getCertificatesByEmail,
+  downloadCertificatePublic,
   getUserCertificates,
   getCourseCertificates,
   revokeCertificate,
@@ -28,6 +29,7 @@ const router = express.Router();
 // Public routes
 router.get("/verify/:certificateNumber", verifyCertificate);
 router.post("/by-email", getCertificatesByEmail);
+router.get("/download/:certificateNumber", downloadCertificatePublic);
 
 // Student routes
 router.get("/my-certificates", protect, getUserCertificates);

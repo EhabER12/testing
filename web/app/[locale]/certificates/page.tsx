@@ -166,25 +166,17 @@ export default function CertificatesPage() {
                             <span>{formatDate(certificate.issuedAt)}</span>
                           </div>
                           
-                          {certificate.pdfUrl ? (
-                            <Link href={certificate.pdfUrl} target="_blank">
-                              <Button className="gap-2">
-                                <Download className="h-4 w-4" />
-                                {t("downloadCertificate")}
-                              </Button>
-                            </Link>
-                          ) : (
-                            <Button variant="secondary" disabled>
-                              {t("generatingPdf")}
+                          <a 
+                            href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/certificates/download/${certificate.certificateNumber}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Button className="gap-2">
+                              <Download className="h-4 w-4" />
+                              {t("downloadCertificate")}
                             </Button>
-                          )}
+                          </a>
                         </div>
-                        
-                        {!certificate.pdfUrl && (
-                          <p className="text-sm text-yellow-600 mt-3">
-                            {t("pdfNotReady")}
-                          </p>
-                        )}
                       </CardContent>
                     </Card>
                   ))}

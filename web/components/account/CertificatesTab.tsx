@@ -39,16 +39,16 @@ export default function CertificatesTab({ locale }: CertificatesTabProps) {
     }
   };
 
-  const handleDownload = async (certificateId: string, number: string) => {
+  const handleDownload = async (certificateNumber: string) => {
     try {
-      const blob = await dispatch(downloadCertificate(certificateId)).unwrap();
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `certificate-${number}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      // Use public download endpoint with certificate number
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const downloadUrl = `${apiUrl}/certificates/download/${certificateNumber}`;
+      
+      // Open in new tab to trigger download
+      window.open(downloadUrl, '_blank');
+      
+      toast.success(isArabic ? "جاري تحميل الشهادة..." : "Downloading certificate...");
     } catch (error: any) {
       toast.error(isArabic ? "فشل تحميل الشهادة" : "Failed to download certificate");
     }
@@ -153,7 +153,7 @@ export default function CertificatesTab({ locale }: CertificatesTabProps) {
                     <Button 
                       className="w-full bg-genoun-green hover:bg-genoun-green/90 text-white" 
                       size="sm"
-                      onClick={() => item.certificateId && handleDownload(item.certificateId, item.certificateNumber!)}
+                      onClick={() => item.certificateNumber && handleDownload(item.certificateNumber)}
                     >
                       <Download className="h-4 w-4 mr-2" />
                       {isArabic ? "تحميل الشهادة" : "Download PDF"}
