@@ -294,7 +294,7 @@ export default function StudentMembersPage() {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <UserCircle className="h-4 w-4 text-muted-foreground" />
-                          {student.name || student.fullName || isRtl ? "غير معروف" : "Unknown"}
+                          {getTextValue(student.name || student.fullName) || (isRtl ? "غير معروف" : "Unknown")}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -376,7 +376,7 @@ export default function StudentMembersPage() {
             <div className="space-y-2">
               <Label>{isRtl ? "الطالب" : "Student"}</Label>
               <div className="p-2 border rounded-md bg-muted/20">
-                {selectedStudentForAssign?.name || selectedStudentForAssign?.fullName || "Unknown"}
+                {getTextValue(selectedStudentForAssign?.name || selectedStudentForAssign?.fullName) || "Unknown"}
               </div>
             </div>
             <div className="space-y-2">
