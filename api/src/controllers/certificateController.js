@@ -1,6 +1,33 @@
 import certificateService from "../services/certificateService.js";
+import Certificate from "../models/certificateModel.js";
+import CertificateTemplate from "../models/certificateTemplateModel.js";
 
 // ============ CERTIFICATE CONTROLLERS ============
+
+// Get all certificates (Admin)
+export const getAllCertificates = async (req, res, next) => {
+  try {
+    const { status, courseId, userId } = req.query;
+    
+    const query = {};
+    if (status) query.status = status;
+    if (courseId) query.courseId = courseId;
+    if (userId) query.userId = userId;
+
+    const certificates = await Certificate.find(query)
+      .populate("userId", "fullName email avatar")
+      .populate("courseId", "title slug thumbnail certificateSettings")
+      .populate("issuedBy", "fullName")
+      .sort({ issuedAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: certificates,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // Issue certificate to a user
 export const issueCertificate = async (req, res, next) => {

@@ -1,4 +1,30 @@
 import quizService from "../services/quizService.js";
+import Quiz from "../models/quizModel.js";
+
+// Get all quizzes (Admin)
+export const getAllQuizzes = async (req, res, next) => {
+  try {
+    const { courseId, sectionId, isPublished } = req.query;
+    
+    const query = {};
+    if (courseId) query.courseId = courseId;
+    if (sectionId) query.sectionId = sectionId;
+    if (isPublished !== undefined) query.isPublished = isPublished === "true";
+
+    const quizzes = await Quiz.find(query)
+      .populate("courseId", "title slug")
+      .populate("sectionId", "title")
+      .populate("createdBy", "fullName")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: quizzes,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // Create Quiz (Admin/Teacher)
 export const createQuiz = async (req, res, next) => {

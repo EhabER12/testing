@@ -3,6 +3,7 @@ import {
   issueCertificate,
   bulkIssueCertificates,
   getCertificateById,
+  getAllCertificates,
   verifyCertificate,
   getCertificatesByEmail,
   downloadCertificatePublic,
@@ -26,6 +27,14 @@ import { protect, authorize } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 // ============ CERTIFICATE ROUTES ============
+
+// Admin route to get all certificates
+router.get(
+  "/",
+  protect,
+  authorize("admin", "moderator"),
+  getAllCertificates
+);
 
 // Public routes
 router.get("/verify/:certificateNumber", verifyCertificate);

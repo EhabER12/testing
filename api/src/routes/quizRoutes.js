@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createQuiz,
+  getAllQuizzes,
   getQuizById,
   getQuizzesByCourse,
   getQuizzesBySection,
@@ -17,6 +18,14 @@ import {
 import { protect, authorize } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
+
+// Admin route to get all quizzes
+router.get(
+  "/",
+  protect,
+  authorize("admin", "moderator", "teacher"),
+  getAllQuizzes
+);
 
 // Public/Student routes
 router.get("/my/all", protect, getMyQuizzes);
