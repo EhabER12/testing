@@ -27,6 +27,51 @@
     "all": "All",
     "home": "Home"
   },
+  "auth": {
+    "register": {
+      "title": "Create Account",
+      "subtitle": "Join us to start learning",
+      "submit": "Sign Up",
+      "submitting": "Creating account...",
+      "success": "Registration successful! Redirecting to login...",
+      "alreadyHaveAccount": "Already have an account?",
+      "signIn": "Sign In",
+      "fields": {
+        "arabicName": {
+          "label": "Arabic Name",
+          "placeholder": "Name in Arabic"
+        },
+        "englishName": {
+          "label": "English Name",
+          "placeholder": "Name in English"
+        },
+        "email": {
+          "label": "Email",
+          "placeholder": "your.email@example.com"
+        },
+        "phone": {
+          "label": "Phone",
+          "placeholder": "01234567890"
+        },
+        "password": {
+          "label": "Password",
+          "placeholder": "••••••••"
+        },
+        "confirmPassword": {
+          "label": "Confirm Password",
+          "placeholder": "••••••••"
+        }
+      },
+      "validation": {
+        "arabicNameMin": "Arabic name must be at least 2 characters",
+        "englishNameMin": "English name must be at least 2 characters",
+        "emailInvalid": "Please enter a valid email address",
+        "phoneMin": "Phone number must be at least 10 digits",
+        "passwordMin": "Password must be at least 6 characters",
+        "passwordMismatch": "Passwords don't match"
+      }
+    }
+  },
   "navigation": {
     "home": "Home",
     "services": "Services",
@@ -390,7 +435,6 @@
         "manageReviews": "Manage Reviews",
         "viewPayments": "View Payments"
       },
-
       "sections": {
         "revenueOverview": "Revenue Overview",
         "revenueChart": "Revenue Chart",

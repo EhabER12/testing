@@ -27,6 +27,51 @@
     "all": "الكل",
     "home": "الرئيسية"
   },
+  "auth": {
+    "register": {
+      "title": "إنشاء حساب",
+      "subtitle": "انضم إلينا لبدء التعلم",
+      "submit": "تسجيل حساب",
+      "submitting": "جاري التسجيل...",
+      "success": "تم التسجيل بنجاح! جاري التوجيه لتسجيل الدخول...",
+      "alreadyHaveAccount": "لديك حساب بالفعل؟",
+      "signIn": "تسجيل الدخول",
+      "fields": {
+        "arabicName": {
+          "label": "الاسم بالعربية",
+          "placeholder": "الاسم بالعربي"
+        },
+        "englishName": {
+          "label": "الاسم بالإنجليزية",
+          "placeholder": "Name in English"
+        },
+        "email": {
+          "label": "البريد الإلكتروني",
+          "placeholder": "your.email@example.com"
+        },
+        "phone": {
+          "label": "رقم الهاتف",
+          "placeholder": "01234567890"
+        },
+        "password": {
+          "label": "كلمة المرور",
+          "placeholder": "••••••••"
+        },
+        "confirmPassword": {
+          "label": "تأكيد كلمة المرور",
+          "placeholder": "••••••••"
+        }
+      },
+      "validation": {
+        "arabicNameMin": "الاسم العربي يجب أن يكون حرفين على الأقل",
+        "englishNameMin": "English name must be at least 2 characters",
+        "emailInvalid": "الرجاء إدخال بريد إلكتروني صحيح",
+        "phoneMin": "رقم الهاتف يجب أن يكون 10 أرقام على الأقل",
+        "passwordMin": "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+        "passwordMismatch": "كلمة المرور غير متطابقة"
+      }
+    }
+  },
   "navigation": {
     "home": "الرئيسية",
     "services": "خدماتنا",

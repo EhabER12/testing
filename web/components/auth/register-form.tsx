@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { register as registerUser } from "@/store/services/authService";
 import { reset } from "@/store/slices/authSlice";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,25 +24,29 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 
-const formSchema = z.object({
-  fullNameAr: z.string().min(2, "Arabic name must be at least 2 characters"),
-  fullNameEn: z.string().min(2, "English name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(10, "Phone number must be at least 10 digits"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const createSchema = (t: any) =>
+  z.object({
+    fullNameAr: z.string().min(2, t("validation.arabicNameMin")),
+    fullNameEn: z.string().min(2, t("validation.englishNameMin")),
+    email: z.string().email(t("validation.emailInvalid")),
+    phone: z.string().min(10, t("validation.phoneMin")),
+    password: z.string().min(6, t("validation.passwordMin")),
+    confirmPassword: z.string(),
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: t("validation.passwordMismatch"),
+    path: ["confirmPassword"],
+  });
 
 export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
+  const t = useTranslations("auth.register");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { isLoading, isError, message, isSuccess } = useAppSelector(
     (state) => state.auth
   );
+
+  const formSchema = createSchema(t);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -90,7 +95,7 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
           {isSuccess && (
             <Alert>
               <AlertDescription>
-                Registration successful! Redirecting to login...
+                {t("success")}
               </AlertDescription>
             </Alert>
           )}
@@ -101,10 +106,10 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
               name="fullNameAr"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Arabic Name</FormLabel>
+                  <FormLabel>{t("fields.arabicName.label")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="الاسم بالعربي"
+                      placeholder={t("fields.arabicName.placeholder")}
                       {...field}
                       onChange={(e) => {
                         field.onChange(e);
@@ -121,10 +126,10 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
               name="fullNameEn"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>English Name</FormLabel>
+                  <FormLabel>{t("fields.englishName.label")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Name in English"
+                      placeholder={t("fields.englishName.placeholder")}
                       {...field}
                       onChange={(e) => {
                         field.onChange(e);
@@ -143,11 +148,11 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>{t("fields.email.label")}</FormLabel>
                 <FormControl>
                   <Input
                     type="email"
-                    placeholder="your.email@example.com"
+                    placeholder={t("fields.email.placeholder")}
                     {...field}
                     onChange={(e) => {
                       field.onChange(e);
@@ -165,10 +170,10 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Phone Number</FormLabel>
+                <FormLabel>{t("fields.phone.label")}</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="01234567890"
+                    placeholder={t("fields.phone.placeholder")}
                     {...field}
                     onChange={(e) => {
                       field.onChange(e);
@@ -186,11 +191,11 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <FormLabel>{t("fields.password.label")}</FormLabel>
                 <FormControl>
                   <Input
                     type="password"
-                    placeholder="••••••••"
+                    placeholder={t("fields.password.placeholder")}
                     {...field}
                     onChange={(e) => {
                       field.onChange(e);
@@ -208,11 +213,11 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
             name="confirmPassword"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
+                <FormLabel>{t("fields.confirmPassword.label")}</FormLabel>
                 <FormControl>
                   <Input
                     type="password"
-                    placeholder="••••••••"
+                    placeholder={t("fields.confirmPassword.placeholder")}
                     {...field}
                     onChange={(e) => {
                       field.onChange(e);
@@ -229,18 +234,18 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating account...
+                {t("submitting")}
               </>
             ) : (
-              "Sign Up"
+              t("submit")
             )}
           </Button>
         </form>
       </Form>
       <div className="text-center text-sm">
-        Already have an account?{" "}
+        {t("alreadyHaveAccount")}{" "}
         <Link href={`/${locale}/login`} className="text-genoun-green hover:text-genoun-green/90 font-semibold">
-          Sign In
+          {t("signIn")}
         </Link>
       </div>
     </div>
