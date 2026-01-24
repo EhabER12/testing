@@ -151,6 +151,7 @@ export class StudentMemberService {
     const members = await StudentMember.find(query)
       .populate("assignedTeacherId", "fullName email")
       .populate("userId", "fullName email")
+      .populate("packageId", "name type")
       .sort(sort)
       .skip(skip)
       .limit(limit);
