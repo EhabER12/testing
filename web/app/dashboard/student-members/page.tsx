@@ -141,7 +141,7 @@ export default function StudentMembersPage() {
   };
 
   const downloadTemplate = () => {
-    const headers = ["name", "phone", "plan", "start time", "billingDay"];
+    const headers = ["name", "phone", "plan", "start time (YYYY-MM-DD)", "billingDay"];
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");

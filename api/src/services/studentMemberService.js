@@ -3,7 +3,7 @@ import User from "../models/userModel.js";
 import { ApiError } from "../utils/apiError.js";
 import { WhatsappNotificationService } from "./whatsappNotificationService.js";
 import logger from "../utils/logger.js";
-import { differenceInDays, addDays } from "date-fns";
+import { differenceInDays, addDays, parse as parseDate, isValid } from "date-fns";
 import Package from "../models/packageModel.js";
 import { parse } from 'csv-parse/sync';
 
@@ -45,14 +45,66 @@ export class StudentMemberService {
           throw new Error(`Package not found: ${record.plan}`);
         }
 
+        // Helper to parse date
+        const parseDateValue = (dateStr) => {
+          if (!dateStr) return new Date();
+
+          // Try standard Date constructor first (YYYY-MM-DD)
+          let date = new Date(dateStr);
+          if (isValid(date)) return date;
+
+          // Try DD/MM/YYYY or DD-MM-YYYY
+          // Split by / or -
+          const parts = dateStr.split(/[/-]/);
+          if (parts.length === 3) {
+            // Assume Day Month Year where Year is 4 digits
+            let day, month, year;
+            if (parts[0].length === 4) {
+              // YYYY/MM/DD
+              year = parseInt(parts[0]);
+              month = parseInt(parts[1]) - 1;
+              day = parseInt(parts[2]);
+            } else {
+              // DD/MM/YYYY
+              day = parseInt(parts[0]);
+              month = parseInt(parts[1]) - 1;
+              year = parseInt(parts[2]);
+            }
+            date = new Date(year, month, day);
+            if (isValid(date)) return date;
+          }
+
+          return new Date(); // Fallback to now
+        };
+
+        const startDate = parseDateValue(record['start time']);
+
+        // Handle billingDay: usually 1-28. If they provided a date, extract the day.
+        let billingDay = 1;
+        if (record.billingDay) {
+          const parsedBilling = parseInt(record.billingDay);
+          // If it's a simple number like "5"
+          if (!isNaN(parsedBilling) && parsedBilling >= 1 && parsedBilling <= 31) {
+            billingDay = Math.min(parsedBilling, 28); // Cap at 28 for safety
+          } else {
+            // Maybe it's a date string
+            const bDate = parseDateValue(record.billingDay);
+            if (isValid(bDate)) {
+              billingDay = Math.min(bDate.getDate(), 28);
+            }
+          }
+        } else {
+          billingDay = Math.min(startDate.getDate(), 28);
+        }
+
         // Prepare data
         const memberData = {
-          name: { ar: record.name, en: record.name }, // Assuming single name for now
+          name: { ar: record.name, en: record.name },
           phone: record.phone,
           packageId: pkg._id,
-          startDate: record['start time'] ? new Date(record['start time']) : new Date(),
-          billingDay: record.billingDay || new Date().getDate(),
-          packagePrice: pkg.price // Store current price
+          startDate: startDate,
+          billingDay: billingDay,
+          packagePrice: pkg.price
         };
 
         // Create member
