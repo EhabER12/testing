@@ -318,6 +318,68 @@ export const generateCertificatePDF = async (req, res, next) => {
   }
 };
 
+// Diagnostic endpoint to check template data
+export const getCertificateTemplateInfo = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    const certificate = await certificateService.getCertificateById(id);
+    
+    // Get template info
+    let templateInfo = null;
+    if (certificate.templateId) {
+      const template = await CertificateTemplate.findById(certificate.templateId);
+      if (template) {
+        templateInfo = {
+          id: template._id,
+          name: template.name,
+          hasPlaceholders: !!template.placeholders,
+          placeholderKeys: template.placeholders ? Object.keys(template.placeholders) : [],
+          placeholders: template.placeholders,
+          width: template.width,
+          height: template.height,
+          backgroundImage: template.backgroundImage
+        };
+      }
+    }
+    
+    // Get default template if no specific template
+    let defaultTemplate = null;
+    if (!templateInfo) {
+      const defaultTemp = await CertificateTemplate.findOne({ isDefault: true });
+      if (defaultTemp) {
+        defaultTemplate = {
+          id: defaultTemp._id,
+          name: defaultTemp.name,
+          hasPlaceholders: !!defaultTemp.placeholders,
+          placeholderKeys: defaultTemp.placeholders ? Object.keys(defaultTemp.placeholders) : [],
+          width: defaultTemp.width,
+          height: defaultTemp.height
+        };
+      }
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        certificate: {
+          id: certificate._id,
+          certificateNumber: certificate.certificateNumber,
+          studentName: certificate.studentName,
+          courseName: certificate.courseName,
+          templateId: certificate.templateId,
+          issuedAt: certificate.issuedAt
+        },
+        template: templateInfo,
+        defaultTemplate: defaultTemplate,
+        willUseTemplate: templateInfo || defaultTemplate
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ============ CERTIFICATE TEMPLATE CONTROLLERS ============
 
 // Create template

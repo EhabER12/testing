@@ -93,6 +93,27 @@ class PDFGenerationService {
    */
   async generateCertificatePDF(certificateData, template) {
     try {
+      // Validate inputs
+      if (!certificateData) {
+        throw new Error('Certificate data is required');
+      }
+      
+      if (!template) {
+        throw new Error('Template is required');
+      }
+      
+      console.log('Generating certificate PDF with template:', {
+        templateId: template._id,
+        templateName: template.name,
+        hasPlaceholders: !!template.placeholders,
+        placeholdersKeys: template.placeholders ? Object.keys(template.placeholders) : [],
+        certificateData: {
+          certificateNumber: certificateData.certificateNumber,
+          studentName: certificateData.studentName,
+          courseName: certificateData.courseName
+        }
+      });
+      
       // Create a new PDF document
       const pdfDoc = await PDFDocument.create();
 
@@ -146,16 +167,44 @@ class PDFGenerationService {
           });
         } catch (imgError) {
           console.error("Error loading background image:", imgError.message);
-          // Draw a simple border if image fails
+          // Draw a simple colored background if image fails
           page.drawRectangle({
-            x: 50,
-            y: 50,
-            width: width - 100,
-            height: height - 100,
-            borderColor: rgb(0.5, 0.7, 0.3),
-            borderWidth: 5,
+            x: 0,
+            y: 0,
+            width,
+            height,
+            color: rgb(0.95, 0.95, 0.95), // Light gray background
+          });
+          
+          // Draw border
+          page.drawRectangle({
+            x: 20,
+            y: 20,
+            width: width - 40,
+            height: height - 40,
+            borderColor: rgb(0.2, 0.4, 0.2),
+            borderWidth: 2,
           });
         }
+      } else {
+        // Default background if no image provided
+        page.drawRectangle({
+          x: 0,
+          y: 0,
+          width,
+          height,
+          color: rgb(0.98, 0.98, 0.98), // Very light gray
+        });
+        
+        // Draw decorative border
+        page.drawRectangle({
+          x: 30,
+          y: 30,
+          width: width - 60,
+          height: height - 60,
+          borderColor: rgb(0.2, 0.4, 0.2),
+          borderWidth: 1,
+        });
       }
 
       // Helper function to draw text
@@ -166,8 +215,8 @@ class PDFGenerationService {
         const processedText = this.reshapeArabic(text);
 
         const config = {
-          x: placeholderConfig.x || width / 2,
-          y: placeholderConfig.y || defaultY,
+          x: placeholderConfig.x !== undefined ? placeholderConfig.x : width / 2,
+          y: placeholderConfig.y !== undefined ? placeholderConfig.y : defaultY,
           fontSize: placeholderConfig.fontSize || 24,
           color: this.hexToRgb(placeholderConfig.color || "#000000"),
           align: placeholderConfig.align || "center",
@@ -175,9 +224,20 @@ class PDFGenerationService {
           fontWeight: placeholderConfig.fontWeight || "normal",
         };
 
+        // Validate coordinates are within page bounds
+        if (config.x < 0 || config.x > width || config.y < 0 || config.y > height) {
+          console.warn(`Text position out of bounds: x=${config.x}, y=${config.y}`);
+          return;
+        }
+
         // Load font if not in cache
         if (!fontCache[config.fontFamily]) {
-          fontCache[config.fontFamily] = await this.loadFont(pdfDoc, config.fontFamily);
+          try {
+            fontCache[config.fontFamily] = await this.loadFont(pdfDoc, config.fontFamily);
+          } catch (fontError) {
+            console.error(`Failed to load font ${config.fontFamily}:`, fontError.message);
+            fontCache[config.fontFamily] = defaultFont; // Use fallback
+          }
         }
 
         const font = fontCache[config.fontFamily];
@@ -190,9 +250,13 @@ class PDFGenerationService {
           xPosition = config.x - textWidth;
         }
 
+        // Ensure text doesn't go off the page
+        if (xPosition < 0) xPosition = 0;
+        if (xPosition + textWidth > width) xPosition = width - textWidth;
+
         page.drawText(processedText, {
           x: xPosition,
-          y: height - config.y, // Flip Y coordinate for PDF
+          y: height - config.y - config.fontSize, // Adjust Y coordinate for PDF and font height
           size: config.fontSize,
           font: font,
           color: config.color,
@@ -201,19 +265,35 @@ class PDFGenerationService {
 
       // Get text values
       const locale = "ar"; // Default to Arabic for Quran platform
-      const studentName =
-        typeof certificateData.studentName === "string"
-          ? certificateData.studentName
-          : certificateData.studentName?.[locale] ||
-          certificateData.studentName?.en ||
-          "Student";
-
-      const courseName =
-        typeof certificateData.courseName === "string"
-          ? certificateData.courseName
-          : certificateData.courseName?.[locale] ||
-          certificateData.courseName?.en ||
-          "Course";
+      
+      // Handle student name (could be string or object with ar/en)
+      let studentName = "Student";
+      if (typeof certificateData.studentName === "string") {
+        studentName = certificateData.studentName;
+      } else if (certificateData.studentName && typeof certificateData.studentName === "object") {
+        studentName = certificateData.studentName[locale] || 
+                     certificateData.studentName.en || 
+                     certificateData.studentName.ar || 
+                     "Student";
+      }
+      
+      // Handle course name (could be string or object with ar/en)
+      let courseName = "Course";
+      if (typeof certificateData.courseName === "string") {
+        courseName = certificateData.courseName;
+      } else if (certificateData.courseName && typeof certificateData.courseName === "object") {
+        courseName = certificateData.courseName[locale] || 
+                    certificateData.courseName.en || 
+                    certificateData.courseName.ar || 
+                    "Course";
+      }
+      
+      console.log('Resolved text values:', {
+        studentName,
+        courseName,
+        originalStudentName: certificateData.studentName,
+        originalCourseName: certificateData.courseName
+      });
 
       const issuedDate = new Date(certificateData.issuedAt).toLocaleDateString(
         locale === "ar" ? "ar-EG" : "en-US",
@@ -222,35 +302,58 @@ class PDFGenerationService {
 
       // Draw certificate elements
       const placeholders = template.placeholders || {};
+      
+      console.log('Processing placeholders:', {
+        studentName: placeholders.studentName,
+        courseName: placeholders.courseName,
+        issuedDate: placeholders.issuedDate,
+        certificateNumber: placeholders.certificateNumber,
+        customText: placeholders.customText,
+        images: placeholders.images
+      });
 
       // Student Name
       if (placeholders.studentName) {
+        console.log('Drawing student name:', studentName, 'at position:', placeholders.studentName);
         await drawText(studentName, placeholders.studentName, height - 300);
+      } else {
+        console.log('No student name placeholder found');
       }
 
       // Course Name
       if (placeholders.courseName) {
+        console.log('Drawing course name:', courseName, 'at position:', placeholders.courseName);
         await drawText(courseName, placeholders.courseName, height - 450);
+      } else {
+        console.log('No course name placeholder found');
       }
 
       // Issue Date
       if (placeholders.issuedDate) {
+        console.log('Drawing issued date:', issuedDate, 'at position:', placeholders.issuedDate);
         await drawText(issuedDate, placeholders.issuedDate, height - 600);
+      } else {
+        console.log('No issued date placeholder found');
       }
 
       // Certificate Number
       if (placeholders.certificateNumber) {
+        console.log('Drawing certificate number:', certificateData.certificateNumber, 'at position:', placeholders.certificateNumber);
         await drawText(
           certificateData.certificateNumber,
           placeholders.certificateNumber,
           height - 750
         );
+      } else {
+        console.log('No certificate number placeholder found');
       }
 
       // Custom Text Elements
       if (placeholders.customText && Array.isArray(placeholders.customText)) {
+        console.log('Drawing custom text elements:', placeholders.customText.length);
         for (const custom of placeholders.customText) {
           if (custom.text) {
+            console.log('Drawing custom text:', custom.text, 'at position:', custom);
             await drawText(custom.text, custom, height / 2);
           }
         }
@@ -258,6 +361,7 @@ class PDFGenerationService {
 
       // Additional Images
       if (placeholders.images && Array.isArray(placeholders.images)) {
+        console.log('Drawing additional images:', placeholders.images.length);
         for (const imgConfig of placeholders.images) {
           try {
             const imgBytes = await this.loadImage(imgConfig.url);
@@ -274,81 +378,226 @@ class PDFGenerationService {
               width: imgConfig.width,
               height: imgConfig.height,
             });
+            console.log('Successfully drew image at position:', imgConfig);
           } catch (err) {
             console.error("Error drawing additional image:", err.message);
           }
         }
       }
 
-      // Default layout if no placeholders configured
-      if (
-        !placeholders.studentName &&
-        !placeholders.courseName &&
-        !placeholders.issuedDate &&
-        !placeholders.certificateNumber
-      ) {
+      // Default layout if no placeholders configured or if template fails
+      const shouldUseDefaultLayout = 
+        !placeholders.studentName && 
+        !placeholders.courseName && 
+        !placeholders.issuedDate && 
+        !placeholders.certificateNumber;
+      
+      // Also use default layout if we're debugging template issues
+      const forceDefaultLayout = process.env.DEBUG_CERTIFICATE_TEMPLATES === 'true';
+      
+      // Force default layout if environment variable is set to always use it
+      const alwaysUseDefaultLayout = process.env.ALWAYS_USE_DEFAULT_CERTIFICATE_LAYOUT === 'true';
+      
+      if (shouldUseDefaultLayout || forceDefaultLayout || alwaysUseDefaultLayout) {
+        console.log('Using default layout. shouldUseDefaultLayout:', shouldUseDefaultLayout, 'forceDefaultLayout:', forceDefaultLayout, 'alwaysUseDefaultLayout:', alwaysUseDefaultLayout);
         const font = defaultFont;
+        const centerX = width / 2;
 
-        // Title
+        // Header decoration
+        page.drawRectangle({
+          x: 50,
+          y: height - 120,
+          width: width - 100,
+          height: 3,
+          color: rgb(0.2, 0.4, 0.2),
+        });
+        
+        // Title - "CERTIFICATE OF COMPLETION"
         const title = "CERTIFICATE OF COMPLETION";
+        const titleFontSize = 42;
+        const titleWidth = font.widthOfTextAtSize(title, titleFontSize);
+        const titleX = centerX - titleWidth / 2;
+        const titleY = height - 180;
+        
+        // Ensure title is within bounds
+        const safeTitleX = Math.max(20, Math.min(titleX, width - titleWidth - 20));
+        
         page.drawText(title, {
-          x: width / 2 - font.widthOfTextAtSize(title, 36) / 2,
-          y: height - 150,
-          size: 36,
+          x: safeTitleX,
+          y: titleY,
+          size: titleFontSize,
           font: font,
-          color: rgb(0.2, 0.4, 0.2),
+          color: rgb(0.1, 0.3, 0.1),
         });
 
-        // شهادة إتمام
+        // Arabic Title - "شهادة إتمام"
         const certTitleAr = this.reshapeArabic("شهادة إتمام");
+        const arTitleFontSize = 32;
+        const arTitleWidth = font.widthOfTextAtSize(certTitleAr, arTitleFontSize);
+        const arTitleX = centerX - arTitleWidth / 2;
+        const arTitleY = height - 200;
+        
+        const safeArTitleX = Math.max(20, Math.min(arTitleX, width - arTitleWidth - 20));
+        
         page.drawText(certTitleAr, {
-          x: width / 2 - font.widthOfTextAtSize(certTitleAr, 32) / 2,
-          y: height - 200,
-          size: 32,
+          x: safeArTitleX,
+          y: arTitleY,
+          size: arTitleFontSize,
           font: font,
           color: rgb(0.2, 0.4, 0.2),
         });
 
-        // Student name
-        const sNameProcessed = this.reshapeArabic(studentName);
-        page.drawText(sNameProcessed, {
-          x: width / 2 - font.widthOfTextAtSize(sNameProcessed, 32) / 2,
-          y: height - 350,
-          size: 32,
-          font: font,
-          color: rgb(0, 0, 0),
-        });
-
-        // Course name
-        const cNameProcessed = this.reshapeArabic(courseName);
-        page.drawText(cNameProcessed, {
-          x: width / 2 - font.widthOfTextAtSize(cNameProcessed, 24) / 2,
-          y: height - 450,
-          size: 24,
-          font: font,
-          color: rgb(0, 0, 0),
-        });
-
-        // Issue date
-        const dateText = `Issued on: ${issuedDate}`;
-        const dateTextProcessed = this.reshapeArabic(dateText);
-        page.drawText(dateTextProcessed, {
-          x: width / 2 - font.widthOfTextAtSize(dateTextProcessed, 18) / 2,
-          y: height - 600,
-          size: 18,
+        // Student name header
+        const studentHeader = this.reshapeArabic("يُمنح هذا الشهادة إلى");
+        const headerFontSize = 20;
+        const headerWidth = font.widthOfTextAtSize(studentHeader, headerFontSize);
+        const headerX = centerX - headerWidth / 2;
+        const headerY = height - 280;
+        
+        const safeHeaderX = Math.max(20, Math.min(headerX, width - headerWidth - 20));
+        
+        page.drawText(studentHeader, {
+          x: safeHeaderX,
+          y: headerY,
+          size: headerFontSize,
           font: font,
           color: rgb(0.3, 0.3, 0.3),
         });
+        
+        // Student name
+        const sNameProcessed = this.reshapeArabic(studentName);
+        const studentFontSize = 36;
+        const studentWidth = font.widthOfTextAtSize(sNameProcessed, studentFontSize);
+        const studentX = centerX - studentWidth / 2;
+        const studentY = height - 340;
+        
+        const safeStudentX = Math.max(20, Math.min(studentX, width - studentWidth - 20));
+        
+        page.drawText(sNameProcessed, {
+          x: safeStudentX,
+          y: studentY,
+          size: studentFontSize,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
+        
+        // Decorative line under student name
+        page.drawRectangle({
+          x: centerX - 100,
+          y: height - 350,
+          width: 200,
+          height: 2,
+          color: rgb(0.2, 0.4, 0.2),
+        });
+
+        // Course completion text
+        const courseHeader = this.reshapeArabic("لإتمامه المساق");
+        const courseHeaderFontSize = 20;
+        const courseHeaderWidth = font.widthOfTextAtSize(courseHeader, courseHeaderFontSize);
+        const courseHeaderX = centerX - courseHeaderWidth / 2;
+        const courseHeaderY = height - 420;
+        
+        const safeCourseHeaderX = Math.max(20, Math.min(courseHeaderX, width - courseHeaderWidth - 20));
+        
+        page.drawText(courseHeader, {
+          x: safeCourseHeaderX,
+          y: courseHeaderY,
+          size: courseHeaderFontSize,
+          font: font,
+          color: rgb(0.3, 0.3, 0.3),
+        });
+        
+        // Course name
+        const cNameProcessed = this.reshapeArabic(courseName);
+        const courseFontSize = 28;
+        const courseWidth = font.widthOfTextAtSize(cNameProcessed, courseFontSize);
+        const courseX = centerX - courseWidth / 2;
+        const courseY = height - 480;
+        
+        const safeCourseX = Math.max(20, Math.min(courseX, width - courseWidth - 20));
+        
+        page.drawText(cNameProcessed, {
+          x: safeCourseX,
+          y: courseY,
+          size: courseFontSize,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
+
+        // Footer section with decorative elements
+        page.drawRectangle({
+          x: 100,
+          y: height - 650,
+          width: width - 200,
+          height: 1,
+          color: rgb(0.7, 0.7, 0.7),
+        });
+        
+        // Issue date
+        const dateLabel = this.reshapeArabic("تاريخ الإصدار:");
+        const dateLabelFontSize = 16;
+        const dateLabelWidth = font.widthOfTextAtSize(dateLabel, dateLabelFontSize);
+        const dateLabelX = centerX - 150;
+        const dateLabelY = height - 680;
+        
+        page.drawText(dateLabel, {
+          x: dateLabelX,
+          y: dateLabelY,
+          size: dateLabelFontSize,
+          font: font,
+          color: rgb(0.2, 0.2, 0.2),
+        });
+        
+        const dateValue = this.reshapeArabic(issuedDate);
+        const dateValueFontSize = 16;
+        const dateValueWidth = font.widthOfTextAtSize(dateValue, dateValueFontSize);
+        const dateValueX = centerX + 50;
+        const dateValueY = height - 680;
+        
+        page.drawText(dateValue, {
+          x: dateValueX,
+          y: dateValueY,
+          size: dateValueFontSize,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
 
         // Certificate number
-        const certNoText = `Certificate #: ${certificateData.certificateNumber}`;
-        const certNoTextProcessed = this.reshapeArabic(certNoText);
-        page.drawText(certNoTextProcessed, {
-          x: width / 2 - font.widthOfTextAtSize(certNoTextProcessed, 14) / 2,
-          y: height - 750,
-          size: 14,
+        const certNoLabel = this.reshapeArabic("رقم الشهادة:");
+        const certNoLabelFontSize = 14;
+        const certNoLabelWidth = font.widthOfTextAtSize(certNoLabel, certNoLabelFontSize);
+        const certNoLabelX = centerX - 150;
+        const certNoLabelY = height - 720;
+        
+        page.drawText(certNoLabel, {
+          x: certNoLabelX,
+          y: certNoLabelY,
+          size: certNoLabelFontSize,
           font: font,
-          color: rgb(0.5, 0.5, 0.5),
+          color: rgb(0.2, 0.2, 0.2),
+        });
+        
+        const certNoValue = this.reshapeArabic(certificateData.certificateNumber);
+        const certNoValueFontSize = 14;
+        const certNoValueWidth = font.widthOfTextAtSize(certNoValue, certNoValueFontSize);
+        const certNoValueX = centerX + 50;
+        const certNoValueY = height - 720;
+        
+        page.drawText(certNoValue, {
+          x: certNoValueX,
+          y: certNoValueY,
+          size: certNoValueFontSize,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
+        
+        // Footer decoration
+        page.drawRectangle({
+          x: 50,
+          y: height - 750,
+          width: width - 100,
+          height: 2,
+          color: rgb(0.2, 0.4, 0.2),
         });
       }
 

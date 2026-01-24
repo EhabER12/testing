@@ -12,6 +12,7 @@ import {
   reissueCertificate,
   downloadCertificate,
   generateCertificatePDF,
+  getCertificateTemplateInfo,
   createTemplate,
   getTemplateById,
   getAllTemplates,
@@ -73,6 +74,7 @@ router.delete(
 // Certificate detail routes (placed after templates to avoid conflict)
 router.get("/:id", protect, getCertificateById);
 router.get("/:id/download", protect, downloadCertificate);
+router.get("/:id/template-info", protect, getCertificateTemplateInfo);
 
 // Admin/Moderator routes
 router.post(
