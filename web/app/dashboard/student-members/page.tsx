@@ -9,6 +9,7 @@ import {
   importStudentMembers,
   StudentMember,
 } from "@/store/services/studentMemberService";
+import { getPackages } from "@/store/services/packageService";
 
 import { isAuthenticated, isAdmin } from "@/store/services/authService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
@@ -51,6 +52,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,8 +90,10 @@ export default function StudentMembersPage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<any>(null);
+  const [selectedPackageId, setSelectedPackageId] = useState<string>("all");
 
   const { studentMembers, isLoading } = useAppSelector((state) => state.studentMembers);
+  const { packages } = useAppSelector((state) => state.packages);
   const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
@@ -99,6 +108,8 @@ export default function StudentMembersPage() {
     }
 
     dispatch(getStudentMembers());
+    dispatch(getStudentMembers());
+    dispatch(getPackages());
   }, [dispatch, user, router]);
 
   const handleDelete = async (id: string) => {
@@ -249,104 +260,134 @@ export default function StudentMembersPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{isRtl ? "قائمة الطلاب" : "Students List"}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {studentMembers.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-semibold text-gray-900">
-                {isRtl ? "لا يوجد طلاب باقات" : "No package students found"}
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {isRtl ? "قم باستيراد ملف لملء القائمة" : "Import a file to populate the list"}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{isRtl ? "الاسم" : "Name"}</TableHead>
-                    <TableHead>{isRtl ? "رقم الهاتف" : "Phone"}</TableHead>
-                    <TableHead>{isRtl ? "الباقة" : "Plan"}</TableHead>
-                    <TableHead>{isRtl ? "تاريخ البداية" : "Start Date"}</TableHead>
-                    <TableHead>{isRtl ? "التجديد القادم" : "Next Due"}</TableHead>
-                    <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
-                    <TableHead className="text-right">
-                      {isRtl ? "الإجراءات" : "Actions"}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {studentMembers.map((student, index) => (
-                    <TableRow key={student.id || student._id || index}>
-                      <TableCell className="font-medium">
-                        {getTextValue(student.studentName || student.name)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span dir="ltr">{student.phone || student.whatsappNumber}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {student.packageId ? getTextValue(student.packageId.name) : (isRtl ? "غير محدد" : "N/A")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {student.startDate ? format(new Date(student.startDate), "yyyy-MM-dd") : "-"}
-                      </TableCell>
-                      <TableCell>
-                        {student.nextDueDate ? format(new Date(student.nextDueDate), "yyyy-MM-dd") : "-"}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(student.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>
-                              {isRtl ? "الإجراءات" : "Actions"}
-                            </DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/dashboard/student-members/${student.id || student._id}`}>
-                                <FileText className="h-4 w-4 mr-2" />
-                                {isRtl ? "التفاصيل" : "Details"}
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => handleDelete(student.id || student._id || "")}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {isRtl ? "حذف" : "Delete"}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+
+
+      <div className="space-y-4">
+        <Tabs defaultValue="all" value={selectedPackageId} onValueChange={setSelectedPackageId} dir={isRtl ? "rtl" : "ltr"}>
+          <TabsList className="bg-muted/60 p-1 h-auto flex-wrap justify-start">
+            <TabsTrigger value="all" className="px-4 py-2">
+              {isRtl ? "جميع الباقات" : "All Packages"}
+            </TabsTrigger>
+            {packages.map(pkg => (
+              <TabsTrigger key={pkg.id || pkg._id} value={pkg.id || pkg._id || ""} className="px-4 py-2">
+                {isRtl ? pkg.name.ar : pkg.name.en}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{isRtl ? "قائمة الطلاب" : "Students List"}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {studentMembers.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-semibold text-gray-900">
+                  {isRtl ? "لا يوجد طلاب باقات" : "No package students found"}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  {isRtl ? "قم باستيراد ملف لملء القائمة" : "Import a file to populate the list"}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{isRtl ? "الاسم" : "Name"}</TableHead>
+                      <TableHead>{isRtl ? "رقم الهاتف" : "Phone"}</TableHead>
+                      <TableHead>{isRtl ? "الباقة" : "Plan"}</TableHead>
+                      <TableHead>{isRtl ? "تاريخ البداية" : "Start Date"}</TableHead>
+                      <TableHead>{isRtl ? "التجديد القادم" : "Next Due"}</TableHead>
+                      <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
+                      <TableHead className="text-right">
+                        {isRtl ? "الإجراءات" : "Actions"}
+                      </TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {studentMembers
+                      .filter(s => selectedPackageId === "all" || (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId))
+                      .map((student, index) => (
+                        <TableRow key={student.id || student._id || index}>
+                          <TableCell className="font-medium">
+                            {getTextValue(student.studentName || student.name)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-4 w-4 text-muted-foreground" />
+                              <span dir="ltr">{student.phone || student.whatsappNumber}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {student.packageId ? getTextValue(student.packageId.name) : (isRtl ? "غير محدد" : "N/A")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {student.startDate ? format(new Date(student.startDate), "yyyy-MM-dd") : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <div className={`font-medium ${student.status === 'overdue' ? 'text-red-600' :
+                                student.status === 'due_soon' ? 'text-orange-600' : ''
+                              }`}>
+                              {student.nextDueDate ? format(new Date(student.nextDueDate), "yyyy-MM-dd") : "-"}
+                            </div>
+                          </TableCell>
+                          <TableCell>{getStatusBadge(student.status)}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>
+                                  {isRtl ? "الإجراءات" : "Actions"}
+                                </DropdownMenuLabel>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/dashboard/student-members/${student.id || student._id}`}>
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    {isRtl ? "التفاصيل / تعديل" : "Details / Edit"}
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-red-600"
+                                  onClick={() => handleDelete(student.id || student._id || "")}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  {isRtl ? "حذف" : "Delete"}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    {studentMembers.filter(s => selectedPackageId === "all" || (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center">
+                          {isRtl ? "لا يوجد طلاب في هذه الباقة" : "No students in this package"}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{isRtl ? "استيراد طلاب (CSV)" : "Import Students (CSV)"}</DialogTitle>
             <DialogDescription>
-              {isRtl ? "قم برفع ملف CSV يحتوي على: الاسم، الهاتف، الخطة" : "Upload a CSV file containing: name, phone, plan"}
+              {isRtl ? "قم برفع ملف CSV. (اسم الباقة يقبل بالعربي أو الإنجليزي)" : "Upload a CSV file. (Plan accepts Arabic or English names)"}
             </DialogDescription>
           </DialogHeader>
 
