@@ -6,7 +6,9 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   getAllUsers,
   deleteUser,
+  assignStudentToTeacher,
 } from "@/store/services/userService";
+import { getAllTeachersWithStats } from "@/store/services/teacherGroupService";
 import { isAuthenticated, isAdmin } from "@/store/services/authService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   MoreHorizontal,
@@ -51,8 +69,12 @@ export default function StudentMembersPage() {
   const router = useRouter();
   const { t, isRtl } = useAdminLocale();
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [selectedStudentForAssign, setSelectedStudentForAssign] = useState<any>(null);
+  const [selectedTeacherId, setSelectedTeacherId] = useState("");
 
   const { users, isLoading } = useAppSelector((state) => state.userManagement);
+  const { teachersWithStats } = useAppSelector((state) => state.teacherGroups);
   const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
@@ -67,6 +89,7 @@ export default function StudentMembersPage() {
     }
 
     dispatch(getAllUsers());
+    dispatch(getAllTeachersWithStats());
   }, [dispatch, user, router]);
 
   const handleDelete = async (id: string) => {
@@ -86,6 +109,40 @@ export default function StudentMembersPage() {
         setDeleteLoading(null);
       }
     }
+  }
+
+
+  const handleAssignTeacher = async () => {
+    if (!selectedStudentForAssign || !selectedTeacherId) return;
+    try {
+      const studentId = selectedStudentForAssign.id || selectedStudentForAssign._id;
+      await dispatch(assignStudentToTeacher({
+        teacherId: selectedTeacherId,
+        studentId
+      })).unwrap();
+      setIsAssignDialogOpen(false);
+      setSelectedStudentForAssign(null);
+      setSelectedTeacherId("");
+      dispatch(getAllUsers());
+    } catch (err) {
+      console.error("Failed to assign teacher:", err);
+    }
+  };
+
+  const openAssignDialog = (student: any) => {
+    setSelectedStudentForAssign(student);
+    if (student.studentInfo?.assignedTeacher) {
+      setSelectedTeacherId(student.studentInfo.assignedTeacher);
+    } else {
+      setSelectedTeacherId("");
+    }
+    setIsAssignDialogOpen(true);
+  };
+
+  const getTextValue = (value: any): string => {
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    return (isRtl ? value.ar : value.en) || value.en || value.ar || "";
   };
 
   // Filter only regular students (exclude admins and moderators)
@@ -274,6 +331,10 @@ export default function StudentMembersPage() {
                                 {isRtl ? "تعديل" : "Edit"}
                               </Link>
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openAssignDialog(student)}>
+                              <UserCircle className="h-4 w-4 mr-2" />
+                              {isRtl ? "تعيين معلم" : "Assign Teacher"}
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-red-600"
@@ -300,6 +361,53 @@ export default function StudentMembersPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+
+
+      {/* Assign Teacher Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isRtl ? "تعيين معلم للطالب" : "Assign Teacher to Student"}</DialogTitle>
+            <DialogDescription>
+              {isRtl ? "اختر المعلم الذي تريد تعيينه لهذا الطالب" : "Select the teacher you want to assign to this student"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label>{isRtl ? "الطالب" : "Student"}</Label>
+              <div className="p-2 border rounded-md bg-muted/20">
+                {selectedStudentForAssign?.name || selectedStudentForAssign?.fullName || "Unknown"}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{isRtl ? "المعلم" : "Teacher"}</Label>
+              <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isRtl ? "اختر معلم" : "Select Teacher"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {teachersWithStats.map((teacher: any) => {
+                    const teacherId = teacher.id || teacher._id;
+                    return (
+                      <SelectItem key={teacherId} value={teacherId}>
+                        {getTextValue(teacher.fullName)}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+              {isRtl ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button className="bg-genoun-green hover:bg-genoun-green/90" onClick={handleAssignTeacher} disabled={!selectedTeacherId}>
+              {isRtl ? "حفظ" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div >
   );
 }
