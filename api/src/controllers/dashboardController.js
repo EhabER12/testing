@@ -105,10 +105,10 @@ export const getDashboardStats = async (req, res, next) => {
       CartSession.getStats
         ? CartSession.getStats()
         : {
-            total: { abandoned: 0, converted: 0 },
-            potentialRevenue: 0,
-            conversionRate: 0,
-          },
+          total: { abandoned: 0, converted: 0 },
+          potentialRevenue: 0,
+          conversionRate: 0,
+        },
       // Article stats
       Article.aggregate([
         {
@@ -281,20 +281,20 @@ export const getDashboardStats = async (req, res, next) => {
         },
         analytics: analyticsOverview
           ? {
-              ...analyticsOverview,
-              realtimeUsers,
-              topCountries,
-              topPages,
-            }
+            ...analyticsOverview,
+            realtimeUsers,
+            topCountries,
+            topPages,
+          }
           : {
-              users: 0,
-              sessions: 0,
-              pageViews: 0,
-              avgSessionDuration: 0,
-              realtimeUsers: 0,
-              topCountries: [],
-              topPages: [],
-            },
+            users: 0,
+            sessions: 0,
+            pageViews: 0,
+            avgSessionDuration: 0,
+            realtimeUsers: 0,
+            topCountries: [],
+            topPages: [],
+          },
       },
     });
   } catch (error) {
@@ -427,42 +427,78 @@ export const getTeacherStats = async (req, res, next) => {
       publishedCoursesCount,
       pendingCoursesCount,
       teacherGroups,
+      directStudents,
     ] = await Promise.all([
       Course.find({ instructorId: teacherId }),
       Course.countDocuments({ instructorId: teacherId, isPublished: true }),
       Course.countDocuments({ instructorId: teacherId, isPublished: false, "approvalStatus.status": "pending" }),
-      TeacherGroup.find({ teacherId, isActive: true }).select("students groupType pricing groupName"),
+      TeacherGroup.find({ teacherId, isActive: true })
+        .select("students groupType pricing groupName")
+        .populate("students.studentId", "studentName name fullName email"), // Populate student details
+      User.find({ "studentInfo.assignedTeacher": teacherId })
+        .select("fullName email studentInfo createdAt")
     ]);
 
     const totalCourses = courses.length;
-    
+
     // Aggregated stats from courses
     const totalEnrollments = courses.reduce((acc, c) => acc + (c.stats.enrolledCount || 0), 0);
     const completedCourses = courses.reduce((acc, c) => acc + (c.stats.completedCount || 0), 0);
-    
+
     // Group & Student stats
     const totalGroups = teacherGroups.length;
-    const activeStudentsInGroups = teacherGroups.reduce((acc, g) => 
+
+    // Calculate active students in groups
+    const activeStudentsInGroups = teacherGroups.reduce((acc, g) =>
       acc + g.students.filter(s => s.status === 'active').length, 0
     );
 
+    // Calculate direct students count
+    const directStudentsCount = directStudents.length;
+
+    // Combined active students (assuming no duplicates between direct and group, or we just sum them)
+    // Direct students are usually distinct from group students in this logic
+    const totalActiveStudents = activeStudentsInGroups + directStudentsCount;
+
     // Get recent students from groups
-    const recentStudents = [];
+    let recentStudentsList = [];
+
+    // 1. Add students from groups
     teacherGroups.forEach(group => {
       group.students.forEach(student => {
-        recentStudents.push({
-          name: student.name,
-          email: student.email,
-          status: student.status,
-          groupName: group.groupName,
-          addedAt: student.addedAt || group.createdAt
-        });
+        if (student.studentId) {
+          // Handle different name fields (studentName for StudentMember, fullName/name for others)
+          const nameObj = student.studentId.studentName || student.studentId.fullName || { en: student.studentId.name, ar: student.studentId.name };
+          // Normalize name to standard fullName structure if it's not
+          const name = nameObj.ar ? nameObj : { en: nameObj, ar: nameObj };
+
+          recentStudentsList.push({
+            name: name,
+            email: student.studentId.email,
+            status: student.status,
+            groupName: group.groupName || { en: "Group", ar: "مجموعة" },
+            addedAt: student.assignedDate || student.addedAt || group.createdAt,
+            type: 'group'
+          });
+        }
+      });
+    });
+
+    // 2. Add direct students
+    directStudents.forEach(student => {
+      recentStudentsList.push({
+        name: student.fullName,
+        email: student.email,
+        status: student.studentInfo?.subscriptionStatus || 'active',
+        groupName: { en: "Direct Student", ar: "طالب مباشر" },
+        addedAt: student.createdAt,
+        type: 'direct'
       });
     });
 
     // Sort and take top 5
-    recentStudents.sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
-    const latestStudents = recentStudents.slice(0, 5);
+    recentStudentsList.sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
+    const latestStudents = recentStudentsList.slice(0, 5);
 
     // Calculate expected revenue for this specific teacher
     let expectedRevenue = 0;
@@ -493,7 +529,7 @@ export const getTeacherStats = async (req, res, next) => {
         },
         groups: {
           total: totalGroups,
-          activeStudents: activeStudentsInGroups,
+          activeStudents: totalActiveStudents, // Updated to include direct students
         },
         revenue: {
           expected: expectedRevenue,
