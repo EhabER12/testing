@@ -95,6 +95,7 @@ export class UserService {
       limit,
       filter,
       select: "-password",
+      populate: "studentInfo.assignedTeacher",
     };
 
     if (search) {

@@ -282,6 +282,7 @@ export default function StudentMembersPage() {
                     <TableHead>{isRtl ? "الاسم" : "Name"}</TableHead>
                     <TableHead>{isRtl ? "البريد الإلكتروني" : "Email"}</TableHead>
                     <TableHead>{isRtl ? "الدور" : "Role"}</TableHead>
+                    <TableHead>{isRtl ? "المعلم" : "Teacher"}</TableHead>
                     <TableHead>{isRtl ? "تاريخ التسجيل" : "Registered"}</TableHead>
                     <TableHead className="text-right">
                       {isRtl ? "الإجراءات" : "Actions"}
@@ -304,6 +305,22 @@ export default function StudentMembersPage() {
                         </div>
                       </TableCell>
                       <TableCell>{getRoleBadge(student.role || "user")}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {student.studentInfo?.assignedTeacher ? (
+                            <>
+                              <UserCircle className="h-4 w-4 text-purple-600" />
+                              <span className="text-sm">
+                                {getTextValue(student.studentInfo.assignedTeacher.fullName)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">
+                              {isRtl ? "غير معين" : "Unassigned"}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
