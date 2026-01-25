@@ -16,7 +16,7 @@ class PDFGenerationService {
    * Check if text contains Arabic characters
    */
   containsArabic(text) {
-    return /[\u0600-\u06FF]/.test(text);
+    return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
   }
 
   /**
@@ -24,6 +24,22 @@ class PDFGenerationService {
    */
   containsLatin(text) {
     return /[a-zA-Z]/.test(text);
+  }
+
+  /**
+   * Detect if text is primarily Arabic (RTL)
+   * Returns true if the first strong directional character is Arabic
+   */
+  isRtlText(text) {
+    if (!text) return false;
+    // Check the first significant character to determine direction
+    const firstArabicIndex = text.search(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/);
+    const firstLatinIndex = text.search(/[a-zA-Z]/);
+    
+    if (firstArabicIndex === -1) return false;
+    if (firstLatinIndex === -1) return true;
+    
+    return firstArabicIndex < firstLatinIndex;
   }
 
   /**
@@ -41,14 +57,15 @@ class PDFGenerationService {
     if (!hasArabic) return stringText;
 
     try {
-      // Check for mixed content (Arabic + Latin)
+      // Check for mixed content (Arabic + Latin/Numbers)
       const hasLatin = this.containsLatin(stringText);
+      const hasNumbers = /\d/.test(stringText);
       
-      if (hasLatin) {
-        // Mixed content: process segments separately
-        return this.processMixedText(stringText);
+      if (hasLatin || hasNumbers) {
+        // Mixed content: use improved bidi algorithm
+        return this.processBidiText(stringText);
       } else {
-        // Pure Arabic: reshape and reverse
+        // Pure Arabic: reshape and reverse for PDF rendering
         const reshaped = arabicReshaper.reshape(stringText);
         return reshaped.split("").reverse().join("");
       }
@@ -59,34 +76,79 @@ class PDFGenerationService {
   }
 
   /**
-   * Process mixed Arabic/English text
-   * Segments text and processes each part appropriately
+   * Process bidirectional text (mixed Arabic/English/Numbers)
+   * Implements a simplified visual ordering algorithm for PDF
    */
-  processMixedText(text) {
-    // Split by word boundaries while preserving delimiters
-    const segments = text.split(/(\s+)/);
-    const processedSegments = [];
+  processBidiText(text) {
+    // Split text into runs of similar direction
+    const runs = [];
+    let currentRun = "";
+    let currentType = null; // 'rtl', 'ltr', 'neutral'
 
-    for (const segment of segments) {
-      if (/^\s+$/.test(segment)) {
-        // Whitespace - keep as is
-        processedSegments.push(segment);
-      } else if (this.containsArabic(segment)) {
-        // Arabic segment - reshape and reverse
-        try {
-          const reshaped = arabicReshaper.reshape(segment);
-          processedSegments.push(reshaped.split("").reverse().join(""));
-        } catch (e) {
-          processedSegments.push(segment);
-        }
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      let charType;
+
+      if (this.containsArabic(char)) {
+        charType = 'rtl';
+      } else if (/[a-zA-Z]/.test(char)) {
+        charType = 'ltr';
+      } else if (/\d/.test(char)) {
+        // Numbers follow the embedding direction (treat as weak LTR but keep with adjacent text)
+        charType = 'number';
       } else {
-        // Latin/numbers - keep as is
-        processedSegments.push(segment);
+        // Whitespace and punctuation
+        charType = 'neutral';
+      }
+
+      if (currentType === null) {
+        currentType = charType;
+        currentRun = char;
+      } else if (charType === currentType || charType === 'neutral' || charType === 'number') {
+        currentRun += char;
+      } else {
+        // Save current run and start new one
+        runs.push({ text: currentRun, type: currentType });
+        currentRun = char;
+        currentType = charType;
       }
     }
 
-    // For RTL text, reverse the order of segments
-    return processedSegments.reverse().join("");
+    // Don't forget the last run
+    if (currentRun) {
+      runs.push({ text: currentRun, type: currentType });
+    }
+
+    // Process each run
+    const processedRuns = runs.map(run => {
+      if (run.type === 'rtl') {
+        // Reshape Arabic text and reverse characters
+        try {
+          const reshaped = arabicReshaper.reshape(run.text);
+          return { text: reshaped.split("").reverse().join(""), type: 'rtl' };
+        } catch (e) {
+          return { text: run.text.split("").reverse().join(""), type: 'rtl' };
+        }
+      }
+      return run;
+    });
+
+    // For RTL base direction (Arabic text), reverse the order of runs
+    // This puts the first Arabic text on the right side
+    const baseRtl = this.isRtlText(text);
+    if (baseRtl) {
+      processedRuns.reverse();
+    }
+
+    return processedRuns.map(r => r.text).join("");
+  }
+
+  /**
+   * Process mixed Arabic/English text (legacy method - kept for compatibility)
+   * @deprecated Use processBidiText instead
+   */
+  processMixedText(text) {
+    return this.processBidiText(text);
   }
 
   /**
@@ -369,7 +431,7 @@ class PDFGenerationService {
         });
       }
 
-      // Helper function to draw text with proper coordinate transformation
+      // Helper function to draw text with proper coordinate transformation and RTL support
       const drawText = async (text, placeholderConfig, defaultY) => {
         if (!placeholderConfig || !text) return;
 
@@ -396,9 +458,13 @@ class PDFGenerationService {
           fontWeight: rawFontWeight && typeof rawFontWeight === 'string' ? rawFontWeight : "normal",
         };
 
+        // Detect if text is RTL (Arabic)
+        const textIsRtl = this.isRtlText(String(text));
+        const textHasArabic = this.containsArabic(String(text));
+
         // Log the resolved config
         console.log('Resolved text config:', {
-          text: text.substring(0, 50),
+          text: String(text).substring(0, 50),
           x: config.x,
           y: config.y,
           fontSize: config.fontSize,
@@ -406,6 +472,8 @@ class PDFGenerationService {
           align: config.align,
           fontFamily: config.fontFamily,
           fontWeight: config.fontWeight,
+          isRtl: textIsRtl,
+          hasArabic: textHasArabic,
         });
 
         // Process text for Arabic/RTL if needed
@@ -434,12 +502,20 @@ class PDFGenerationService {
         const font = fontCache[config.fontFamily];
         const textWidth = font.widthOfTextAtSize(processedText, config.fontSize);
 
-        // Calculate X position based on alignment
+        // Calculate X position based on alignment AND text direction
+        // For RTL text, alignment interpretation may need adjustment
         let xPosition = config.x;
-        if (config.align === "center") {
+        let effectiveAlign = config.align;
+
+        // For center alignment, both LTR and RTL work the same
+        if (effectiveAlign === "center") {
           xPosition = config.x - textWidth / 2;
-        } else if (config.align === "right") {
+        } else if (effectiveAlign === "right") {
+          // Right alignment: text ends at x position
           xPosition = config.x - textWidth;
+        } else if (effectiveAlign === "left") {
+          // Left alignment: text starts at x position
+          xPosition = config.x;
         }
 
         // Ensure text doesn't go off the page
@@ -454,6 +530,14 @@ class PDFGenerationService {
 
         // Check if we should simulate bold
         const isBold = this.isBoldWeight(config.fontWeight);
+
+        console.log('Final draw position:', {
+          xPosition,
+          safePdfY,
+          textWidth,
+          effectiveAlign,
+          isBold,
+        });
 
         // Draw text (simulate bold by drawing multiple times with slight offset if needed)
         if (isBold) {
@@ -479,34 +563,47 @@ class PDFGenerationService {
         }
       };
 
-      // Get text values based on locale
-      
+      // Get text values based on locale and content language detection
+      // Helper to get best text value considering both locale preference and content language
+      const getBilingualText = (textData, defaultAr, defaultEn) => {
+        if (!textData) {
+          return locale === "ar" ? defaultAr : defaultEn;
+        }
+        
+        if (typeof textData === "string") {
+          return textData;
+        }
+        
+        if (typeof textData === "object") {
+          // Get both values
+          const arText = textData.ar || defaultAr;
+          const enText = textData.en || defaultEn;
+          
+          // Prefer the locale-appropriate text, but fall back to the other
+          if (locale === "ar") {
+            // For Arabic locale, prefer Arabic text
+            return arText || enText;
+          } else {
+            // For English locale, prefer English text, but use Arabic if English is empty
+            return enText || arText;
+          }
+        }
+        
+        return locale === "ar" ? defaultAr : defaultEn;
+      };
+
       // Handle student name (could be string or object with ar/en)
-      let studentName = locale === "ar" ? "الطالب" : "Student";
-      if (typeof data.studentName === "string") {
-        studentName = data.studentName;
-      } else if (data.studentName && typeof data.studentName === "object") {
-        studentName = data.studentName[locale] ||
-          data.studentName.ar ||
-          data.studentName.en ||
-          (locale === "ar" ? "الطالب" : "Student");
-      }
+      const studentName = getBilingualText(data.studentName, "الطالب", "Student");
 
       // Handle course name (could be string or object with ar/en)
-      let courseName = locale === "ar" ? "الدورة" : "Course";
-      if (typeof data.courseName === "string") {
-        courseName = data.courseName;
-      } else if (data.courseName && typeof data.courseName === "object") {
-        courseName = data.courseName[locale] ||
-          data.courseName.ar ||
-          data.courseName.en ||
-          (locale === "ar" ? "الدورة" : "Course");
-      }
+      const courseName = getBilingualText(data.courseName, "الدورة", "Course");
 
       console.log('Resolved text values:', {
         locale,
         studentName,
+        studentNameIsRtl: this.isRtlText(studentName),
         courseName,
+        courseNameIsRtl: this.isRtlText(courseName),
         originalStudentName: data.studentName,
         originalCourseName: data.courseName
       });
