@@ -238,22 +238,30 @@ class PDFGenerationService {
   /**
    * Normalize and validate a placeholder configuration
    * Ensures all required properties exist with proper defaults
+   * @param {Object} placeholder - The placeholder config (can be null/undefined)
+   * @param {Number} pageWidth - Page width for default x position
+   * @param {Number} pageHeight - Page height for default y position
+   * @param {Boolean} allowNull - If true, return null for missing placeholders; if false, create defaults
    */
-  normalizeplaceholder(placeholder, pageWidth, pageHeight) {
-    if (!placeholder || typeof placeholder !== 'object') {
+  normalizeplaceholder(placeholder, pageWidth, pageHeight, allowNull = false) {
+    // If placeholder is completely missing and we allow null, return null
+    if ((placeholder === null || placeholder === undefined) && allowNull) {
       return null;
     }
 
+    // If placeholder is falsy, create a default placeholder
+    const p = placeholder || {};
+
     // Ensure all properties exist with defaults
     return {
-      x: placeholder.x !== undefined && placeholder.x !== null ? Number(placeholder.x) : pageWidth / 2,
-      y: placeholder.y !== undefined && placeholder.y !== null ? Number(placeholder.y) : 400,
-      fontSize: placeholder.fontSize !== undefined && placeholder.fontSize !== null && Number(placeholder.fontSize) > 0 ? Number(placeholder.fontSize) : 24,
-      fontFamily: placeholder.fontFamily && typeof placeholder.fontFamily === 'string' ? placeholder.fontFamily : "Cairo",
-      color: placeholder.color && typeof placeholder.color === 'string' ? placeholder.color : "#000000",
-      align: placeholder.align && typeof placeholder.align === 'string' ? placeholder.align : "center",
-      fontWeight: placeholder.fontWeight && typeof placeholder.fontWeight === 'string' ? placeholder.fontWeight : "normal",
-      text: placeholder.text || undefined, // For custom text
+      x: p.x !== undefined && p.x !== null ? Number(p.x) : pageWidth / 2,
+      y: p.y !== undefined && p.y !== null ? Number(p.y) : 400,
+      fontSize: p.fontSize !== undefined && p.fontSize !== null && Number(p.fontSize) > 0 ? Number(p.fontSize) : 24,
+      fontFamily: p.fontFamily && typeof p.fontFamily === 'string' ? p.fontFamily : "Cairo",
+      color: p.color && typeof p.color === 'string' ? p.color : "#000000",
+      align: p.align && typeof p.align === 'string' ? p.align : "center",
+      fontWeight: p.fontWeight && typeof p.fontWeight === 'string' ? p.fontWeight : "normal",
+      text: p.text || undefined, // For custom text
     };
   }
 
@@ -617,13 +625,28 @@ class PDFGenerationService {
       // Track if we drew any placeholder successfully
       let drewAnyPlaceholder = false;
 
-      // Normalize all placeholders before processing
+      // Helper to create placeholder with specific default Y
+      const normalizePlaceholderWithDefaultY = (placeholder, defaultY) => {
+        const p = placeholder || {};
+        return {
+          x: p.x !== undefined && p.x !== null ? Number(p.x) : width / 2,
+          y: p.y !== undefined && p.y !== null ? Number(p.y) : defaultY,
+          fontSize: p.fontSize !== undefined && p.fontSize !== null && Number(p.fontSize) > 0 ? Number(p.fontSize) : 24,
+          fontFamily: p.fontFamily && typeof p.fontFamily === 'string' ? p.fontFamily : "Cairo",
+          color: p.color && typeof p.color === 'string' ? p.color : "#000000",
+          align: p.align && typeof p.align === 'string' ? p.align : "center",
+          fontWeight: p.fontWeight && typeof p.fontWeight === 'string' ? p.fontWeight : "normal",
+          text: p.text || undefined,
+        };
+      };
+
+      // Normalize all placeholders before processing with appropriate default Y positions
       const normalizedPlaceholders = {
-        studentName: this.normalizeplaceholder(placeholders.studentName, width, height),
-        courseName: this.normalizeplaceholder(placeholders.courseName, width, height),
-        issuedDate: this.normalizeplaceholder(placeholders.issuedDate, width, height),
-        certificateNumber: this.normalizeplaceholder(placeholders.certificateNumber, width, height),
-        customText: (placeholders.customText || []).map(ct => this.normalizeplaceholder(ct, width, height)).filter(Boolean),
+        studentName: normalizePlaceholderWithDefaultY(placeholders.studentName, 300),
+        courseName: normalizePlaceholderWithDefaultY(placeholders.courseName, 400),
+        issuedDate: normalizePlaceholderWithDefaultY(placeholders.issuedDate, 500),
+        certificateNumber: normalizePlaceholderWithDefaultY(placeholders.certificateNumber, 600),
+        customText: (placeholders.customText || []).map(ct => this.normalizeplaceholder(ct, width, height, true)).filter(Boolean),
         images: placeholders.images || [],
       };
 
@@ -636,46 +659,26 @@ class PDFGenerationService {
         imagesCount: normalizedPlaceholders.images?.length
       });
 
-      // Student Name
-      if (normalizedPlaceholders.studentName) {
-        console.log('Drawing student name:', studentName, 'at position:', normalizedPlaceholders.studentName);
-        await drawText(studentName, normalizedPlaceholders.studentName, 300);
-        drewAnyPlaceholder = true;
-      } else {
-        console.log('No valid student name placeholder found');
-      }
+      // Student Name - always draw
+      console.log('Drawing student name:', studentName, 'at position:', normalizedPlaceholders.studentName);
+      await drawText(studentName, normalizedPlaceholders.studentName, 300);
+      drewAnyPlaceholder = true;
 
-      // Course Name
-      if (normalizedPlaceholders.courseName) {
-        console.log('Drawing course name:', courseName, 'at position:', normalizedPlaceholders.courseName);
-        await drawText(courseName, normalizedPlaceholders.courseName, 450);
-        drewAnyPlaceholder = true;
-      } else {
-        console.log('No valid course name placeholder found');
-      }
+      // Course Name - always draw
+      console.log('Drawing course name:', courseName, 'at position:', normalizedPlaceholders.courseName);
+      await drawText(courseName, normalizedPlaceholders.courseName, 400);
+      drewAnyPlaceholder = true;
 
-      // Issue Date
-      if (normalizedPlaceholders.issuedDate) {
-        console.log('Drawing issued date:', issuedDate, 'at position:', normalizedPlaceholders.issuedDate);
-        await drawText(issuedDate, normalizedPlaceholders.issuedDate, 600);
-        drewAnyPlaceholder = true;
-      } else {
-        console.log('No valid issued date placeholder found');
-      }
+      // Issue Date - always draw
+      console.log('Drawing issued date:', issuedDate, 'at position:', normalizedPlaceholders.issuedDate);
+      await drawText(issuedDate, normalizedPlaceholders.issuedDate, 500);
+      drewAnyPlaceholder = true;
 
-      // Certificate Number
+      // Certificate Number - always draw
       const certNumber = data.certificateNumber || "CERT-XXXX";
-      if (normalizedPlaceholders.certificateNumber) {
-        console.log('Drawing certificate number:', certNumber, 'at position:', normalizedPlaceholders.certificateNumber);
-        await drawText(
-          certNumber,
-          normalizedPlaceholders.certificateNumber,
-          750
-        );
-        drewAnyPlaceholder = true;
-      } else {
-        console.log('No valid certificate number placeholder found');
-      }
+      console.log('Drawing certificate number:', certNumber, 'at position:', normalizedPlaceholders.certificateNumber);
+      await drawText(certNumber, normalizedPlaceholders.certificateNumber, 600);
+      drewAnyPlaceholder = true;
 
       // Custom Text Elements
       if (normalizedPlaceholders.customText && normalizedPlaceholders.customText.length > 0) {
