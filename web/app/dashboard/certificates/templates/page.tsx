@@ -853,17 +853,17 @@ export default function CertificateDesignerPage() {
                       onMouseDown={(e) => handleMouseDown(e, "standard", k)}
                       className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
-                        top: p.y,
-                        left: p.align === "center" ? 0 : p.align === "right" ? "auto" : p.x,
-                        right: p.align === "right" ? design.width - p.x : "auto",
+                        top: p.y * previewScale,
+                        left: p.align === "center" ? 0 : p.align === "right" ? "auto" : p.x * previewScale,
+                        right: p.align === "right" ? (design.width - p.x) * previewScale : "auto",
                         width: p.align === "center" ? "100%" : "auto",
                         textAlign: (p.align || "center") as React.CSSProperties["textAlign"],
                         color: p.color,
-                        fontSize: p.fontSize,
+                        fontSize: p.fontSize * previewScale,
                         fontFamily: p.fontFamily,
                         fontWeight: p.fontWeight,
                         lineHeight: 1,
-                        padding: "4px",
+                        padding: `${4 * previewScale}px`,
                       }}
                     >
                       {k === "studentName" ? (isRtl ? "اسم الطالب هنا" : "Student Name") :
@@ -883,17 +883,17 @@ export default function CertificateDesignerPage() {
                       onMouseDown={(e) => handleMouseDown(e, "custom", idx)}
                       className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
-                        top: p.y,
-                        left: p.align === "center" ? 0 : p.align === "right" ? "auto" : p.x,
-                        right: p.align === "right" ? design.width - p.x : "auto",
+                        top: p.y * previewScale,
+                        left: p.align === "center" ? 0 : p.align === "right" ? "auto" : p.x * previewScale,
+                        right: p.align === "right" ? (design.width - p.x) * previewScale : "auto",
                         width: p.align === "center" ? "100%" : "auto",
                         textAlign: (p.align || "center") as React.CSSProperties["textAlign"],
                         color: p.color,
-                        fontSize: p.fontSize,
+                        fontSize: p.fontSize * previewScale,
                         fontFamily: p.fontFamily,
                         fontWeight: p.fontWeight,
                         lineHeight: 1,
-                        padding: "4px",
+                        padding: `${4 * previewScale}px`,
                       }}
                     >
                       {p.text || "Custom Text"}
@@ -910,10 +910,10 @@ export default function CertificateDesignerPage() {
                       onMouseDown={(e) => handleMouseDown(e, "image", idx)}
                       className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
-                        top: img.y,
-                        left: img.x,
-                        width: img.width,
-                        height: img.height,
+                        top: img.y * previewScale,
+                        left: img.x * previewScale,
+                        width: img.width * previewScale,
+                        height: img.height * previewScale,
                       }}
                     >
                       <img

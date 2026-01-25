@@ -102,12 +102,16 @@ class PDFGenerationService {
         throw new Error('Template is required');
       }
 
+      // Convert Mongoose document to plain object if needed
+      const templateObj = typeof template.toObject === 'function' ? template.toObject() : template;
+      const placeholders = templateObj.placeholders || {};
+
       console.log('Generating certificate PDF with template:', {
-        templateId: template._id,
-        templateName: template.name,
-        hasPlaceholders: !!template.placeholders,
-        placeholdersKeys: template.placeholders ? Object.keys(template.placeholders) : [],
-        isFallback: template.isFallback,
+        templateId: templateObj._id || templateObj.id,
+        templateName: templateObj.name,
+        hasPlaceholders: !!templateObj.placeholders,
+        placeholdersKeys: templateObj.placeholders ? Object.keys(templateObj.placeholders) : [],
+        isFallback: templateObj.isFallback,
         certificateData: {
           certificateNumber: certificateData.certificateNumber,
           studentName: certificateData.studentName,
@@ -302,24 +306,22 @@ class PDFGenerationService {
       );
 
       // Draw certificate elements based on template placeholders
-      const placeholders = template.placeholders || {};
+      // Track if we drew any placeholder successfully
+      let drewAnyPlaceholder = false;
 
       console.log('Processing placeholders:', {
         studentName: placeholders.studentName,
         courseName: placeholders.courseName,
         issuedDate: placeholders.issuedDate,
         certificateNumber: placeholders.certificateNumber,
-        customText: placeholders.customText,
-        images: placeholders.images
+        customTextCount: placeholders.customText?.length,
+        imagesCount: placeholders.images?.length
       });
-
-      // Track if we drew any placeholder successfully
-      let drewAnyPlaceholder = false;
 
       // Student Name
       if (placeholders.studentName && placeholders.studentName.x !== undefined && placeholders.studentName.y !== undefined) {
         console.log('Drawing student name:', studentName, 'at position:', placeholders.studentName);
-        await drawText(studentName, placeholders.studentName, height - 300);
+        await drawText(studentName, placeholders.studentName, 300);
         drewAnyPlaceholder = true;
       } else {
         console.log('No valid student name placeholder found');
@@ -328,7 +330,7 @@ class PDFGenerationService {
       // Course Name
       if (placeholders.courseName && placeholders.courseName.x !== undefined && placeholders.courseName.y !== undefined) {
         console.log('Drawing course name:', courseName, 'at position:', placeholders.courseName);
-        await drawText(courseName, placeholders.courseName, height - 450);
+        await drawText(courseName, placeholders.courseName, 450);
         drewAnyPlaceholder = true;
       } else {
         console.log('No valid course name placeholder found');
@@ -337,7 +339,7 @@ class PDFGenerationService {
       // Issue Date
       if (placeholders.issuedDate && placeholders.issuedDate.x !== undefined && placeholders.issuedDate.y !== undefined) {
         console.log('Drawing issued date:', issuedDate, 'at position:', placeholders.issuedDate);
-        await drawText(issuedDate, placeholders.issuedDate, height - 600);
+        await drawText(issuedDate, placeholders.issuedDate, 600);
         drewAnyPlaceholder = true;
       } else {
         console.log('No valid issued date placeholder found');
@@ -349,7 +351,7 @@ class PDFGenerationService {
         await drawText(
           certificateData.certificateNumber,
           placeholders.certificateNumber,
-          height - 750
+          750
         );
         drewAnyPlaceholder = true;
       } else {
