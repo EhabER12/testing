@@ -21,6 +21,11 @@ export interface Certificate {
     _id?: string;
     name: BilingualText;
   };
+  studentMemberId?: string;
+  studentName?: {
+    ar: string;
+    en: string;
+  };
   certificateNumber: string;
   issuedAt: string;
   status: "issued" | "revoked";

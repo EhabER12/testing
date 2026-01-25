@@ -349,7 +349,7 @@ export default function CertificatesPage() {
                 <TableRow>
                   <TableHead>{isRtl ? "رقم الشهادة" : "Certificate #"}</TableHead>
                   <TableHead>{isRtl ? "الطالب" : "Student"}</TableHead>
-                  <TableHead>{isRtl ? "الدورة" : "Course"}</TableHead>
+                  <TableHead>{isRtl ? "الدورة / الباقة" : "Course / Package"}</TableHead>
                   <TableHead>{isRtl ? "تاريخ الإصدار" : "Issue Date"}</TableHead>
                   <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
                   <TableHead className="text-right">
@@ -368,13 +368,13 @@ export default function CertificatesPage() {
                         <User className="h-4 w-4 text-muted-foreground" />
                         {certificate.userId
                           ? getTextValue(certificate.userId.fullName)
-                          : "-"}
+                          : (certificate.studentName ? getTextValue(certificate.studentName) : "-")}
                       </div>
                     </TableCell>
                     <TableCell>
                       {certificate.courseId
                         ? getTextValue(certificate.courseId.title)
-                        : "-"}
+                        : (certificate.packageId ? (isRtl ? `باقة: ${getTextValue(certificate.packageId.name)}` : `Package: ${getTextValue(certificate.packageId.name)}`) : "-")}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
