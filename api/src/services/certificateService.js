@@ -544,8 +544,17 @@ class CertificateService {
       // If found, update the certificate to link to this template for future use
       if (template) {
         certificate.templateId = template._id;
-        // detailed log
         console.log(`Linked certificate ${certificate.certificateNumber} to course template ${template.name} (${template._id})`);
+      }
+    }
+
+    // 2b. Try to find template linked directly to the course by courseId field
+    if (!template && certificate.courseId) {
+      const courseIdStr = certificate.courseId._id || certificate.courseId;
+      template = await CertificateTemplate.findOne({ courseId: courseIdStr }).lean();
+      if (template) {
+        certificate.templateId = template._id;
+        console.log(`Found template linked to course ${courseIdStr}: ${template.name}`);
       }
     }
 

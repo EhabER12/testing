@@ -42,6 +42,12 @@ const certificateTemplateSchema = new mongoose.Schema(
       ref: "Package",
     },
 
+    // Linked Course (Optional)
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+    },
+
     // Background Image
     backgroundImage: {
       type: String,
@@ -129,6 +135,20 @@ certificateTemplateSchema.pre("save", async function (next) {
       { $set: { isDefault: false } }
     );
   }
+  
+  // If linked to a course, update the course's certificateSettings.templateId
+  if (this.courseId) {
+    try {
+      const Course = mongoose.model("Course");
+      await Course.findByIdAndUpdate(this.courseId, {
+        "certificateSettings.templateId": this._id,
+        "certificateSettings.enabled": true
+      });
+    } catch (err) {
+      console.error("Failed to update course certificate settings:", err.message);
+    }
+  }
+  
   next();
 });
 

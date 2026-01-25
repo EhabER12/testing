@@ -13,6 +13,7 @@ import {
   ImagePlaceholder,
 } from "@/store/services/certificateService";
 import { getPackages } from "@/store/services/packageService";
+import { getCourses } from "@/store/services/courseService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,6 +82,7 @@ export default function CertificateDesignerPage() {
   const [design, setDesign] = useState<{
     name: string;
     packageId?: string;
+    courseId?: string;
     backgroundImage: string;
     width: number;
     height: number;
@@ -97,6 +99,7 @@ export default function CertificateDesignerPage() {
   }>({
     name: "",
     packageId: "",
+    courseId: "",
     backgroundImage: "",
     width: 1200,
     height: 900,
@@ -121,10 +124,12 @@ export default function CertificateDesignerPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const { packages } = useAppSelector((state) => state.packages);
+  const { courses } = useAppSelector((state) => state.courses);
 
   useEffect(() => {
     dispatch(getAllTemplates());
     dispatch(getPackages());
+    dispatch(getCourses({}));
   }, [dispatch]);
 
   // Default placeholder values for fallback
@@ -156,6 +161,7 @@ export default function CertificateDesignerPage() {
     setDesign({
       name: template.name,
       packageId: template.packageId || "",
+      courseId: (template as any).courseId || "",
       backgroundImage: template.backgroundImage,
       width: template.width,
       height: template.height,
@@ -177,6 +183,7 @@ export default function CertificateDesignerPage() {
     setDesign({
       name: design.name || "",
       packageId: "",
+      courseId: "",
       backgroundImage: "",
       width: 1200,
       height: 900,
@@ -550,6 +557,26 @@ export default function CertificateDesignerPage() {
                     {packages.filter(pkg => pkg && (pkg.id || pkg._id) && String(pkg.id || pkg._id) !== "").map((pkg) => (
                       <SelectItem key={pkg.id || pkg._id} value={String(pkg.id || pkg._id)}>
                         {isRtl ? pkg.name.ar : pkg.name.en}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{isRtl ? "ربط بكورس (اختياري)" : "Link to Course (Optional)"}</Label>
+                <Select
+                  value={design.courseId || "none"}
+                  onValueChange={(val) => setDesign({ ...design, courseId: val === "none" ? "" : val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={isRtl ? "اختر كورس..." : "Select course..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{isRtl ? "بدون ربط" : "No Link"}</SelectItem>
+                    {courses && courses.filter((course: any) => course && (course.id || course._id) && String(course.id || course._id) !== "").map((course: any) => (
+                      <SelectItem key={course.id || course._id} value={String(course.id || course._id)}>
+                        {isRtl ? course.title?.ar : course.title?.en}
                       </SelectItem>
                     ))}
                   </SelectContent>
