@@ -22,6 +22,7 @@ import {
   deleteTemplate,
   getMyCertificatesEligibility,
   claimCertificate,
+  bulkIssuePackageCertificates,
 } from "../controllers/certificateController.js";
 import { protect, authorize } from "../middlewares/authMiddleware.js";
 
@@ -65,6 +66,13 @@ router.post(
   protect,
   authorize("admin", "moderator"),
   bulkIssueCertificates
+);
+
+router.post(
+  "/bulk-package-issue",
+  protect,
+  authorize("admin"),
+  bulkIssuePackageCertificates
 );
 
 // ============ CERTIFICATE TEMPLATE ROUTES ============
