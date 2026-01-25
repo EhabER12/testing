@@ -336,3 +336,18 @@ export const deleteTemplate = createAsyncThunk(
     }
   }
 );
+
+// Bulk issue package certificates
+export const bulkIssuePackageCertificates = createAsyncThunk(
+  "certificates/bulkIssuePackage",
+  async (packageId: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.post("/certificates/bulk-package-issue", { packageId });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to bulk issue certificates"
+      );
+    }
+  }
+);
