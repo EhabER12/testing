@@ -243,9 +243,19 @@ export default function CheckoutPage() {
     try {
       // 1. PayPal
       if (selectedMethodId === "paypal") {
+        const mainItem = items[0];
+        const productId = mainItem?.product?.id || (mainItem?.product as any)?._id;
+
         const response = await dispatch(createPaypalPaymentThunk({
           amount: total,
-          currency: items[0]?.product?.currency || "USD" // PayPal usually USD, but check support
+          productId,
+          currency: items[0]?.product?.currency || "USD", // PayPal usually USD
+          locale,
+          billingInfo: {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+          },
         })).unwrap();
 
         if (response.approvalUrl) {

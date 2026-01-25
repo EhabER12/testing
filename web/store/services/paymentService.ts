@@ -393,6 +393,12 @@ interface CreatePaypalPaymentPayload {
   productId?: string;
   amount: number;
   currency?: string;
+  locale?: string;
+  billingInfo?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
 }
 
 export const createPaypalPaymentThunk = createAsyncThunk<

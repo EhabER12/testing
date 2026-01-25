@@ -243,6 +243,12 @@ export default function CourseCheckoutPage() {
                     amount: currentCourse?.price || 0,
                     currency: "USD",
                     courseId,
+                    locale,
+                    billingInfo: {
+                        name: formData.name,
+                        email: formData.email,
+                        phone: formData.phone,
+                    },
                 })).unwrap();
 
                 if (response.approvalUrl) {

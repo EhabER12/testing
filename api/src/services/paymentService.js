@@ -146,6 +146,11 @@ export class PaymentService {
 
     // If status changed to success, send notification and create finance entry
     if (status === "success" && payment.status !== "success") {
+      // Determine locale from payment details or default to 'ar'
+      const paymentLocale = payment.paymentDetails?.locale || 
+                           payment.billingInfo?.locale || 
+                           (payment.currency === "USD" ? "en" : "ar");
+
       // Send email notification using template
       try {
         await emailTemplateService.sendTemplatedEmail(
@@ -159,7 +164,7 @@ export class PaymentService {
             year: new Date().getFullYear(),
             dashboardUrl: (process.env.CLIENT_URL || "http://localhost:3000") + "/dashboard"
           },
-          "ar"
+          paymentLocale
         );
       } catch (emailError) {
         logger.error("Failed to send purchase notification email using template", { error: emailError.message });
@@ -507,7 +512,7 @@ export class PaymentService {
 
   // --- PayPal ---
 
-  async createPaypalPayment({ userId, courseId, productId, serviceId, amount, currency }) {
+  async createPaypalPayment({ userId, courseId, productId, serviceId, amount, currency, locale, billingInfo }) {
     const config = await this.getGatewayConfig("paypal");
 
     // Map courseId to productId if present (for compatibility)
@@ -525,9 +530,11 @@ export class PaymentService {
       status: "pending",
       paymentMethod: "PayPal",
       merchantOrderId,
+      billingInfo: billingInfo || {},
       paymentDetails: {
         methodType: "paypal_checkout",
-        gatewayMode: config.mode
+        gatewayMode: config.mode,
+        locale: locale || "en" // Store locale for email notifications
       }
     };
 
@@ -562,67 +569,170 @@ export class PaymentService {
   async capturePaypalOrder({ orderId, userId }) {
     const config = await this.getGatewayConfig("paypal");
 
-    // Find our payment record by paypalOrderId
-    // Since paymentDetails is nested, we search by path.
-    // NOTE: paymentRepository.findAll filter might not support deep nested search easily without dot notation in filter
-    // So we'll use direct mongoose model if needed, or assume we pass our internal paymentId. 
-    // But the controller passes `orderId` (PayPal ID)
-
-    // Note: Assuming we saved paypalOrderId in paymentDetails.paypalOrderId
-    // We need to find the payment first.
-    // For now, let's assume we capture it using the PayPal API, and then update our DB.
-
     try {
+      // Find payment by PayPal Order ID first
+      const Payment = (await import("../models/paymentModel.js")).default;
+      let payment = await Payment.findOne({ "paymentDetails.paypalOrderId": orderId });
+
+      if (!payment) {
+        console.warn(`Payment not found for PayPal order ${orderId}`);
+        throw new ApiError(404, "Payment not found for this PayPal order");
+      }
+
+      // Check if already captured
+      if (payment.status === "success") {
+        console.log(`Payment ${payment._id} already captured`);
+        return {
+          id: payment._id,
+          merchantOrderId: payment.merchantOrderId,
+          status: payment.status,
+          amount: payment.amount,
+          currency: payment.currency,
+          message: "Payment already captured"
+        };
+      }
+
+      // Capture the PayPal order
       const captureData = await paypalClient.captureOrder({ orderId, config });
 
-      if (captureData.status === "COMPLETED") {
-        // Find payment by paypalOrderId. 
-        // Ideally controller should pass internal paymentId, but if not:
-        // We need to implement findByPaypalOrderId in repo or search.
-        // For safety, let's just log this for now if we can't find it, or use flexible search.
-        // Actually, we can use `findOne` on the repo with specific filter.
-        const Payment = (await import("../models/paymentModel.js")).default;
-        const payment = await Payment.findOne({ "paymentDetails.paypalOrderId": orderId });
+      console.log(`PayPal capture response for ${orderId}:`, captureData.status);
 
-        if (payment) {
-          await this.updatePaymentStatus(payment._id, "success", null, null, "PayPal Capture Completed");
-          return payment;
-        }
+      if (captureData.status === "COMPLETED") {
+        // Extract capture details
+        const captureId = captureData.purchase_units?.[0]?.payments?.captures?.[0]?.id;
+        const payerEmail = captureData.payer?.email_address;
+        const payerName = `${captureData.payer?.name?.given_name || ''} ${captureData.payer?.name?.surname || ''}`.trim();
+
+        // Update payment with capture details
+        await Payment.findByIdAndUpdate(payment._id, {
+          "paymentDetails.captureId": captureId,
+          "paymentDetails.payerEmail": payerEmail,
+          "paymentDetails.payerName": payerName,
+          "paymentDetails.capturedAt": new Date(),
+          "paymentDetails.paypalResponse": {
+            status: captureData.status,
+            captureId,
+            payerEmail,
+          }
+        });
+
+        // Update payment status to success
+        await this.updatePaymentStatus(
+          payment._id, 
+          "success", 
+          null, 
+          null, 
+          `PayPal Capture Completed - Capture ID: ${captureId}`
+        );
+
+        // Refetch updated payment
+        payment = await Payment.findById(payment._id);
+
+        console.log(`✅ PayPal payment ${payment._id} captured successfully`);
+
+        return {
+          id: payment._id,
+          merchantOrderId: payment.merchantOrderId,
+          status: "success",
+          amount: payment.amount,
+          currency: payment.currency,
+          captureId,
+          payerEmail,
+          message: "Payment captured successfully"
+        };
+      } else {
+        // Capture not completed
+        const failureReason = `PayPal capture status: ${captureData.status}`;
+        await this.updatePaymentStatus(payment._id, "failed", failureReason, null, failureReason);
+        throw new ApiError(400, `PayPal capture failed: ${captureData.status}`);
       }
     } catch (error) {
+      console.error(`❌ PayPal capture error for ${orderId}:`, error.message);
       throw error;
     }
   }
 
-  async handlePaypalWebhook(payload) {
+  async handlePaypalWebhook(payload, headers = {}) {
     try {
+      const config = await this.getGatewayConfig("paypal");
+      
+      // Verify webhook signature if headers provided
+      if (headers && headers["paypal-transmission-sig"]) {
+        try {
+          const verificationResult = await paypalClient.verifyWebhookSignature({
+            headers,
+            body: payload,
+            config
+          });
+
+          if (verificationResult.verification_status !== "SUCCESS") {
+            console.error("❌ PayPal webhook signature verification failed");
+            throw new ApiError(401, "Invalid webhook signature");
+          }
+          console.log("✅ PayPal webhook signature verified");
+        } catch (verifyError) {
+          console.warn("⚠️ Webhook verification skipped:", verifyError.message);
+          // Continue processing if verification fails (for backwards compatibility)
+        }
+      }
+
       const eventType = payload.event_type;
       const resource = payload.resource;
 
       console.log(`🔔 PayPal Webhook Event: ${eventType}`);
 
+      const Payment = (await import("../models/paymentModel.js")).default;
+
       if (eventType === "PAYMENT.CAPTURE.COMPLETED") {
-        const orderId = resource.supplementary_data?.related_ids?.order_id || resource.id;
-        // In some cases resource.id might be capture ID, need careful handling.
-        // Usually we track by custom_id or invoice_id if we set it, or simple search.
-        // Let's try to match by order ID if available in our DB.
+        // Extract order ID from the webhook payload
+        const captureId = resource.id;
+        const orderId = resource.supplementary_data?.related_ids?.order_id;
+        const amount = resource.amount?.value;
+        const currency = resource.amount?.currency_code;
 
-        // Strategy: 
-        // 1. Try to find payment by paypalOrderId (if we stored it)
-        // 2. Or by merchantOrderId (if we passed it as custom_id/invoice_id)
+        console.log(`✅ PayPal Payment Captured via Webhook - Order: ${orderId}, Capture: ${captureId}`);
 
-        // For now, let's just log. Full implementation requires mapping PayPal resource back to Payment.
-        // Assuming we rely on frontend capture for now, this is a backup/verification.
+        // Try to find and update payment by PayPal order ID
+        if (orderId) {
+          const payment = await Payment.findOne({ "paymentDetails.paypalOrderId": orderId });
+          
+          if (payment && payment.status !== "success") {
+            await this.updatePaymentStatus(
+              payment._id, 
+              "success", 
+              null, 
+              null, 
+              `PayPal Webhook: Capture ${captureId} completed`
+            );
+            console.log(`✅ Payment ${payment._id} marked as success via webhook`);
+          }
+        }
+      } else if (eventType === "PAYMENT.CAPTURE.DENIED" || eventType === "PAYMENT.CAPTURE.DECLINED") {
+        const orderId = resource.supplementary_data?.related_ids?.order_id;
+        console.log(`❌ PayPal Payment Denied via Webhook - Order: ${orderId}`);
 
-        console.log("✅ PayPal Payment Captured (Webhook)", JSON.stringify(resource, null, 2));
-      } else if (eventType === "PAYMENT.CAPTURE.DENIED") {
-        console.log("❌ PayPal Payment Denied (Webhook)", resource);
+        if (orderId) {
+          const payment = await Payment.findOne({ "paymentDetails.paypalOrderId": orderId });
+          
+          if (payment && payment.status === "pending") {
+            await this.updatePaymentStatus(
+              payment._id, 
+              "failed", 
+              "Payment denied by PayPal", 
+              null, 
+              `PayPal Webhook: Payment denied`
+            );
+          }
+        }
+      } else if (eventType === "CHECKOUT.ORDER.APPROVED") {
+        // Order approved but not yet captured - this is expected in our flow
+        console.log(`🟡 PayPal Order Approved (pending capture) - Order: ${resource.id}`);
       }
 
       return true;
     } catch (error) {
       console.error("PayPal Webhook Error:", error);
-      // Return true anyway to stop PayPal retries if it's an internal error we can't fix
+      // Return true anyway to acknowledge receipt and stop PayPal retries
       return true;
     }
   }

@@ -287,7 +287,7 @@ export const cancelPayment = async (req, res, next) => {
 // @access  Private
 export const createPaypalPayment = async (req, res, next) => {
   try {
-    const { courseId, amount, currency = "USD" } = req.body;
+    const { courseId, amount, currency = "USD", locale, billingInfo } = req.body;
     const userId = req.user?._id; // Optional - may be undefined for guest checkout
 
     if (!courseId || !amount) {
@@ -299,6 +299,8 @@ export const createPaypalPayment = async (req, res, next) => {
       courseId,
       amount,
       currency,
+      locale,
+      billingInfo,
     });
 
     return ApiResponse.success(
@@ -343,7 +345,8 @@ export const capturePaypalOrder = async (req, res, next) => {
 export const paypalWebhook = async (req, res, next) => {
   try {
     // PayPal expects 200 OK immediately
-    await paymentService.handlePaypalWebhook(req.body);
+    // Pass headers for signature verification
+    await paymentService.handlePaypalWebhook(req.body, req.headers);
 
     res.status(200).json({
       success: true,

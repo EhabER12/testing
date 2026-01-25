@@ -1,4 +1,5 @@
 import axios from "axios";
+import crypto from "crypto";
 
 /**
  * تحديد PayPal API URL بناءً على mode
@@ -124,6 +125,77 @@ export async function captureOrder({ orderId, config }) {
   } catch (error) {
     console.error("❌ PayPal captureOrder error:", error.response?.data);
     throw new Error("Failed to capture PayPal order");
+  }
+}
+
+/**
+ * Verify PayPal webhook signature
+ * @see https://developer.paypal.com/docs/api/webhooks/v1/#verify-webhook-signature
+ */
+export async function verifyWebhookSignature({ headers, body, config }) {
+  const paypalApiUrl = getPaypalApiUrl(config.mode);
+  const accessToken = await getAccessToken(config);
+  
+  const webhookId = config.credentials?.webhookId;
+  
+  if (!webhookId) {
+    console.warn("⚠️ PayPal webhook ID not configured - skipping verification");
+    return { verification_status: "SUCCESS" }; // Allow if not configured (dev mode)
+  }
+
+  try {
+    const verificationPayload = {
+      auth_algo: headers["paypal-auth-algo"],
+      cert_url: headers["paypal-cert-url"],
+      transmission_id: headers["paypal-transmission-id"],
+      transmission_sig: headers["paypal-transmission-sig"],
+      transmission_time: headers["paypal-transmission-time"],
+      webhook_id: webhookId,
+      webhook_event: body,
+    };
+
+    const response = await axios.post(
+      `${paypalApiUrl}/v1/notifications/verify-webhook-signature`,
+      verificationPayload,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 15000,
+      }
+    );
+
+    console.log("🔐 PayPal webhook verification result:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ PayPal webhook verification error:", error.response?.data || error.message);
+    throw new Error("Failed to verify PayPal webhook signature");
+  }
+}
+
+/**
+ * Get order details from PayPal
+ */
+export async function getOrderDetails({ orderId, config }) {
+  const paypalApiUrl = getPaypalApiUrl(config.mode);
+  const accessToken = await getAccessToken(config);
+
+  try {
+    const response = await axios.get(
+      `${paypalApiUrl}/v2/checkout/orders/${orderId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("❌ PayPal getOrderDetails error:", error.response?.data);
+    throw new Error("Failed to get PayPal order details");
   }
 }
 
