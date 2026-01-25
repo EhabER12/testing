@@ -18,20 +18,25 @@ class PDFGenerationService {
    */
   reshapeArabic(text) {
     if (!text) return "";
+    
+    // Ensure text is a string
+    const stringText = String(text);
 
     // Check if text contains Arabic characters
-    const isArabic = /[\u0600-\u06FF]/.test(text);
-    if (!isArabic) return text;
+    const isArabic = /[\u0600-\u06FF]/.test(stringText);
+    if (!isArabic) return stringText;
 
     try {
       // Reshape Arabic characters (handle joining)
-      const reshaped = arabicReshaper.reshape(text);
+      const reshaped = arabicReshaper.reshape(stringText);
 
       // Reverse for RTL display in PDF
+      // Note: This simple reverse can mess up mixed English/Arabic
+      // but is necessary for basic RTL support in pdf-lib
       return reshaped.split("").reverse().join("");
     } catch (error) {
-      console.error("Arabic reshaping error:", error);
-      return text;
+      console.error("Arabic reshaping error for text:", stringText, error);
+      return stringText;
     }
   }
 
@@ -270,37 +275,40 @@ class PDFGenerationService {
 
       // Get text values
       const locale = "ar"; // Default to Arabic for Quran platform
+      
+      // Ensure certificateData is a plain object if it came from Mongoose
+      const data = typeof certificateData.toObject === 'function' ? certificateData.toObject() : certificateData;
 
       // Handle student name (could be string or object with ar/en)
       let studentName = "Student";
-      if (typeof certificateData.studentName === "string") {
-        studentName = certificateData.studentName;
-      } else if (certificateData.studentName && typeof certificateData.studentName === "object") {
-        studentName = certificateData.studentName[locale] ||
-          certificateData.studentName.en ||
-          certificateData.studentName.ar ||
+      if (typeof data.studentName === "string") {
+        studentName = data.studentName;
+      } else if (data.studentName && typeof data.studentName === "object") {
+        studentName = data.studentName[locale] ||
+          data.studentName.en ||
+          data.studentName.ar ||
           "Student";
       }
 
       // Handle course name (could be string or object with ar/en)
       let courseName = "Course";
-      if (typeof certificateData.courseName === "string") {
-        courseName = certificateData.courseName;
-      } else if (certificateData.courseName && typeof certificateData.courseName === "object") {
-        courseName = certificateData.courseName[locale] ||
-          certificateData.courseName.en ||
-          certificateData.courseName.ar ||
+      if (typeof data.courseName === "string") {
+        courseName = data.courseName;
+      } else if (data.courseName && typeof data.courseName === "object") {
+        courseName = data.courseName[locale] ||
+          data.courseName.en ||
+          data.courseName.ar ||
           "Course";
       }
 
       console.log('Resolved text values:', {
         studentName,
         courseName,
-        originalStudentName: certificateData.studentName,
-        originalCourseName: certificateData.courseName
+        originalStudentName: data.studentName,
+        originalCourseName: data.courseName
       });
 
-      const issuedDate = new Date(certificateData.issuedAt).toLocaleDateString(
+      const issuedDate = new Date(data.issuedAt || Date.now()).toLocaleDateString(
         locale === "ar" ? "ar-EG" : "en-US",
         { year: "numeric", month: "long", day: "numeric" }
       );
@@ -346,10 +354,11 @@ class PDFGenerationService {
       }
 
       // Certificate Number
+      const certNumber = data.certificateNumber || "CERT-XXXX";
       if (placeholders.certificateNumber && placeholders.certificateNumber.x !== undefined && placeholders.certificateNumber.y !== undefined) {
-        console.log('Drawing certificate number:', certificateData.certificateNumber, 'at position:', placeholders.certificateNumber);
+        console.log('Drawing certificate number:', certNumber, 'at position:', placeholders.certificateNumber);
         await drawText(
-          certificateData.certificateNumber,
+          certNumber,
           placeholders.certificateNumber,
           750
         );
