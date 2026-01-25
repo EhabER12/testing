@@ -655,15 +655,14 @@ class CertificateService {
     console.log('issuedAt:', certificateData.issuedAt);
     console.log('=================================');
 
-    // Determine preferred locale based on certificate data
-    // If student name has Arabic characters, use Arabic locale
-    let preferredLocale = null;
+    // Determine preferred locale - DEFAULT TO ARABIC
+    // Only use English if Arabic data is completely missing
+    let preferredLocale = 'ar';  // Default to Arabic for this platform
     const studentNameAr = certificate.studentName?.ar || '';
     const studentNameEn = certificate.studentName?.en || '';
     
-    if (studentNameAr && /[\u0600-\u06FF]/.test(studentNameAr)) {
-      preferredLocale = 'ar';
-    } else if (studentNameEn) {
+    // Only switch to English if there's absolutely no Arabic content
+    if (!studentNameAr && studentNameEn) {
       preferredLocale = 'en';
     }
 

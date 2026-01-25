@@ -340,8 +340,9 @@ class PDFGenerationService {
         ? certificateData.toObject() 
         : (certificateData._doc ? { ...certificateData._doc } : { ...certificateData });
 
-      // Detect locale from certificate data or use preferred/default
-      const locale = preferredLocale || this.detectLocale(data) || "ar";
+      // Detect locale - DEFAULT TO ARABIC for this platform
+      // Only use English if explicitly requested or no Arabic content exists
+      const locale = preferredLocale || "ar";
 
       console.log('Generating certificate PDF with template:', {
         templateId: templateObj._id || templateObj.id,
@@ -596,46 +597,38 @@ class PDFGenerationService {
         }
       };
 
-      // Get text values based on locale and content language detection
-      // Helper to get best text value considering both locale preference and content language
+      // Get text values based on locale
+      // FIXED: Properly prioritize Arabic when locale is Arabic
       const getBilingualText = (textData, defaultAr, defaultEn) => {
-        console.log('getBilingualText called with:', { textData, defaultAr, defaultEn, locale });
-        
+        // If no data at all, return default based on locale
         if (!textData) {
-          const result = locale === "ar" ? defaultAr : defaultEn;
-          console.log('textData is falsy, returning default:', result);
-          return result;
+          return locale === "ar" ? defaultAr : defaultEn;
         }
         
+        // If it's a string, just return it (can't determine language)
         if (typeof textData === "string") {
-          console.log('textData is string, returning:', textData);
-          return textData;
+          return textData || (locale === "ar" ? defaultAr : defaultEn);
         }
         
+        // If it's a bilingual object
         if (typeof textData === "object") {
-          // Get both values
-          const arText = textData.ar || defaultAr;
-          const enText = textData.en || defaultEn;
+          const arText = textData.ar?.trim() || "";
+          const enText = textData.en?.trim() || "";
           
-          console.log('textData is object:', { arText, enText });
-          
-          // Prefer the locale-appropriate text, but fall back to the other
+          // For Arabic locale: ALWAYS prefer Arabic if available
           if (locale === "ar") {
-            // For Arabic locale, prefer Arabic text
-            const result = arText || enText;
-            console.log('Arabic locale, returning:', result);
-            return result;
-          } else {
-            // For English locale, prefer English text, but use Arabic if English is empty
-            const result = enText || arText;
-            console.log('English locale, returning:', result);
-            return result;
+            if (arText) return arText;
+            if (enText) return enText;
+            return defaultAr;
           }
+          
+          // For English locale: prefer English, fallback to Arabic
+          if (enText) return enText;
+          if (arText) return arText;
+          return defaultEn;
         }
         
-        const result = locale === "ar" ? defaultAr : defaultEn;
-        console.log('Fallback, returning default:', result);
-        return result;
+        return locale === "ar" ? defaultAr : defaultEn;
       };
 
       // Handle student name (could be string or object with ar/en)
@@ -644,15 +637,14 @@ class PDFGenerationService {
       // Handle course name (could be string or object with ar/en)
       const courseName = getBilingualText(data.courseName, "الدورة", "Course");
 
-      console.log('Resolved text values:', {
-        locale,
-        studentName,
-        studentNameIsRtl: this.isRtlText(studentName),
-        courseName,
-        courseNameIsRtl: this.isRtlText(courseName),
-        originalStudentName: data.studentName,
-        originalCourseName: data.courseName
-      });
+      // DEBUG: Log final text values
+      console.log('=== FINAL TEXT FOR PDF ===');
+      console.log('locale:', locale);
+      console.log('studentName:', studentName);
+      console.log('courseName:', courseName);
+      console.log('raw studentName:', JSON.stringify(data.studentName));
+      console.log('raw courseName:', JSON.stringify(data.courseName));
+      console.log('==========================');
 
       const issuedDate = new Date(data.issuedAt || Date.now()).toLocaleDateString(
         locale === "ar" ? "ar-EG" : "en-US",
