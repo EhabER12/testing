@@ -243,8 +243,17 @@ const certificateSlice = createSlice({
         state.error = action.payload as string;
       })
       // Delete template
+      .addCase(deleteTemplate.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(deleteTemplate.fulfilled, (state, action) => {
+        state.isLoading = false;
         state.templates = state.templates.filter((t) => (t.id || t._id) !== action.payload);
+      })
+      .addCase(deleteTemplate.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
       })
       // Get my certificates
       .addCase(getMyCertificates.pending, (state) => {

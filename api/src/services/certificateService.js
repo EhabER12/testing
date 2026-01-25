@@ -607,42 +607,77 @@ class CertificateService {
     let studentNameData = certificate.studentName;
     let courseNameData = certificate.courseName;
 
-    // Check if studentName data is valid
+    // DEBUG: Log initial values
+    console.log('=== INITIAL CERTIFICATE DATA ===');
+    console.log('studentNameData:', JSON.stringify(studentNameData));
+    console.log('courseNameData:', JSON.stringify(courseNameData));
+
+    // Check if studentName data is valid (has actual content, not just empty strings)
     const hasValidStudentName = studentNameData && 
-      (studentNameData.ar || studentNameData.en) && 
-      (studentNameData.ar !== '' || studentNameData.en !== '');
+      typeof studentNameData === 'object' &&
+      ((studentNameData.ar && studentNameData.ar.trim()) || (studentNameData.en && studentNameData.en.trim()));
 
     // Check if courseName data is valid
     const hasValidCourseName = courseNameData && 
-      (courseNameData.ar || courseNameData.en) && 
-      (courseNameData.ar !== '' || courseNameData.en !== '');
+      typeof courseNameData === 'object' &&
+      ((courseNameData.ar && courseNameData.ar.trim()) || (courseNameData.en && courseNameData.en.trim()));
+
+    console.log('hasValidStudentName:', hasValidStudentName);
+    console.log('hasValidCourseName:', hasValidCourseName);
 
     // Fallback: Get student name from populated user if missing
     if (!hasValidStudentName) {
+      console.log('Student name invalid, checking populated user...');
       if (certificate.userId && certificate.userId.fullName) {
-        studentNameData = certificate.userId.fullName;
-        console.log('Using student name from populated user:', studentNameData);
+        studentNameData = {
+          ar: certificate.userId.fullName.ar || certificate.userId.fullName.en || 'الطالب',
+          en: certificate.userId.fullName.en || certificate.userId.fullName.ar || 'Student'
+        };
+        console.log('Using student name from populated user:', JSON.stringify(studentNameData));
+      } else {
+        studentNameData = { ar: 'الطالب', en: 'Student' };
+        console.log('Using default student name');
       }
     }
 
     // Fallback: Get course/package name from populated relations if missing
     if (!hasValidCourseName) {
+      console.log('Course name invalid, checking populated relations...');
       // Try course first
       if (certificate.courseId && certificate.courseId.title) {
-        courseNameData = certificate.courseId.title;
-        console.log('Using course name from populated course:', courseNameData);
+        courseNameData = {
+          ar: certificate.courseId.title.ar || certificate.courseId.title.en || 'الدورة',
+          en: certificate.courseId.title.en || certificate.courseId.title.ar || 'Course'
+        };
+        console.log('Using course name from populated course:', JSON.stringify(courseNameData));
       }
       // Then try package
       else if (certificate.packageId && certificate.packageId.name) {
-        courseNameData = certificate.packageId.name;
-        console.log('Using package name from populated package:', courseNameData);
+        courseNameData = {
+          ar: certificate.packageId.name.ar || certificate.packageId.name.en || 'الباقة',
+          en: certificate.packageId.name.en || certificate.packageId.name.ar || 'Package'
+        };
+        console.log('Using package name from populated package:', JSON.stringify(courseNameData));
+      } else {
+        courseNameData = { ar: 'الدورة', en: 'Course' };
+        console.log('Using default course name');
       }
     }
 
+    // Ensure we have valid objects with trimmed values
+    const finalStudentName = {
+      ar: (studentNameData?.ar || '').trim() || 'الطالب',
+      en: (studentNameData?.en || '').trim() || 'Student'
+    };
+    const finalCourseName = {
+      ar: (courseNameData?.ar || '').trim() || 'الدورة',
+      en: (courseNameData?.en || '').trim() || 'Course'
+    };
+
     const certificateData = {
       certificateNumber: certificate.certificateNumber,
-      studentName: studentNameData || { ar: 'الطالب', en: 'Student' },
-      courseName: courseNameData || { ar: 'الدورة', en: 'Course' },
+      studentName: finalStudentName,
+      courseName: finalCourseName,
       issuedAt: certificate.issuedAt,
       metadata: certificate.metadata,
     };
