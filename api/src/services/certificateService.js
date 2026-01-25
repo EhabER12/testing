@@ -24,25 +24,28 @@ class CertificateService {
   }
 
   // Issue certificate to a single user (Course or Package)
-  async issueCertificate(userId, courseId, issuerUserId, overrideEligibility = false, manualTemplateId = null, packageId = null) {
-    // Check if user already has certificate
+  async issueCertificate(userId, courseId, issuerUserId, overrideEligibility = false, manualTemplateId = null, packageId = null, studentMemberId = null) {
+    // Check if certificate already exists
     const query = {};
     if (courseId) query.courseId = courseId;
     if (packageId) query.packageId = packageId;
-    query.userId = userId;
+
+    // Uniqueness check: prefer studentMemberId if available (more specific for this flow)
+    if (studentMemberId) {
+      query.studentMemberId = studentMemberId;
+    } else if (userId) {
+      query.userId = userId;
+    } else {
+      throw new Error("Either User ID or Student Member ID is required");
+    }
 
     const existing = await Certificate.findOne(query);
     if (existing) {
-      // If manual template provided and existing certificate has different template (or none),
-      // we might want to update it? But current behavior returns existing.
-      // For now, let's respect existing behavior but log if we're "re-issuing".
-      // Actually, standard behavior is usually "return existing". 
-      // User can use "Reissue" (revoke then issue) if they want a new one.
       return existing;
     }
 
     // Validate eligibility (skip if override is true)
-    if (!overrideEligibility) {
+    if (!overrideEligibility && userId && courseId) {
       const eligibility = await quizService.canUserGetCertificate(
         userId,
         courseId
@@ -54,37 +57,54 @@ class CertificateService {
       }
     }
 
-    // Get user and course info
-    const user = await User.findById(userId);
+    // Get recipient info
+    let user = null;
+    let studentMember = null;
+
+    if (userId) user = await User.findById(userId);
+    if (studentMemberId) studentMember = await StudentMember.findById(studentMemberId);
+
     const course = courseId ? await Course.findById(courseId) : null;
     const pkg = packageId ? await Package.findById(packageId) : null;
 
-    if (!user || (!course && !pkg)) {
-      throw new Error("User, Course, or Package not found");
+    if ((!user && !studentMember) || (!course && !pkg)) {
+      throw new Error("Recipient (User/Student) or Source (Course/Package) not found");
+    }
+
+    // Determine Names
+    let studentNameAr = "الطالب";
+    let studentNameEn = "Student";
+
+    if (studentMember) {
+      studentNameAr = studentMember.name.ar;
+      studentNameEn = studentMember.name.en;
+    } else if (user) {
+      studentNameAr = user.fullName?.ar || user.fullName?.en || "الطالب";
+      studentNameEn = user.fullName?.en || user.fullName?.ar || "Student";
     }
 
     // Generate certificate
     const certificateNumber = this.generateCertificateNumber();
 
-    // Get template: Use manual if provided, otherwise fallback to course/package settings
+    // Get template
     let templateId = manualTemplateId;
     if (!templateId && course?.certificateSettings?.templateId) {
       templateId = course.certificateSettings.templateId;
     }
-    // For package: find a template linked to this package
     if (!templateId && pkg) {
       const pkgTemplate = await CertificateTemplate.findOne({ packageId: pkg._id });
       if (pkgTemplate) templateId = pkgTemplate._id;
     }
 
     const certificate = await Certificate.create({
-      userId,
+      userId: userId || undefined, // Optional now
+      studentMemberId: studentMemberId || undefined,
       courseId,
       packageId,
       certificateNumber,
       studentName: {
-        ar: user.fullName?.ar || user.fullName?.en || user.email || "الطالب",
-        en: user.fullName?.en || user.fullName?.ar || user.email || "Student",
+        ar: studentNameAr,
+        en: studentNameEn,
       },
       courseName: {
         ar: course ? course.title.ar : (pkg ? pkg.name.ar : "Certificate"),
@@ -96,24 +116,28 @@ class CertificateService {
       templateId,
     });
 
-    // Update progress
-    try {
-      await Progress.findOneAndUpdate(
-        { userId, courseId },
-        {
-          certificateIssued: true,
-          certificateId: certificate._id
-        }
-      );
-    } catch (progressErr) {
-      if (courseId) console.log("Failed to update progress certificate status:", progressErr.message);
+    // Update progress (only if user exists and it's a course)
+    if (user && courseId) {
+      try {
+        await Progress.findOneAndUpdate(
+          { userId, courseId },
+          {
+            certificateIssued: true,
+            certificateId: certificate._id
+          }
+        );
+      } catch (progressErr) {
+        console.log("Failed to update progress certificate status:", progressErr.message);
+      }
     }
 
-    // Notify user
-    try {
-      await notificationService.notifyCertificateIssued(userId, certificate);
-    } catch (notifError) {
-      console.log("Certificate notification failed:", notifError.message);
+    // Notify user (only if user exists)
+    if (user) {
+      try {
+        await notificationService.notifyCertificateIssued(userId, certificate);
+      } catch (notifError) {
+        console.log("Certificate notification failed:", notifError.message);
+      }
     }
 
     return certificate;
@@ -218,23 +242,18 @@ class CertificateService {
     };
 
     for (const student of students) {
-      if (!student.userId) {
-        results.failed.push({
-          studentId: student._id,
-          name: student.name,
-          reason: "Student not linked to a registered user account"
-        });
-        continue;
-      }
-
       try {
+        // Resolve User ID if available, otherwise null
+        const userId = student.userId ? (student.userId._id || student.userId) : null;
+
         const cert = await this.issueCertificate(
-          student.userId._id || student.userId,
-          (student.userId.courseId || null),
+          userId,
+          null, // No courseId
           issuerUserId,
-          true,
+          true, // Override eligibility
           template._id,
-          pkg._id
+          pkg._id,
+          student._id // Pass StudentMember ID
         );
 
         results.success.push({

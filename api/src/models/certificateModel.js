@@ -7,7 +7,11 @@ const certificateSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "User ID is required"],
+      index: true,
+    },
+    studentMemberId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "StudentMember",
       index: true,
     },
     courseId: {
@@ -132,8 +136,9 @@ const certificateSchema = new mongoose.Schema(
 );
 
 // Compound unique index (one certificate per user per course OR per package)
-certificateSchema.index({ userId: 1, courseId: 1 }, { unique: true, partialFilterExpression: { courseId: { $exists: true } } });
-certificateSchema.index({ userId: 1, packageId: 1 }, { unique: true, partialFilterExpression: { packageId: { $exists: true } } });
+certificateSchema.index({ userId: 1, courseId: 1 }, { unique: true, partialFilterExpression: { courseId: { $exists: true }, userId: { $exists: true } } });
+certificateSchema.index({ userId: 1, packageId: 1 }, { unique: true, partialFilterExpression: { packageId: { $exists: true }, userId: { $exists: true } } });
+certificateSchema.index({ studentMemberId: 1, packageId: 1 }, { unique: true, partialFilterExpression: { packageId: { $exists: true }, studentMemberId: { $exists: true } } });
 
 // Pre-save: Generate certificate number if not provided
 certificateSchema.pre("save", function (next) {

@@ -154,7 +154,13 @@ export default function StudentMembersPage() {
             : `Successfully issued ${result.data.success.length} certificates`
         );
         if (result.data.failed.length > 0) {
-          toast.error(isRtl ? `فشل إصدار ${result.data.failed.length} شهادة` : `Failed to issue ${result.data.failed.length} certificates`);
+          const failedNames = result.data.failed.map((f: any) => f.name).join("، ");
+          const msg = isRtl
+            ? `فشل إصدار ${result.data.failed.length} شهادة. الطلاب: ${failedNames}. (السبب غالباً: عدم وجود حساب مستخدم مرتبط)`
+            : `Failed to issue ${result.data.failed.length} certificates. Students: ${failedNames}. (Effect: No linked user account)`;
+
+          toast.error(msg, { duration: 6000 });
+          console.error("Failed certificates:", result.data.failed);
         }
       } catch (err: any) {
         toast.error(err || "Failed to generate certificates");
