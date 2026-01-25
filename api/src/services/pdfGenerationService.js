@@ -11,9 +11,24 @@ import axios from "axios";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// ============ MODULE-LEVEL CACHES FOR PERFORMANCE ============
+// Font bytes cache - stores raw font file contents
+const fontBytesCache = new Map();
+// Image bytes cache - stores raw image file contents
+const imageBytesCache = new Map();
+
+// Configuration paths (can be overridden by environment variables)
+const FONTS_PATH = process.env.CERTIFICATE_FONTS_PATH || path.join(__dirname, "..", "assets", "fonts");
+const UPLOADS_PATH = process.env.CERTIFICATE_UPLOADS_PATH || path.join(__dirname, "..", "..", "uploads");
+
 class PDFGenerationService {
+  constructor() {
+    // Per-document font cache (embedded fonts are document-specific)
+    this.documentFontCache = null;
+  }
+
   /**
-   * Check if text contains Arabic characters
+   * Check if text contains Arabic characters (extended range)
    */
   containsArabic(text) {
     return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
@@ -32,7 +47,6 @@ class PDFGenerationService {
    */
   isRtlText(text) {
     if (!text) return false;
-    // Check the first significant character to determine direction
     const firstArabicIndex = text.search(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/);
     const firstLatinIndex = text.search(/[a-zA-Z]/);
     
@@ -44,159 +58,133 @@ class PDFGenerationService {
 
   /**
    * Reshape and process Arabic text for PDF rendering
-   * Handles mixed Arabic/English text properly
+   * Uses arabic-reshaper for proper glyph shaping
    */
   reshapeArabic(text) {
     if (!text) return "";
-    
-    // Ensure text is a string
     const stringText = String(text);
-
-    // Check if text contains Arabic characters
-    const hasArabic = this.containsArabic(stringText);
-    if (!hasArabic) return stringText;
+    
+    if (!this.containsArabic(stringText)) return stringText;
 
     try {
-      // Check for mixed content (Arabic + Latin/Numbers)
       const hasLatin = this.containsLatin(stringText);
       const hasNumbers = /\d/.test(stringText);
       
       if (hasLatin || hasNumbers) {
-        // Mixed content: use improved bidi algorithm
         return this.processBidiText(stringText);
       } else {
-        // Pure Arabic: reshape and reverse for PDF rendering
+        // Pure Arabic: reshape and reverse
         const reshaped = arabicReshaper.reshape(stringText);
         return reshaped.split("").reverse().join("");
       }
     } catch (error) {
-      console.error("Arabic reshaping error for text:", stringText, error);
-      return stringText;
+      console.error("Arabic reshaping error:", error.message, "for text:", stringText.substring(0, 50));
+      // Fallback: just reverse the text
+      return stringText.split("").reverse().join("");
     }
   }
 
   /**
    * Process bidirectional text (mixed Arabic/English/Numbers)
-   * Implements a simplified visual ordering algorithm for PDF
+   * Improved algorithm that handles numbers and punctuation better
    */
   processBidiText(text) {
-    // Split text into runs of similar direction
-    const runs = [];
-    let currentRun = "";
-    let currentType = null; // 'rtl', 'ltr', 'neutral'
+    try {
+      const runs = [];
+      let currentRun = "";
+      let currentType = null;
 
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      let charType;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        let charType;
 
-      if (this.containsArabic(char)) {
-        charType = 'rtl';
-      } else if (/[a-zA-Z]/.test(char)) {
-        charType = 'ltr';
-      } else if (/\d/.test(char)) {
-        // Numbers follow the embedding direction (treat as weak LTR but keep with adjacent text)
-        charType = 'number';
-      } else {
-        // Whitespace and punctuation
-        charType = 'neutral';
-      }
+        if (this.containsArabic(char)) {
+          charType = 'rtl';
+        } else if (/[a-zA-Z]/.test(char)) {
+          charType = 'ltr';
+        } else if (/\d/.test(char)) {
+          // Numbers inherit direction from surrounding text
+          charType = 'number';
+        } else {
+          charType = 'neutral';
+        }
 
-      if (currentType === null) {
-        currentType = charType;
-        currentRun = char;
-      } else if (charType === currentType || charType === 'neutral' || charType === 'number') {
-        currentRun += char;
-      } else {
-        // Save current run and start new one
-        runs.push({ text: currentRun, type: currentType });
-        currentRun = char;
-        currentType = charType;
-      }
-    }
-
-    // Don't forget the last run
-    if (currentRun) {
-      runs.push({ text: currentRun, type: currentType });
-    }
-
-    // Process each run
-    const processedRuns = runs.map(run => {
-      if (run.type === 'rtl') {
-        // Reshape Arabic text and reverse characters
-        try {
-          const reshaped = arabicReshaper.reshape(run.text);
-          return { text: reshaped.split("").reverse().join(""), type: 'rtl' };
-        } catch (e) {
-          return { text: run.text.split("").reverse().join(""), type: 'rtl' };
+        if (currentType === null) {
+          currentType = charType;
+          currentRun = char;
+        } else if (charType === currentType || charType === 'neutral' || charType === 'number') {
+          currentRun += char;
+        } else {
+          runs.push({ text: currentRun, type: currentType });
+          currentRun = char;
+          currentType = charType;
         }
       }
-      return run;
-    });
 
-    // For RTL base direction (Arabic text), reverse the order of runs
-    // This puts the first Arabic text on the right side
-    const baseRtl = this.isRtlText(text);
-    if (baseRtl) {
-      processedRuns.reverse();
+      if (currentRun) {
+        runs.push({ text: currentRun, type: currentType });
+      }
+
+      // Process each run
+      const processedRuns = runs.map(run => {
+        if (run.type === 'rtl') {
+          try {
+            const reshaped = arabicReshaper.reshape(run.text);
+            return { text: reshaped.split("").reverse().join(""), type: 'rtl' };
+          } catch (e) {
+            return { text: run.text.split("").reverse().join(""), type: 'rtl' };
+          }
+        }
+        return run;
+      });
+
+      // For RTL base direction, reverse the order of runs
+      if (this.isRtlText(text)) {
+        processedRuns.reverse();
+      }
+
+      return processedRuns.map(r => r.text).join("");
+    } catch (error) {
+      console.error("BiDi processing error:", error.message);
+      return text;
     }
-
-    return processedRuns.map(r => r.text).join("");
-  }
-
-  /**
-   * Process mixed Arabic/English text (legacy method - kept for compatibility)
-   * @deprecated Use processBidiText instead
-   */
-  processMixedText(text) {
-    return this.processBidiText(text);
   }
 
   /**
    * Detect locale from certificate data
-   * Returns 'ar' for Arabic, 'en' for English
    */
   detectLocale(certificateData) {
-    // Check if student name has Arabic characters
     let name = "";
     if (typeof certificateData.studentName === "string") {
       name = certificateData.studentName;
     } else if (certificateData.studentName?.ar) {
-      // If we have bilingual data, prefer Arabic for Arabic-first platforms
       name = certificateData.studentName.ar;
     }
     
-    // If student name contains Arabic, use Arabic locale
-    if (this.containsArabic(name)) {
-      return "ar";
-    }
-    
-    // Otherwise use English
-    return "en";
+    return this.containsArabic(name) ? "ar" : "en";
   }
 
   /**
-   * Font mapping: Maps font family names to .ttf filenames
-   * Note: Font weight variants would need separate font files
-   * For now, we use Regular variants and simulate bold with stroke
+   * Get font filename with weight support
    */
   getFontFilename(fontFamily, fontWeight = "normal") {
-    // Map font weight strings to standardized values
     const normalizedWeight = this.normalizeFontWeight(fontWeight);
+    const isBold = this.isBoldWeight(fontWeight);
     
-    // For now, use regular variants (font files for different weights would need to be added)
+    // Font map with weight variants
     const fontMap = {
-      "Cairo": "Cairo-Regular.ttf",
-      "Amiri": "Amiri-Regular.ttf",
-      "Tajawal": "Tajawal-Regular.ttf",
-      "Almarai": "Almarai-Regular.ttf",
-      "Noto Kufi Arabic": "NotoKufiArabic-Regular.ttf",
-      // Signature Fonts
-      "Great Vibes": "GreatVibes-Regular.ttf",
-      "Dancing Script": "DancingScript-Regular.ttf",
-      "Pacifico": "Pacifico-Regular.ttf",
+      "Cairo": { regular: "Cairo-Regular.ttf", bold: "Cairo-Bold.ttf" },
+      "Amiri": { regular: "Amiri-Regular.ttf", bold: "Amiri-Bold.ttf" },
+      "Tajawal": { regular: "Tajawal-Regular.ttf", bold: "Tajawal-Bold.ttf" },
+      "Almarai": { regular: "Almarai-Regular.ttf", bold: "Almarai-Bold.ttf" },
+      "Noto Kufi Arabic": { regular: "NotoKufiArabic-Regular.ttf", bold: "NotoKufiArabic-Bold.ttf" },
+      "Great Vibes": { regular: "GreatVibes-Regular.ttf", bold: "GreatVibes-Regular.ttf" },
+      "Dancing Script": { regular: "DancingScript-Regular.ttf", bold: "DancingScript-Bold.ttf" },
+      "Pacifico": { regular: "Pacifico-Regular.ttf", bold: "Pacifico-Regular.ttf" },
     };
 
-    return fontMap[fontFamily] || "Cairo-Regular.ttf";
+    const fontConfig = fontMap[fontFamily] || fontMap["Cairo"];
+    return isBold ? fontConfig.bold : fontConfig.regular;
   }
 
   /**
@@ -266,32 +254,56 @@ class PDFGenerationService {
   }
 
   /**
-   * Load and embed a font
+   * Load font bytes from disk with caching
+   * Uses module-level cache to avoid repeated disk reads
    */
-  async loadFont(pdfDoc, fontFamily) {
-    const filename = this.getFontFilename(fontFamily);
-    const fontPath = path.join(__dirname, "..", "assets", "fonts", filename);
+  async loadFontBytes(fontPath) {
+    // Check module-level cache first
+    if (fontBytesCache.has(fontPath)) {
+      return fontBytesCache.get(fontPath);
+    }
+    
+    // Read from disk and cache
+    const fontBytes = await fs.readFile(fontPath);
+    fontBytesCache.set(fontPath, fontBytes);
+    return fontBytes;
+  }
+
+  /**
+   * Load and embed a font with proper caching
+   */
+  async loadFont(pdfDoc, fontFamily, fontWeight = "normal") {
+    const filename = this.getFontFilename(fontFamily, fontWeight);
+    const fontPath = path.join(FONTS_PATH, filename);
 
     try {
-      const fontBytes = await fs.readFile(fontPath);
+      const fontBytes = await this.loadFontBytes(fontPath);
       return await pdfDoc.embedFont(fontBytes);
     } catch (error) {
-      // Fallback to Cairo if font not found
-      console.warn(`Font ${fontFamily} (${filename}) not found, falling back to Cairo`);
+      console.warn(`Font ${fontFamily} (${filename}) not found at ${fontPath}, trying fallback`);
+      
+      // Try regular variant if bold failed
+      if (this.isBoldWeight(fontWeight)) {
+        try {
+          const regularFilename = this.getFontFilename(fontFamily, "normal");
+          const regularPath = path.join(FONTS_PATH, regularFilename);
+          const regularBytes = await this.loadFontBytes(regularPath);
+          return await pdfDoc.embedFont(regularBytes);
+        } catch (e) {
+          // Continue to Cairo fallback
+        }
+      }
+      
+      // Fallback to Cairo
       try {
-        const fallbackPath = path.join(__dirname, "..", "assets", "fonts", "Cairo-Regular.ttf");
-        const fallbackBytes = await fs.readFile(fallbackPath);
+        const fallbackPath = path.join(FONTS_PATH, "Cairo-Regular.ttf");
+        const fallbackBytes = await this.loadFontBytes(fallbackPath);
         return await pdfDoc.embedFont(fallbackBytes);
       } catch (fallbackError) {
-        console.warn("Cairo font not found, using default font");
-        // If no Cairo font exists, create a simple fallback
-        try {
-          // Try to embed a standard font (Helvetica is usually available in PDF viewers)
-          return await pdfDoc.embedFont(pdfDoc.StandardFonts.Helvetica);
-        } catch (finalError) {
-          // Last resort - create a basic font embedding
-          return await pdfDoc.embedFont(pdfDoc.StandardFonts.Helvetica);
-        }
+        console.error("Cairo font not found, using Helvetica");
+        // Use standard PDF font
+        const { StandardFonts } = await import('pdf-lib');
+        return await pdfDoc.embedFont(StandardFonts.Helvetica);
       }
     }
   }
@@ -757,202 +769,41 @@ class PDFGenerationService {
         const font = defaultFont;
         const centerX = width / 2;
 
-        // Header decoration
-        page.drawRectangle({
-          x: 50,
-          y: height - 120,
-          width: width - 100,
-          height: 3,
-          color: rgb(0.2, 0.4, 0.2),
-        });
+        // Helper to draw centered text with bounds checking
+        const drawCenteredText = (text, y, fontSize, color, isArabic = false) => {
+          const processedText = isArabic ? this.reshapeArabic(text) : text;
+          const textWidth = font.widthOfTextAtSize(processedText, fontSize);
+          const x = Math.max(20, Math.min(centerX - textWidth / 2, width - textWidth - 20));
+          page.drawText(processedText, { x, y: height - y, size: fontSize, font, color });
+        };
 
-        // Title - "CERTIFICATE OF COMPLETION"
-        const title = "CERTIFICATE OF COMPLETION";
-        const titleFontSize = 42;
-        const titleWidth = font.widthOfTextAtSize(title, titleFontSize);
-        const titleX = centerX - titleWidth / 2;
-        const titleY = height - 180;
+        // Helper to draw label-value pair
+        const drawLabelValue = (label, value, y, labelX, valueX, fontSize, labelColor, valueColor) => {
+          page.drawText(this.reshapeArabic(label), { x: centerX + labelX, y: height - y, size: fontSize, font, color: labelColor });
+          page.drawText(this.reshapeArabic(value), { x: centerX + valueX, y: height - y, size: fontSize, font, color: valueColor });
+        };
 
-        // Ensure title is within bounds
-        const safeTitleX = Math.max(20, Math.min(titleX, width - titleWidth - 20));
+        // Decorative elements
+        page.drawRectangle({ x: 50, y: height - 120, width: width - 100, height: 3, color: rgb(0.2, 0.4, 0.2) });
 
-        page.drawText(title, {
-          x: safeTitleX,
-          y: titleY,
-          size: titleFontSize,
-          font: font,
-          color: rgb(0.1, 0.3, 0.1),
-        });
+        // Titles
+        drawCenteredText("CERTIFICATE OF COMPLETION", 180, 42, rgb(0.1, 0.3, 0.1));
+        drawCenteredText("شهادة إتمام", 200, 32, rgb(0.2, 0.4, 0.2), true);
 
-        // Arabic Title - "شهادة إتمام"
-        const certTitleAr = this.reshapeArabic("شهادة إتمام");
-        const arTitleFontSize = 32;
-        const arTitleWidth = font.widthOfTextAtSize(certTitleAr, arTitleFontSize);
-        const arTitleX = centerX - arTitleWidth / 2;
-        const arTitleY = height - 200;
+        // Student section
+        drawCenteredText("يُمنح هذا الشهادة إلى", 280, 20, rgb(0.3, 0.3, 0.3), true);
+        drawCenteredText(studentName, 340, 36, rgb(0, 0, 0), true);
+        page.drawRectangle({ x: centerX - 100, y: height - 350, width: 200, height: 2, color: rgb(0.2, 0.4, 0.2) });
 
-        const safeArTitleX = Math.max(20, Math.min(arTitleX, width - arTitleWidth - 20));
+        // Course section
+        drawCenteredText("لإتمامه المساق", 420, 20, rgb(0.3, 0.3, 0.3), true);
+        drawCenteredText(courseName, 480, 28, rgb(0, 0, 0), true);
 
-        page.drawText(certTitleAr, {
-          x: safeArTitleX,
-          y: arTitleY,
-          size: arTitleFontSize,
-          font: font,
-          color: rgb(0.2, 0.4, 0.2),
-        });
-
-        // Student name header
-        const studentHeader = this.reshapeArabic("يُمنح هذا الشهادة إلى");
-        const headerFontSize = 20;
-        const headerWidth = font.widthOfTextAtSize(studentHeader, headerFontSize);
-        const headerX = centerX - headerWidth / 2;
-        const headerY = height - 280;
-
-        const safeHeaderX = Math.max(20, Math.min(headerX, width - headerWidth - 20));
-
-        page.drawText(studentHeader, {
-          x: safeHeaderX,
-          y: headerY,
-          size: headerFontSize,
-          font: font,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-
-        // Student name
-        const sNameProcessed = this.reshapeArabic(studentName);
-        const studentFontSize = 36;
-        const studentWidth = font.widthOfTextAtSize(sNameProcessed, studentFontSize);
-        const studentX = centerX - studentWidth / 2;
-        const studentY = height - 340;
-
-        const safeStudentX = Math.max(20, Math.min(studentX, width - studentWidth - 20));
-
-        page.drawText(sNameProcessed, {
-          x: safeStudentX,
-          y: studentY,
-          size: studentFontSize,
-          font: font,
-          color: rgb(0, 0, 0),
-        });
-
-        // Decorative line under student name
-        page.drawRectangle({
-          x: centerX - 100,
-          y: height - 350,
-          width: 200,
-          height: 2,
-          color: rgb(0.2, 0.4, 0.2),
-        });
-
-        // Course completion text
-        const courseHeader = this.reshapeArabic("لإتمامه المساق");
-        const courseHeaderFontSize = 20;
-        const courseHeaderWidth = font.widthOfTextAtSize(courseHeader, courseHeaderFontSize);
-        const courseHeaderX = centerX - courseHeaderWidth / 2;
-        const courseHeaderY = height - 420;
-
-        const safeCourseHeaderX = Math.max(20, Math.min(courseHeaderX, width - courseHeaderWidth - 20));
-
-        page.drawText(courseHeader, {
-          x: safeCourseHeaderX,
-          y: courseHeaderY,
-          size: courseHeaderFontSize,
-          font: font,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-
-        // Course name
-        const cNameProcessed = this.reshapeArabic(courseName);
-        const courseFontSize = 28;
-        const courseWidth = font.widthOfTextAtSize(cNameProcessed, courseFontSize);
-        const courseX = centerX - courseWidth / 2;
-        const courseY = height - 480;
-
-        const safeCourseX = Math.max(20, Math.min(courseX, width - courseWidth - 20));
-
-        page.drawText(cNameProcessed, {
-          x: safeCourseX,
-          y: courseY,
-          size: courseFontSize,
-          font: font,
-          color: rgb(0, 0, 0),
-        });
-
-        // Footer section with decorative elements
-        page.drawRectangle({
-          x: 100,
-          y: height - 650,
-          width: width - 200,
-          height: 1,
-          color: rgb(0.7, 0.7, 0.7),
-        });
-
-        // Issue date
-        const dateLabel = this.reshapeArabic("تاريخ الإصدار:");
-        const dateLabelFontSize = 16;
-        const dateLabelWidth = font.widthOfTextAtSize(dateLabel, dateLabelFontSize);
-        const dateLabelX = centerX - 150;
-        const dateLabelY = height - 680;
-
-        page.drawText(dateLabel, {
-          x: dateLabelX,
-          y: dateLabelY,
-          size: dateLabelFontSize,
-          font: font,
-          color: rgb(0.2, 0.2, 0.2),
-        });
-
-        const dateValue = this.reshapeArabic(issuedDate);
-        const dateValueFontSize = 16;
-        const dateValueWidth = font.widthOfTextAtSize(dateValue, dateValueFontSize);
-        const dateValueX = centerX + 50;
-        const dateValueY = height - 680;
-
-        page.drawText(dateValue, {
-          x: dateValueX,
-          y: dateValueY,
-          size: dateValueFontSize,
-          font: font,
-          color: rgb(0, 0, 0),
-        });
-
-        // Certificate number
-        const certNoLabel = this.reshapeArabic("رقم الشهادة:");
-        const certNoLabelFontSize = 14;
-        const certNoLabelWidth = font.widthOfTextAtSize(certNoLabel, certNoLabelFontSize);
-        const certNoLabelX = centerX - 150;
-        const certNoLabelY = height - 720;
-
-        page.drawText(certNoLabel, {
-          x: certNoLabelX,
-          y: certNoLabelY,
-          size: certNoLabelFontSize,
-          font: font,
-          color: rgb(0.2, 0.2, 0.2),
-        });
-
-        const certNoValue = this.reshapeArabic(certificateData.certificateNumber);
-        const certNoValueFontSize = 14;
-        const certNoValueWidth = font.widthOfTextAtSize(certNoValue, certNoValueFontSize);
-        const certNoValueX = centerX + 50;
-        const certNoValueY = height - 720;
-
-        page.drawText(certNoValue, {
-          x: certNoValueX,
-          y: certNoValueY,
-          size: certNoValueFontSize,
-          font: font,
-          color: rgb(0, 0, 0),
-        });
-
-        // Footer decoration
-        page.drawRectangle({
-          x: 50,
-          y: height - 750,
-          width: width - 100,
-          height: 2,
-          color: rgb(0.2, 0.4, 0.2),
-        });
+        // Footer section
+        page.drawRectangle({ x: 100, y: height - 650, width: width - 200, height: 1, color: rgb(0.7, 0.7, 0.7) });
+        drawLabelValue("تاريخ الإصدار:", issuedDate, 680, -150, 50, 16, rgb(0.2, 0.2, 0.2), rgb(0, 0, 0));
+        drawLabelValue("رقم الشهادة:", certificateData.certificateNumber, 720, -150, 50, 14, rgb(0.2, 0.2, 0.2), rgb(0, 0, 0));
+        page.drawRectangle({ x: 50, y: height - 750, width: width - 100, height: 2, color: rgb(0.2, 0.4, 0.2) });
       }
 
       // Save PDF
@@ -965,19 +816,20 @@ class PDFGenerationService {
   }
 
   /**
-   * Load image from URL or file path
+   * Load image from URL or file path with caching
    */
   async loadImage(imagePath) {
     try {
-      // Check if it's a URL
+      // Check if it's a URL (no caching for URLs)
       if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
         const response = await axios.get(imagePath, {
           responseType: "arraybuffer",
+          timeout: 30000, // 30 second timeout
         });
         return Buffer.from(response.data);
       }
 
-      // Check if it's a file path
+      // Normalize file path
       let cleanPath = imagePath;
       if (cleanPath.startsWith("/uploads/")) {
         cleanPath = cleanPath.replace("/uploads/", "");
@@ -988,10 +840,24 @@ class PDFGenerationService {
 
       const fullPath = path.isAbsolute(cleanPath)
         ? cleanPath
-        : path.join(__dirname, "..", "..", "uploads", cleanPath);
+        : path.join(UPLOADS_PATH, cleanPath);
 
-      return await fs.readFile(fullPath);
+      // Check cache for local files
+      if (imageBytesCache.has(fullPath)) {
+        return imageBytesCache.get(fullPath);
+      }
+
+      const imageBytes = await fs.readFile(fullPath);
+      
+      // Cache the image (only for frequently used images like backgrounds)
+      // Limit cache size to prevent memory issues
+      if (imageBytesCache.size < 50) {
+        imageBytesCache.set(fullPath, imageBytes);
+      }
+      
+      return imageBytes;
     } catch (error) {
+      console.error(`Failed to load image from ${imagePath}:`, error.message);
       throw new Error(`Failed to load image: ${error.message}`);
     }
   }
@@ -1000,6 +866,7 @@ class PDFGenerationService {
    * Convert hex color to RGB
    */
   hexToRgb(hex) {
+    if (!hex) return rgb(0, 0, 0);
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
       ? rgb(
@@ -1014,7 +881,7 @@ class PDFGenerationService {
    * Save PDF to file
    */
   async savePDF(pdfBuffer, fileName) {
-    const uploadsDir = path.join(__dirname, "..", "..", "uploads", "certificates");
+    const uploadsDir = path.join(UPLOADS_PATH, "certificates");
 
     // Ensure directory exists
     await fs.mkdir(uploadsDir, { recursive: true });
@@ -1023,6 +890,15 @@ class PDFGenerationService {
     await fs.writeFile(filePath, pdfBuffer);
 
     return `/uploads/certificates/${fileName}`;
+  }
+
+  /**
+   * Clear caches (useful for testing or memory management)
+   */
+  clearCaches() {
+    fontBytesCache.clear();
+    imageBytesCache.clear();
+    console.log('PDF generation caches cleared');
   }
 }
 
