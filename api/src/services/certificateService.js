@@ -79,7 +79,6 @@ class CertificateService {
 
     const certificate = await Certificate.create({
       userId,
-      userId,
       courseId,
       packageId,
       certificateNumber,
