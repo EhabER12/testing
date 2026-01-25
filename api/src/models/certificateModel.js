@@ -13,7 +13,12 @@ const certificateSchema = new mongoose.Schema(
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
-      required: [true, "Course ID is required"],
+      required: function () { return !this.packageId; }, // Required if no packageId
+      index: true,
+    },
+    packageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Package",
       index: true,
     },
 
@@ -126,8 +131,9 @@ const certificateSchema = new mongoose.Schema(
   }
 );
 
-// Compound unique index (one certificate per user per course)
-certificateSchema.index({ userId: 1, courseId: 1 }, { unique: true });
+// Compound unique index (one certificate per user per course OR per package)
+certificateSchema.index({ userId: 1, courseId: 1 }, { unique: true, partialFilterExpression: { courseId: { $exists: true } } });
+certificateSchema.index({ userId: 1, packageId: 1 }, { unique: true, partialFilterExpression: { packageId: { $exists: true } } });
 
 // Pre-save: Generate certificate number if not provided
 certificateSchema.pre("save", function (next) {
@@ -136,11 +142,11 @@ certificateSchema.pre("save", function (next) {
     const randomId = uuidv4().split("-")[0].toUpperCase();
     this.certificateNumber = `CERT-${year}-${randomId}`;
   }
-  
+
   if (!this.verificationCode) {
     this.verificationCode = uuidv4();
   }
-  
+
   next();
 });
 
@@ -161,7 +167,7 @@ certificateSchema.statics.verifyByNumber = async function (certificateNumber) {
   })
     .populate("userId", "name email")
     .populate("courseId", "title");
-  
+
   return certificate;
 };
 

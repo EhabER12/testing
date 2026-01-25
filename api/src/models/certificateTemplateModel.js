@@ -36,6 +36,12 @@ const certificateTemplateSchema = new mongoose.Schema(
       type: String,
     },
 
+    // Linked Package (Optional)
+    packageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Package",
+    },
+
     // Background Image
     backgroundImage: {
       type: String,

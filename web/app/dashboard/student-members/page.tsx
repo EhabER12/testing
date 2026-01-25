@@ -10,6 +10,7 @@ import {
   StudentMember,
 } from "@/store/services/studentMemberService";
 import { getPackages } from "@/store/services/packageService";
+import { bulkIssuePackageCertificates } from "@/store/services/certificateService";
 
 import { isAuthenticated, isAdmin } from "@/store/services/authService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
@@ -74,6 +75,7 @@ import {
   FileText,
   AlertCircle,
   Download,
+  Award,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -87,6 +89,7 @@ export default function StudentMembersPage() {
 
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [importLoading, setImportLoading] = useState(false);
+  const [generateLoading, setGenerateLoading] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<any>(null);
@@ -108,7 +111,7 @@ export default function StudentMembersPage() {
     }
 
     dispatch(getStudentMembers());
-    dispatch(getStudentMembers());
+
     dispatch(getPackages());
   }, [dispatch, user, router]);
 
@@ -130,6 +133,33 @@ export default function StudentMembersPage() {
         toast.error(isRtl ? "فشل حذف الطالب" : "Failed to delete student");
       } finally {
         setDeleteLoading(null);
+      }
+    }
+  };
+
+
+  const handleGenerateCertificates = async () => {
+    if (selectedPackageId === "all") {
+      toast.error(isRtl ? "الرجاء اختيار باقة أولاً" : "Please select a package first");
+      return;
+    }
+
+    if (confirm(isRtl ? "هل أنت متأكد من استخراج شهادات لجميع الطلاب النشطين في هذه الباقة؟" : "Are you sure you want to generate certificates for all active students in this package?")) {
+      setGenerateLoading(true);
+      try {
+        const result = await dispatch(bulkIssuePackageCertificates(selectedPackageId)).unwrap();
+        toast.success(
+          isRtl
+            ? `تم إصدار ${result.data.success.length} شهادة بنجاح`
+            : `Successfully issued ${result.data.success.length} certificates`
+        );
+        if (result.data.failed.length > 0) {
+          toast.error(isRtl ? `فشل إصدار ${result.data.failed.length} شهادة` : `Failed to issue ${result.data.failed.length} certificates`);
+        }
+      } catch (err: any) {
+        toast.error(err || "Failed to generate certificates");
+      } finally {
+        setGenerateLoading(false);
       }
     }
   };
@@ -209,6 +239,16 @@ export default function StudentMembersPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          {selectedPackageId !== "all" && (
+            <Button
+              onClick={handleGenerateCertificates}
+              disabled={generateLoading}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Award className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+              {generateLoading ? (isRtl ? "جاري الإصدار..." : "Generating...") : (isRtl ? "استخراج الشهادات" : "Generate Certificates")}
+            </Button>
+          )}
           <Button onClick={() => {
             setImportDialogOpen(true);
             setImportResult(null);
@@ -331,7 +371,7 @@ export default function StudentMembersPage() {
                           </TableCell>
                           <TableCell>
                             <div className={`font-medium ${student.status === 'overdue' ? 'text-red-600' :
-                                student.status === 'due_soon' ? 'text-orange-600' : ''
+                              student.status === 'due_soon' ? 'text-orange-600' : ''
                               }`}>
                               {student.nextDueDate ? format(new Date(student.nextDueDate), "yyyy-MM-dd") : "-"}
                             </div>

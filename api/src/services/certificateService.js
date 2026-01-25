@@ -10,6 +10,9 @@ import pdfGenerationService from "./pdfGenerationService.js";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import fs from "fs/promises";
+import Package from "../models/packageModel.js";
+import StudentMember from "../models/studentMemberModel.js";
+
 
 class CertificateService {
   // Generate certificate number
@@ -20,10 +23,15 @@ class CertificateService {
     return `${prefix}-${timestamp}-${random}`;
   }
 
-  // Issue certificate to a single user
-  async issueCertificate(userId, courseId, issuerUserId, overrideEligibility = false, manualTemplateId = null) {
+  // Issue certificate to a single user (Course or Package)
+  async issueCertificate(userId, courseId, issuerUserId, overrideEligibility = false, manualTemplateId = null, packageId = null) {
     // Check if user already has certificate
-    const existing = await Certificate.findOne({ userId, courseId });
+    const query = {};
+    if (courseId) query.courseId = courseId;
+    if (packageId) query.packageId = packageId;
+    query.userId = userId;
+
+    const existing = await Certificate.findOne(query);
     if (existing) {
       // If manual template provided and existing certificate has different template (or none),
       // we might want to update it? But current behavior returns existing.
@@ -48,29 +56,40 @@ class CertificateService {
 
     // Get user and course info
     const user = await User.findById(userId);
-    const course = await Course.findById(courseId);
+    const course = courseId ? await Course.findById(courseId) : null;
+    const pkg = packageId ? await Package.findById(packageId) : null;
 
-    if (!user || !course) {
-      throw new Error("User or Course not found");
+    if (!user || (!course && !pkg)) {
+      throw new Error("User, Course, or Package not found");
     }
 
     // Generate certificate
     const certificateNumber = this.generateCertificateNumber();
 
-    // Get template: Use manual if provided, otherwise fallback to course settings
-    let templateId = manualTemplateId || course.certificateSettings?.templateId || null;
+    // Get template: Use manual if provided, otherwise fallback to course/package settings
+    let templateId = manualTemplateId;
+    if (!templateId && course?.certificateSettings?.templateId) {
+      templateId = course.certificateSettings.templateId;
+    }
+    // For package: find a template linked to this package
+    if (!templateId && pkg) {
+      const pkgTemplate = await CertificateTemplate.findOne({ packageId: pkg._id });
+      if (pkgTemplate) templateId = pkgTemplate._id;
+    }
 
     const certificate = await Certificate.create({
       userId,
+      userId,
       courseId,
+      packageId,
       certificateNumber,
       studentName: {
         ar: user.fullName?.ar || user.fullName?.en || user.email || "الطالب",
         en: user.fullName?.en || user.fullName?.ar || user.email || "Student",
       },
       courseName: {
-        ar: course.title.ar,
-        en: course.title.en,
+        ar: course ? course.title.ar : (pkg ? pkg.name.ar : "Certificate"),
+        en: course ? course.title.en : (pkg ? pkg.name.en : "Certificate"),
       },
       issuedAt: new Date(),
       issuedBy: issuerUserId,
@@ -88,7 +107,7 @@ class CertificateService {
         }
       );
     } catch (progressErr) {
-      console.log("Failed to update progress certificate status:", progressErr.message);
+      if (courseId) console.log("Failed to update progress certificate status:", progressErr.message);
     }
 
     // Notify user
@@ -174,6 +193,62 @@ class CertificateService {
         results.failed.push({
           ...cert,
           reason: error.message,
+        });
+      }
+    }
+
+    return results;
+  }
+
+  // Bulk issue certificates for Package Students
+  async bulkIssuePackageCertificates(packageId, issuerUserId) {
+    const pkg = await Package.findById(packageId);
+    if (!pkg) throw new Error("Package not found");
+
+    const students = await StudentMember.find({
+      packageId: pkg._id,
+      status: "active"
+    }).populate("userId");
+
+    const template = await CertificateTemplate.findOne({ packageId: pkg._id });
+    if (!template) throw new Error("No certificate template found for this package");
+
+    const results = {
+      success: [],
+      failed: []
+    };
+
+    for (const student of students) {
+      if (!student.userId) {
+        results.failed.push({
+          studentId: student._id,
+          name: student.name,
+          reason: "Student not linked to a registered user account"
+        });
+        continue;
+      }
+
+      try {
+        const cert = await this.issueCertificate(
+          student.userId._id || student.userId,
+          (student.userId.courseId || null),
+          issuerUserId,
+          true,
+          template._id,
+          pkg._id
+        );
+
+        results.success.push({
+          studentId: student._id,
+          name: student.name,
+          certificateNumber: cert.certificateNumber
+        });
+
+      } catch (error) {
+        results.failed.push({
+          studentId: student._id,
+          name: student.name,
+          reason: error.message
         });
       }
     }

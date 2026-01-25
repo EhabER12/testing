@@ -12,6 +12,7 @@ import {
   Placeholder,
   ImagePlaceholder,
 } from "@/store/services/certificateService";
+import { getPackages } from "@/store/services/packageService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,6 +80,7 @@ export default function CertificateDesignerPage() {
   // Designer State
   const [design, setDesign] = useState<{
     name: string;
+    packageId?: string;
     backgroundImage: string;
     width: number;
     height: number;
@@ -94,6 +96,7 @@ export default function CertificateDesignerPage() {
     isDefault: boolean;
   }>({
     name: "",
+    packageId: "",
     backgroundImage: "",
     width: 1200,
     height: 900,
@@ -117,15 +120,18 @@ export default function CertificateDesignerPage() {
   // Dragging State
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const { packages } = useAppSelector((state) => state.packages);
 
   useEffect(() => {
     dispatch(getAllTemplates());
+    dispatch(getPackages());
   }, [dispatch]);
 
   const handleSelectTemplate = (template: CertificateTemplate) => {
     setSelectedTemplate(template);
     setDesign({
       name: template.name,
+      packageId: template.packageId || "",
       backgroundImage: template.backgroundImage,
       width: template.width,
       height: template.height,
@@ -146,6 +152,7 @@ export default function CertificateDesignerPage() {
   const handleCreateNew = () => {
     setDesign({
       name: design.name || "",
+      packageId: "",
       backgroundImage: "",
       width: 1200,
       height: 900,
@@ -491,6 +498,26 @@ export default function CertificateDesignerPage() {
               <div className="space-y-2">
                 <Label>{isRtl ? "اسم القالب" : "Template Name"}</Label>
                 <Input value={design.name} onChange={(e) => setDesign({ ...design, name: e.target.value })} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>{isRtl ? "ربط بباقة (اختياري)" : "Link to Package (Optional)"}</Label>
+                <Select
+                  value={design.packageId || "none"}
+                  onValueChange={(val) => setDesign({ ...design, packageId: val === "none" ? "" : val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={isRtl ? "اختر باقة..." : "Select package..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{isRtl ? "بدون ربط" : "No Link"}</SelectItem>
+                    {packages.map((pkg) => (
+                      <SelectItem key={pkg.id || pkg._id} value={pkg.id || pkg._id || ""}>
+                        {isRtl ? pkg.name.ar : pkg.name.en}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

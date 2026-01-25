@@ -11,10 +11,15 @@ export interface Certificate {
     fullName: BilingualText;
     email: string;
   };
-  courseId: {
+  courseId?: {
     id: string;
     _id?: string;
     title: BilingualText;
+  };
+  packageId?: {
+    id: string;
+    _id?: string;
+    name: BilingualText;
   };
   certificateNumber: string;
   issuedAt: string;
@@ -53,7 +58,9 @@ export interface CertificateTemplate {
   _id?: string;
   id: string;
   name: string;
+  packageId?: string; // Linked package
   description?: string;
+
   backgroundImage: string;
   width: number;
   height: number;
