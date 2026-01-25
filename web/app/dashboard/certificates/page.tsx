@@ -7,6 +7,8 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   getCertificates,
   revokeCertificate,
+  reissueCertificate,
+  regenerateCertificatePDF,
   verifyCertificate,
   downloadCertificate,
   issueCertificate,
@@ -69,6 +71,8 @@ import {
   Calendar,
   User,
   Plus,
+  RefreshCw,
+  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
@@ -78,6 +82,8 @@ export default function CertificatesPage() {
   const router = useRouter();
   const { t, isRtl } = useAdminLocale();
   const [revokeLoading, setRevokeLoading] = useState<string | null>(null);
+  const [reissueLoading, setReissueLoading] = useState<string | null>(null);
+  const [regenerateLoading, setRegenerateLoading] = useState<string | null>(null);
   const [issueLoading, setIssueLoading] = useState(false);
   const [issueDialog, setIssueDialog] = useState({
     open: false,
@@ -136,12 +142,48 @@ export default function CertificatesPage() {
       try {
         await dispatch(revokeCertificate(id)).unwrap();
         toast.success(isRtl ? "تم إلغاء الشهادة" : "Certificate revoked");
+        dispatch(getCertificates());
       } catch (err) {
         console.warn("Failed to revoke certificate:", err);
         toast.error(typeof err === 'string' ? err : "Failed to revoke certificate");
       } finally {
         setRevokeLoading(null);
       }
+    }
+  };
+
+  const handleReissue = async (id: string) => {
+    if (
+      confirm(
+        isRtl
+          ? "هل أنت متأكد من حذف هذه الشهادة وإصدار شهادة جديدة؟"
+          : "Are you sure you want to delete this certificate and issue a new one?"
+      )
+    ) {
+      setReissueLoading(id);
+      try {
+        await dispatch(reissueCertificate(id)).unwrap();
+        toast.success(isRtl ? "تم إصدار شهادة جديدة بنجاح" : "New certificate issued successfully");
+        dispatch(getCertificates());
+      } catch (err) {
+        console.warn("Failed to reissue certificate:", err);
+        toast.error(typeof err === 'string' ? err : "Failed to reissue certificate");
+      } finally {
+        setReissueLoading(null);
+      }
+    }
+  };
+
+  const handleRegeneratePDF = async (id: string) => {
+    setRegenerateLoading(id);
+    try {
+      await dispatch(regenerateCertificatePDF(id)).unwrap();
+      toast.success(isRtl ? "تم تجديد PDF بنجاح" : "PDF regenerated successfully");
+    } catch (err) {
+      console.warn("Failed to regenerate PDF:", err);
+      toast.error(typeof err === 'string' ? err : "Failed to regenerate PDF");
+    } finally {
+      setRegenerateLoading(null);
     }
   };
 
@@ -400,8 +442,27 @@ export default function CertificatesPage() {
                             <Download className="h-4 w-4 mr-2" />
                             {isRtl ? "تحميل PDF" : "Download PDF"}
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleRegeneratePDF((certificate.id || certificate._id)!)}
+                            disabled={regenerateLoading === (certificate.id || certificate._id)}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            {regenerateLoading === (certificate.id || certificate._id)
+                              ? isRtl ? "جاري التجديد..." : "Regenerating..."
+                              : isRtl ? "تجديد PDF" : "Regenerate PDF"}
+                          </DropdownMenuItem>
                           {certificate.status === "issued" && (
                             <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleReissue((certificate.id || certificate._id)!)}
+                                disabled={reissueLoading === (certificate.id || certificate._id)}
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                {reissueLoading === (certificate.id || certificate._id)
+                                  ? isRtl ? "جاري الإصدار..." : "Reissuing..."
+                                  : isRtl ? "حذف وإعادة إصدار" : "Delete & Reissue"}
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-red-600"

@@ -182,6 +182,36 @@ export const revokeCertificate = createAsyncThunk(
   }
 );
 
+// Reissue certificate (revoke old and create new)
+export const reissueCertificate = createAsyncThunk(
+  "certificates/reissue",
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`/certificates/${id}/reissue`);
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to reissue certificate"
+      );
+    }
+  }
+);
+
+// Regenerate certificate PDF
+export const regenerateCertificatePDF = createAsyncThunk(
+  "certificates/regeneratePDF",
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`/certificates/${id}/generate-pdf`);
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to regenerate certificate PDF"
+      );
+    }
+  }
+);
+
 // Download certificate PDF
 export const downloadCertificate = createAsyncThunk(
   "certificates/download",
