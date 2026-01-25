@@ -71,10 +71,10 @@ function ResetPasswordContent() {
   useEffect(() => {
     if (isSuccess) {
       setTimeout(() => {
-        router.push("/login?message=reset_success");
+        router.push(`/${locale}/login?message=reset_success`);
       }, 3000);
     }
-  }, [isSuccess, router]);
+  }, [isSuccess, router, locale]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!token) return;
@@ -98,11 +98,11 @@ function ResetPasswordContent() {
       <div className="w-full max-w-md space-y-4">
         <Alert variant="destructive">
           <AlertDescription>
-            Invalid or missing reset token. Please request a new password reset link.
+            {t("invalidToken") || "Invalid or missing reset token. Please request a new password reset link."}
           </AlertDescription>
         </Alert>
         <Button asChild className="w-full">
-          <Link href="/forgot-password">Request New Link</Link>
+          <Link href={`/${locale}/forgot-password`}>{t("requestNewLink") || "Request New Link"}</Link>
         </Button>
       </div>
     );
@@ -185,11 +185,12 @@ function ResetPasswordContent() {
 }
 
 export default function ResetPasswordPage() {
+  const locale = useLocale();
   return (
     <div className="flex min-h-screen flex-col">
       <div className="absolute top-4 left-4 z-10">
         <Button variant="ghost" asChild>
-          <Link href="/" className="flex items-center gap-2">
+          <Link href={`/${locale}`} className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Link>

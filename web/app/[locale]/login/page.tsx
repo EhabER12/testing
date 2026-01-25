@@ -7,16 +7,18 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { useLocale } from "next-intl";
 
 function LoginContent() {
   const searchParams = useSearchParams();
   const message = searchParams.get("message");
+  const locale = useLocale();
 
   return (
     <div className="flex min-h-screen flex-col">
       <div className="absolute top-4 left-4 z-10">
         <Button variant="ghost" asChild>
-          <Link href="/" className="flex items-center gap-2">
+          <Link href={`/${locale}`} className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Link>

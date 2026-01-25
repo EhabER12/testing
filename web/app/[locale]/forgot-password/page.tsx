@@ -71,9 +71,9 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen flex-col">
       <div className="absolute top-4 left-4 z-10">
         <Button variant="ghost" asChild>
-          <Link href="/" className="flex items-center gap-2">
+          <Link href={`/${locale}`} className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Home
+            {t("backToHome") || "Back to Home"}
           </Link>
         </Button>
       </div>
@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
                   </AlertDescription>
                 </Alert>
                 <Button variant="outline" asChild className="w-full">
-                  <Link href="/login">{t("backToLogin")}</Link>
+                  <Link href={`/${locale}/login`}>{t("backToLogin")}</Link>
                 </Button>
               </div>
             ) : (
@@ -141,7 +141,7 @@ export default function ForgotPasswordPage() {
 
           <div className="text-center text-sm">
             <Link
-              href="/login"
+              href={`/${locale}/login`}
               className="text-genoun-green hover:text-genoun-green/90 font-semibold"
             >
               {t("backToLogin")}
