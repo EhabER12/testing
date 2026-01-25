@@ -511,8 +511,8 @@ export default function CertificateDesignerPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{isRtl ? "بدون ربط" : "No Link"}</SelectItem>
-                    {packages.map((pkg) => (
-                      <SelectItem key={pkg.id || pkg._id} value={pkg.id || pkg._id || ""}>
+                    {packages.filter(pkg => pkg && (pkg.id || pkg._id) && String(pkg.id || pkg._id) !== "").map((pkg) => (
+                      <SelectItem key={pkg.id || pkg._id} value={String(pkg.id || pkg._id)}>
                         {isRtl ? pkg.name.ar : pkg.name.en}
                       </SelectItem>
                     ))}

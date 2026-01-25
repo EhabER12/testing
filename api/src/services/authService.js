@@ -301,7 +301,7 @@ export class AuthService {
   /**
    * Initiate password reset process
    */
-  async forgotPassword(email) {
+  async forgotPassword(email, lang = "ar") {
     const user = await this.userRepository.findByEmail(email);
 
     // Always return success to prevent email enumeration
@@ -325,34 +325,18 @@ export class AuthService {
 
     // Send email
     try {
-      const emailHtml = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1a472a;">Password Reset Request</h2>
-          <p>Hello ${user.name || "User"},</p>
-          <p>You requested to reset your password. Click the button below to proceed:</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetUrl}" 
-               style="background-color: #1a472a; color: white; padding: 12px 30px; 
-                      text-decoration: none; border-radius: 5px; display: inline-block;">
-              Reset Password
-            </a>
-          </div>
-          <p>Or copy and paste this link in your browser:</p>
-          <p style="color: #666; word-break: break-all;">${resetUrl}</p>
-          <p><strong>This link will expire in 1 hour.</strong></p>
-          <p>If you didn't request this, please ignore this email.</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-          <p style="color: #999; font-size: 12px;">This is an automated message, please do not reply.</p>
-        </div>
-      `;
-
-      await this.emailService.sendEmail(
+      await emailTemplateService.sendTemplatedEmail(
         user.email,
-        "Password Reset Request",
-        emailHtml
+        "password_reset",
+        {
+          name: user.fullName?.en || user.fullName?.ar || "User",
+          resetUrl: resetUrl,
+          year: new Date().getFullYear(),
+        },
+        lang
       );
 
-      logger.info("Password reset email sent", { userId: user._id, email: user.email });
+      logger.info("Password reset email sent using template", { userId: user._id, email: user.email, lang });
     } catch (error) {
       // Clear the reset token if email fails
       await this.userRepository.update(user._id, {
@@ -370,7 +354,7 @@ export class AuthService {
   /**
    * Reset password using token
    */
-  async resetPassword(token, newPassword) {
+  async resetPassword(token, newPassword, lang = "ar") {
     // Hash the provided token
     const hashedToken = hashToken(token);
 
@@ -394,25 +378,18 @@ export class AuthService {
 
     // Optionally send confirmation email
     try {
-      const confirmationHtml = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1a472a;">Password Changed Successfully</h2>
-          <p>Hello ${user.name || "User"},</p>
-          <p>Your password has been changed successfully.</p>
-          <p>If you didn't make this change, please contact support immediately.</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-          <p style="color: #999; font-size: 12px;">This is an automated message, please do not reply.</p>
-        </div>
-      `;
-
-      await this.emailService.sendEmail(
+      await emailTemplateService.sendTemplatedEmail(
         user.email,
-        "Password Changed Successfully",
-        confirmationHtml
+        "password_reset_confirmation",
+        {
+          name: user.fullName?.en || user.fullName?.ar || "User",
+          year: new Date().getFullYear(),
+        },
+        lang
       );
     } catch (error) {
       // Don't throw error if confirmation email fails
-      logger.warn("Failed to send password change confirmation email", { error: error.message });
+      logger.warn("Failed to send password change confirmation email using template", { error: error.message });
     }
 
     return { success: true };

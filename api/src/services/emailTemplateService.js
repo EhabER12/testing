@@ -12,7 +12,7 @@ class EmailTemplateService {
   async getAllTemplates() {
     try {
       // Ensure system templates exist
-      const systemTemplates = ['email_verification', 'user_invitation', 'order_confirmation'];
+      const systemTemplates = ['email_verification', 'user_invitation', 'order_confirmation', 'password_reset', 'password_reset_confirmation'];
 
       for (const name of systemTemplates) {
         const exists = await EmailTemplate.exists({ name });
@@ -263,6 +263,121 @@ class EmailTemplateService {
         variables: [
           { name: "role", description: "User role in Arabic/English" },
           { name: "inviteUrl", description: "Invitation completion URL" },
+          { name: "year", description: "Current year" },
+        ],
+      });
+    }
+
+    if (name === 'password_reset') {
+      return await this.saveTemplate({
+        name: "password_reset",
+        type: "auth",
+        subject: {
+          ar: "طلب إعادة تعيين كلمة المرور",
+          en: "Password Reset Request",
+        },
+        content: {
+          ar: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; direction: rtl; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 1px;">منصة جنون</h1>
+            </div>
+            <div style="padding: 40px 30px; text-align: center;">
+              <h2 style="color: #1a472a; margin: 0 0 20px; font-size: 24px;">طلب إعادة تعيين كلمة المرور 🔑</h2>
+              <p style="color: #4a5568; line-height: 1.6; font-size: 16px; margin-bottom: 30px;">
+                مرحباً {{name}}، لقد تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك. يرجى الضغط على الزر أدناه للمتابعة.
+              </p>
+              <div style="margin: 30px 0;">
+                <a href="{{resetUrl}}" 
+                   style="background-color: #d4af37; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block; transition: background-color 0.3s;">
+                  إعادة تعيين كلمة المرور
+                </a>
+              </div>
+              <p style="color: #718096; font-size: 14px; margin-top: 30px;">
+                هذا الرابط صالح لمدة ساعة واحدة فقط. إذا لم تطلب هذا التغيير، يمكنك تجاهل هذا البريد.
+              </p>
+            </div>
+            <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. جميع الحقوق محفوظة.</p>
+            </div>
+          </div>`,
+          en: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 1px;">Genoun</h1>
+            </div>
+            <div style="padding: 40px 30px; text-align: center;">
+              <h2 style="color: #1a472a; margin: 0 0 20px; font-size: 24px;">Password Reset Request 🔑</h2>
+              <p style="color: #4a5568; line-height: 1.6; font-size: 16px; margin-bottom: 30px;">
+                Hi {{name}}, we received a request to reset your password. Please click the button below to proceed.
+              </p>
+              <div style="margin: 30px 0;">
+                <a href="{{resetUrl}}" 
+                   style="background-color: #d4af37; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block; transition: background-color 0.3s;">
+                  Reset Password
+                </a>
+              </div>
+              <p style="color: #718096; font-size: 14px; margin-top: 30px;">
+                This link is valid for 1 hour only. If you didn't request this change, you can safely ignore this email.
+              </p>
+            </div>
+            <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. All rights reserved.</p>
+            </div>
+          </div>`,
+        },
+        variables: [
+          { name: "name", description: "User full name" },
+          { name: "resetUrl", description: "Password reset URL" },
+          { name: "year", description: "Current year" },
+        ],
+      });
+    }
+
+    if (name === 'password_reset_confirmation') {
+      return await this.saveTemplate({
+        name: "password_reset_confirmation",
+        type: "auth",
+        subject: {
+          ar: "تم تغيير كلمة المرور بنجاح",
+          en: "Password Changed Successfully",
+        },
+        content: {
+          ar: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; direction: rtl; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 1px;">منصة جنون</h1>
+            </div>
+            <div style="padding: 40px 30px; text-align: center;">
+              <h2 style="color: #1a472a; margin: 0 0 20px; font-size: 24px;">تم تغيير كلمة المرور! ✅</h2>
+              <p style="color: #4a5568; line-height: 1.6; font-size: 16px; margin-bottom: 30px;">
+                مرحباً {{name}}، نحيطك علماً بأنه قد تم تغيير كلمة المرور الخاصة بحسابك بنجاح.
+              </p>
+              <p style="color: #718096; font-size: 14px; margin-top: 30px;">
+                إذا لم تكن أنت من قام بهذا الإجراء، يرجى التواصل مع الدعم الفني فوراً لحماية حسابك.
+              </p>
+            </div>
+            <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. جميع الحقوق محفوظة.</p>
+            </div>
+          </div>`,
+          en: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 1px;">Genoun</h1>
+            </div>
+            <div style="padding: 40px 30px; text-align: center;">
+              <h2 style="color: #1a472a; margin: 0 0 20px; font-size: 24px;">Password Changed! ✅</h2>
+              <p style="color: #4a5568; line-height: 1.6; font-size: 16px; margin-bottom: 30px;">
+                Hi {{name}}, this is a confirmation that your password has been successfully changed.
+              </p>
+              <p style="color: #718096; font-size: 14px; margin-top: 30px;">
+                If you didn't perform this action, please contact support immediately to secure your account.
+              </p>
+            </div>
+            <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. All rights reserved.</p>
+            </div>
+          </div>`,
+        },
+        variables: [
+          { name: "name", description: "User full name" },
           { name: "year", description: "Current year" },
         ],
       });

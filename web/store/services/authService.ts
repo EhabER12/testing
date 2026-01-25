@@ -248,13 +248,11 @@ export const getCurrentUser = createAsyncThunk<
  ***************************************************/
 export const forgotPassword = createAsyncThunk<
   { message: string },
-  string,
+  { email: string; lang?: string },
   { rejectValue: string }
->("auth/forgotPassword", async (email, thunkAPI) => {
+>("auth/forgotPassword", async (data, thunkAPI) => {
   try {
-    const response = await axiosInstance.post("/auth/forgot-password", {
-      email,
-    });
+    const response = await axiosInstance.post("/auth/forgot-password", data);
     return response.data;
   } catch (error: any) {
     return thunkAPI.rejectWithValue(extractErrorMessage(error));
@@ -266,7 +264,7 @@ export const forgotPassword = createAsyncThunk<
  ***************************************************/
 export const resetPassword = createAsyncThunk<
   { message: string },
-  { token: string; password: string; confirmPassword: string },
+  { token: string; password: string; confirmPassword: string; lang?: string },
   { rejectValue: string }
 >("auth/resetPassword", async (resetData, thunkAPI) => {
   try {

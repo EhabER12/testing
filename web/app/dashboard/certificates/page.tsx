@@ -156,7 +156,7 @@ export default function CertificatesPage() {
       await dispatch(issueCertificate({
         userId: issueDialog.userId,
         courseId: issueDialog.courseId,
-        templateId: issueDialog.templateId || undefined
+        templateId: (issueDialog.templateId && issueDialog.templateId !== "none") ? issueDialog.templateId : undefined
       })).unwrap();
     } catch (err) {
       console.warn("Failed to issue certificate:", err);
@@ -551,8 +551,8 @@ export default function CertificatesPage() {
                   <SelectValue placeholder={isRtl ? "اختر الطالب" : "Select Student"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map((u, index) => (
-                    <SelectItem key={u.id || u._id || `user-${index}`} value={(u.id || u._id || "")!}>
+                  {users.filter(u => u && (u.id || u._id) && String(u.id || u._id) !== "").map((u, index) => (
+                    <SelectItem key={u.id || u._id || `user-${index}`} value={String(u.id || u._id)}>
                       {u.fullName ? getTextValue(u.fullName) : u.name || u.email} ({u.email})
                     </SelectItem>
                   ))}
@@ -569,8 +569,8 @@ export default function CertificatesPage() {
                   <SelectValue placeholder={isRtl ? "اختر الدورة" : "Select Course"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {courses.filter(c => c.certificateSettings?.enabled).map((c, index) => (
-                    <SelectItem key={c.id || c._id || `course-${index}`} value={(c.id || c._id || "")!}>
+                  {courses.filter(c => c && (c.id || c._id) && String(c.id || c._id) !== "" && c.certificateSettings?.enabled).map((c, index) => (
+                    <SelectItem key={c.id || c._id || `course-${index}`} value={String(c.id || c._id)}>
                       {getTextValue(c.title)}
                     </SelectItem>
                   ))}
@@ -587,11 +587,11 @@ export default function CertificatesPage() {
                   <SelectValue placeholder={isRtl ? "استخدم قالب الدورة الافتراضي" : "Use Course Default Template"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">
+                  <SelectItem value="none">
                     {isRtl ? "الافتراضي (حسب إعدادات الدورة)" : "Default (Based on Course Settings)"}
                   </SelectItem>
-                  {templates.map((t, index) => (
-                    <SelectItem key={t.id || t._id || `tpl-${index}`} value={(t.id || t._id || "")!}>
+                  {templates.filter(t => t && (t.id || t._id) && String(t.id || t._id) !== "").map((t, index) => (
+                    <SelectItem key={t.id || t._id || `tpl-${index}`} value={String(t.id || t._id)}>
                       {t.name}
                     </SelectItem>
                   ))}
@@ -608,8 +608,13 @@ export default function CertificatesPage() {
             >
               {isRtl ? "إلغاء" : "Cancel"}
             </Button>
-
-
+            <Button
+              className="bg-genoun-green hover:bg-genoun-green/90"
+              onClick={handleIssue}
+              disabled={issueLoading || !issueDialog.userId || !issueDialog.courseId}
+            >
+              {issueLoading ? (isRtl ? "جاري الإصدار..." : "Issuing...") : (isRtl ? "إصدار الشهادة" : "Issue Certificate")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

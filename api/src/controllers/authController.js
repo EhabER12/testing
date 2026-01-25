@@ -86,10 +86,10 @@ export const getProfile = async (req, res, next) => {
 // @access  Public
 export const forgotPassword = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    const { email, lang } = req.body;
 
     // Call the service method
-    await authService.forgotPassword(email);
+    await authService.forgotPassword(email, lang);
 
     // Always return a success message to prevent email enumeration attacks
     return ApiResponse.success(
@@ -115,10 +115,10 @@ export const forgotPassword = async (req, res, next) => {
 // @access  Public
 export const resetPassword = async (req, res, next) => {
   try {
-    const { token, password } = req.body;
+    const { token, password, lang } = req.body;
 
     // Call the service method
-    await authService.resetPassword(token, password);
+    await authService.resetPassword(token, password, lang);
 
     return ApiResponse.success(
       res,

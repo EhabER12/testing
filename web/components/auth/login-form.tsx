@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { login } from "@/store/services/authService";
 import { reset } from "@/store/slices/authSlice";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,7 @@ const formSchema = z.object({
 });
 
 export function LoginForm() {
+  const t = useTranslations("auth.login");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -96,7 +98,7 @@ export function LoginForm() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>{t("email")}</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="your.email@example.com"
@@ -116,7 +118,7 @@ export function LoginForm() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <FormLabel>{t("password")}</FormLabel>
                 <FormControl>
                   <Input
                     type="password"
@@ -136,10 +138,10 @@ export function LoginForm() {
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Logging in...
+                {t("submit")}...
               </>
             ) : (
-              "Sign In"
+              t("submit")
             )}
           </Button>
         </form>
@@ -149,16 +151,16 @@ export function LoginForm() {
           href="/forgot-password"
           className="text-secondary-blue hover:text-secondary-blue/90"
         >
-          Forgot your password?
+          {t("forgotPassword")}
         </Link>
       </div>
       <div className="text-center text-sm">
-        Don't have an account?{" "}
+        {t("noAccount")}{" "}
         <Link
           href="/register"
           className="text-genoun-green hover:text-genoun-green/90 font-semibold"
         >
-          Sign Up
+          {t("signUp")}
         </Link>
       </div>
     </div>

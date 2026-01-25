@@ -70,6 +70,21 @@ export const schemas = {
           .messages({ "any.only": "Passwords do not match" }),
       }),
     }),
+
+    forgotPassword: Joi.object({
+      body: Joi.object({
+        email: Joi.string().email().required(),
+        lang: Joi.string().valid("ar", "en").optional(),
+      }),
+    }),
+
+    resetPassword: Joi.object({
+      body: Joi.object({
+        token: Joi.string().required(),
+        password: Joi.string().min(6).required(),
+        lang: Joi.string().valid("ar", "en").optional(),
+      }),
+    }),
   },
 
 };

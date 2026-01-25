@@ -51,6 +51,16 @@ function LoginContent() {
             </Alert>
           )}
 
+          {message === "reset_success" && (
+            <Alert className="bg-green-50 border-green-200">
+              <AlertDescription className="text-green-800">
+                <strong>تمت إعادة تعيين كلمة المرور بنجاح!</strong> يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.
+                <br />
+                <strong>Password reset successful!</strong> You can now log in with your new password.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <LoginForm />
         </div>
       </main>
