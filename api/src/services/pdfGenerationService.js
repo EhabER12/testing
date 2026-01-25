@@ -174,6 +174,28 @@ class PDFGenerationService {
   }
 
   /**
+   * Normalize and validate a placeholder configuration
+   * Ensures all required properties exist with proper defaults
+   */
+  normalizeplaceholder(placeholder, pageWidth, pageHeight) {
+    if (!placeholder || typeof placeholder !== 'object') {
+      return null;
+    }
+
+    // Ensure all properties exist with defaults
+    return {
+      x: placeholder.x !== undefined && placeholder.x !== null ? Number(placeholder.x) : pageWidth / 2,
+      y: placeholder.y !== undefined && placeholder.y !== null ? Number(placeholder.y) : 400,
+      fontSize: placeholder.fontSize !== undefined && placeholder.fontSize !== null && Number(placeholder.fontSize) > 0 ? Number(placeholder.fontSize) : 24,
+      fontFamily: placeholder.fontFamily && typeof placeholder.fontFamily === 'string' ? placeholder.fontFamily : "Cairo",
+      color: placeholder.color && typeof placeholder.color === 'string' ? placeholder.color : "#000000",
+      align: placeholder.align && typeof placeholder.align === 'string' ? placeholder.align : "center",
+      fontWeight: placeholder.fontWeight && typeof placeholder.fontWeight === 'string' ? placeholder.fontWeight : "normal",
+      text: placeholder.text || undefined, // For custom text
+    };
+  }
+
+  /**
    * Load and embed a font
    */
   async loadFont(pdfDoc, fontFamily) {
@@ -223,11 +245,10 @@ class PDFGenerationService {
       }
 
       // Convert Mongoose document to plain object if needed
-      const templateObj = typeof template.toObject === 'function' 
-        ? template.toObject() 
-        : (template._doc ? { ...template._doc } : { ...template });
+      // Note: With .lean() queries from certificateService, template should already be plain
+      const templateObj = template;
       
-      // Deep clone placeholders to avoid reference issues
+      // Deep clone placeholders to avoid reference issues and ensure all properties are accessible
       const placeholders = templateObj.placeholders 
         ? JSON.parse(JSON.stringify(templateObj.placeholders)) 
         : {};
@@ -245,6 +266,7 @@ class PDFGenerationService {
         templateName: templateObj.name,
         hasPlaceholders: !!placeholders,
         placeholdersKeys: Object.keys(placeholders),
+        placeholdersContent: placeholders,
         isFallback: templateObj.isFallback,
         locale: locale,
         certificateData: {
@@ -351,16 +373,40 @@ class PDFGenerationService {
       const drawText = async (text, placeholderConfig, defaultY) => {
         if (!placeholderConfig || !text) return;
 
-        // Get configuration with defaults
+        // Log the raw placeholder config for debugging
+        console.log('Raw placeholder config:', JSON.stringify(placeholderConfig, null, 2));
+
+        // Explicitly extract each property with proper fallbacks
+        const rawX = placeholderConfig.x;
+        const rawY = placeholderConfig.y;
+        const rawFontSize = placeholderConfig.fontSize;
+        const rawColor = placeholderConfig.color;
+        const rawAlign = placeholderConfig.align;
+        const rawFontFamily = placeholderConfig.fontFamily;
+        const rawFontWeight = placeholderConfig.fontWeight;
+
+        // Build config with explicit property extraction
         const config = {
-          x: placeholderConfig.x !== undefined ? Number(placeholderConfig.x) : width / 2,
-          y: placeholderConfig.y !== undefined ? Number(placeholderConfig.y) : defaultY,
-          fontSize: Number(placeholderConfig.fontSize) || 24,
-          color: this.hexToRgb(placeholderConfig.color || "#000000"),
-          align: placeholderConfig.align || "center",
-          fontFamily: placeholderConfig.fontFamily || "Cairo",
-          fontWeight: placeholderConfig.fontWeight || "normal",
+          x: rawX !== undefined && rawX !== null ? Number(rawX) : width / 2,
+          y: rawY !== undefined && rawY !== null ? Number(rawY) : defaultY,
+          fontSize: rawFontSize !== undefined && rawFontSize !== null && rawFontSize > 0 ? Number(rawFontSize) : 24,
+          color: this.hexToRgb(rawColor && typeof rawColor === 'string' ? rawColor : "#000000"),
+          align: rawAlign && typeof rawAlign === 'string' ? rawAlign : "center",
+          fontFamily: rawFontFamily && typeof rawFontFamily === 'string' ? rawFontFamily : "Cairo",
+          fontWeight: rawFontWeight && typeof rawFontWeight === 'string' ? rawFontWeight : "normal",
         };
+
+        // Log the resolved config
+        console.log('Resolved text config:', {
+          text: text.substring(0, 50),
+          x: config.x,
+          y: config.y,
+          fontSize: config.fontSize,
+          colorHex: rawColor,
+          align: config.align,
+          fontFamily: config.fontFamily,
+          fontWeight: config.fontWeight,
+        });
 
         // Process text for Arabic/RTL if needed
         const processedText = this.reshapeArabic(String(text));
@@ -474,37 +520,47 @@ class PDFGenerationService {
       // Track if we drew any placeholder successfully
       let drewAnyPlaceholder = false;
 
-      console.log('Processing placeholders:', {
-        studentName: placeholders.studentName,
-        courseName: placeholders.courseName,
-        issuedDate: placeholders.issuedDate,
-        certificateNumber: placeholders.certificateNumber,
-        customTextCount: placeholders.customText?.length,
-        imagesCount: placeholders.images?.length
+      // Normalize all placeholders before processing
+      const normalizedPlaceholders = {
+        studentName: this.normalizeplaceholder(placeholders.studentName, width, height),
+        courseName: this.normalizeplaceholder(placeholders.courseName, width, height),
+        issuedDate: this.normalizeplaceholder(placeholders.issuedDate, width, height),
+        certificateNumber: this.normalizeplaceholder(placeholders.certificateNumber, width, height),
+        customText: (placeholders.customText || []).map(ct => this.normalizeplaceholder(ct, width, height)).filter(Boolean),
+        images: placeholders.images || [],
+      };
+
+      console.log('Normalized placeholders:', {
+        studentName: normalizedPlaceholders.studentName,
+        courseName: normalizedPlaceholders.courseName,
+        issuedDate: normalizedPlaceholders.issuedDate,
+        certificateNumber: normalizedPlaceholders.certificateNumber,
+        customTextCount: normalizedPlaceholders.customText?.length,
+        imagesCount: normalizedPlaceholders.images?.length
       });
 
       // Student Name
-      if (placeholders.studentName && placeholders.studentName.x !== undefined && placeholders.studentName.y !== undefined) {
-        console.log('Drawing student name:', studentName, 'at position:', placeholders.studentName);
-        await drawText(studentName, placeholders.studentName, 300);
+      if (normalizedPlaceholders.studentName) {
+        console.log('Drawing student name:', studentName, 'at position:', normalizedPlaceholders.studentName);
+        await drawText(studentName, normalizedPlaceholders.studentName, 300);
         drewAnyPlaceholder = true;
       } else {
         console.log('No valid student name placeholder found');
       }
 
       // Course Name
-      if (placeholders.courseName && placeholders.courseName.x !== undefined && placeholders.courseName.y !== undefined) {
-        console.log('Drawing course name:', courseName, 'at position:', placeholders.courseName);
-        await drawText(courseName, placeholders.courseName, 450);
+      if (normalizedPlaceholders.courseName) {
+        console.log('Drawing course name:', courseName, 'at position:', normalizedPlaceholders.courseName);
+        await drawText(courseName, normalizedPlaceholders.courseName, 450);
         drewAnyPlaceholder = true;
       } else {
         console.log('No valid course name placeholder found');
       }
 
       // Issue Date
-      if (placeholders.issuedDate && placeholders.issuedDate.x !== undefined && placeholders.issuedDate.y !== undefined) {
-        console.log('Drawing issued date:', issuedDate, 'at position:', placeholders.issuedDate);
-        await drawText(issuedDate, placeholders.issuedDate, 600);
+      if (normalizedPlaceholders.issuedDate) {
+        console.log('Drawing issued date:', issuedDate, 'at position:', normalizedPlaceholders.issuedDate);
+        await drawText(issuedDate, normalizedPlaceholders.issuedDate, 600);
         drewAnyPlaceholder = true;
       } else {
         console.log('No valid issued date placeholder found');
@@ -512,11 +568,11 @@ class PDFGenerationService {
 
       // Certificate Number
       const certNumber = data.certificateNumber || "CERT-XXXX";
-      if (placeholders.certificateNumber && placeholders.certificateNumber.x !== undefined && placeholders.certificateNumber.y !== undefined) {
-        console.log('Drawing certificate number:', certNumber, 'at position:', placeholders.certificateNumber);
+      if (normalizedPlaceholders.certificateNumber) {
+        console.log('Drawing certificate number:', certNumber, 'at position:', normalizedPlaceholders.certificateNumber);
         await drawText(
           certNumber,
-          placeholders.certificateNumber,
+          normalizedPlaceholders.certificateNumber,
           750
         );
         drewAnyPlaceholder = true;
@@ -525,10 +581,10 @@ class PDFGenerationService {
       }
 
       // Custom Text Elements
-      if (placeholders.customText && Array.isArray(placeholders.customText) && placeholders.customText.length > 0) {
-        console.log('Drawing custom text elements:', placeholders.customText.length);
-        for (const custom of placeholders.customText) {
-          if (custom.text && custom.x !== undefined && custom.y !== undefined) {
+      if (normalizedPlaceholders.customText && normalizedPlaceholders.customText.length > 0) {
+        console.log('Drawing custom text elements:', normalizedPlaceholders.customText.length);
+        for (const custom of normalizedPlaceholders.customText) {
+          if (custom && custom.text) {
             console.log('Drawing custom text:', custom.text, 'at position:', custom);
             await drawText(custom.text, custom, height / 2);
             drewAnyPlaceholder = true;
@@ -537,9 +593,9 @@ class PDFGenerationService {
       }
 
       // Additional Images
-      if (placeholders.images && Array.isArray(placeholders.images) && placeholders.images.length > 0) {
-        console.log('Drawing additional images:', placeholders.images.length);
-        for (const imgConfig of placeholders.images) {
+      if (normalizedPlaceholders.images && Array.isArray(normalizedPlaceholders.images) && normalizedPlaceholders.images.length > 0) {
+        console.log('Drawing additional images:', normalizedPlaceholders.images.length);
+        for (const imgConfig of normalizedPlaceholders.images) {
           try {
             const imgBytes = await this.loadImage(imgConfig.url);
             let img;

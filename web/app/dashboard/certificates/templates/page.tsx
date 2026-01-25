@@ -127,6 +127,30 @@ export default function CertificateDesignerPage() {
     dispatch(getPackages());
   }, [dispatch]);
 
+  // Default placeholder values for fallback
+  const defaultPlaceholder: Placeholder = {
+    x: 600,
+    y: 400,
+    fontSize: 24,
+    fontFamily: "Cairo",
+    color: "#000000",
+    align: "center",
+    fontWeight: "normal"
+  };
+
+  // Helper to merge placeholder with defaults
+  const mergePlaceholder = (placeholder: Partial<Placeholder> | undefined, defaults: Partial<Placeholder> = {}): Placeholder => {
+    return {
+      ...defaultPlaceholder,
+      ...defaults,
+      ...placeholder,
+      // Ensure numeric values
+      x: Number(placeholder?.x ?? defaults?.x ?? defaultPlaceholder.x),
+      y: Number(placeholder?.y ?? defaults?.y ?? defaultPlaceholder.y),
+      fontSize: Number(placeholder?.fontSize ?? defaults?.fontSize ?? defaultPlaceholder.fontSize),
+    };
+  };
+
   const handleSelectTemplate = (template: CertificateTemplate) => {
     setSelectedTemplate(template);
     setDesign({
@@ -137,12 +161,12 @@ export default function CertificateDesignerPage() {
       height: template.height,
       orientation: (template as any).orientation || "landscape",
       placeholders: {
-        studentName: template.placeholders.studentName,
-        courseName: template.placeholders.courseName,
-        issuedDate: template.placeholders.issuedDate,
-        certificateNumber: template.placeholders.certificateNumber,
-        customText: template.placeholders.customText || [],
-        images: template.placeholders.images || [],
+        studentName: mergePlaceholder(template.placeholders?.studentName, { y: 400, fontSize: 40, fontWeight: "bold" }),
+        courseName: mergePlaceholder(template.placeholders?.courseName, { y: 500, fontSize: 30 }),
+        issuedDate: mergePlaceholder(template.placeholders?.issuedDate, { y: 600, fontSize: 20 }),
+        certificateNumber: mergePlaceholder(template.placeholders?.certificateNumber, { y: 700, fontSize: 16 }),
+        customText: (template.placeholders?.customText || []).map(ct => mergePlaceholder(ct)),
+        images: template.placeholders?.images || [],
       },
       isDefault: template.isDefault,
     });

@@ -500,13 +500,13 @@ class CertificateService {
 
     // 1. Try to use the template explicitly assigned to the certificate
     if (certificate.templateId) {
-      template = await CertificateTemplate.findById(certificate.templateId);
+      template = await CertificateTemplate.findById(certificate.templateId).lean();
     }
 
     // 2. If no template assigned (or not found), look at the course settings
     if (!template && certificate.courseId && certificate.courseId.certificateSettings?.templateId) {
       console.log(`Certificate ${certificate.certificateNumber} has no template. Falling back to course template.`);
-      template = await CertificateTemplate.findById(certificate.courseId.certificateSettings.templateId);
+      template = await CertificateTemplate.findById(certificate.courseId.certificateSettings.templateId).lean();
 
       // If found, update the certificate to link to this template for future use
       if (template) {
@@ -519,7 +519,7 @@ class CertificateService {
     // 3. If still no template, try to find a system default
     if (!template) {
       // Get default template
-      template = await CertificateTemplate.findOne({ isDefault: true });
+      template = await CertificateTemplate.findOne({ isDefault: true }).lean();
       if (template) {
         console.log(`Using system default template for certificate ${certificate.certificateNumber}`);
       }
@@ -536,6 +536,29 @@ class CertificateService {
         isFallback: true
       };
     }
+
+    // Convert template to plain object to ensure all nested properties are accessible
+    // With .lean() queries, template is already a plain object, but we deep clone to be safe
+    let templateData;
+    if (template.toObject) {
+      // Mongoose document (shouldn't happen with .lean() but just in case)
+      templateData = template.toObject({ getters: false, virtuals: false });
+    } else {
+      // Already a plain object from .lean() - deep clone to avoid mutations
+      templateData = JSON.parse(JSON.stringify(template));
+    }
+
+    // Log template data for debugging
+    console.log('Template data being used:', {
+      id: templateData._id || templateData.id,
+      name: templateData.name,
+      width: templateData.width,
+      height: templateData.height,
+      hasPlaceholders: !!templateData.placeholders,
+      placeholderKeys: templateData.placeholders ? Object.keys(templateData.placeholders) : [],
+      studentNamePlaceholder: templateData.placeholders?.studentName,
+      courseNamePlaceholder: templateData.placeholders?.courseName,
+    });
 
     // Prepare certificate data with locale hint
     const certificateData = {
@@ -561,7 +584,7 @@ class CertificateService {
     // Generate PDF with locale preference
     const pdfBuffer = await pdfGenerationService.generateCertificatePDF(
       certificateData,
-      template,
+      templateData,
       preferredLocale
     );
 
