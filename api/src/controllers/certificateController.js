@@ -81,6 +81,34 @@ export const bulkIssueCertificates = async (req, res, next) => {
   }
 };
 
+// Bulk issue certificates for Package
+export const bulkIssuePackageCertificates = async (req, res, next) => {
+  try {
+    const { packageId } = req.body;
+    const issuerUserId = req.user._id;
+
+    if (!packageId) {
+      return res.status(400).json({
+        success: false,
+        message: "Package ID is required",
+      });
+    }
+
+    const results = await certificateService.bulkIssuePackageCertificates(
+      packageId,
+      issuerUserId
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Issued ${results.success.length} certificates. ${results.failed.length} failed.`,
+      data: results,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get certificate by ID
 export const getCertificateById = async (req, res, next) => {
   try {
