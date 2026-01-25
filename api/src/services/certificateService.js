@@ -67,6 +67,16 @@ class CertificateService {
     const course = courseId ? await Course.findById(courseId) : null;
     const pkg = packageId ? await Package.findById(packageId) : null;
 
+    // Debug: Log fetched course/package data
+    console.log('=== ISSUE CERTIFICATE DEBUG ===');
+    console.log('courseId:', courseId);
+    console.log('packageId:', packageId);
+    console.log('course found:', !!course);
+    console.log('course title:', course?.title);
+    console.log('package found:', !!pkg);
+    console.log('package name:', pkg?.name);
+    console.log('================================');
+
     if ((!user && !studentMember) || (!course && !pkg)) {
       throw new Error("Recipient (User/Student) or Source (Course/Package) not found");
     }
@@ -96,6 +106,17 @@ class CertificateService {
       if (pkgTemplate) templateId = pkgTemplate._id;
     }
 
+    // Prepare certificate data
+    const courseNameAr = course ? course.title?.ar : (pkg ? pkg.name?.ar : "Certificate");
+    const courseNameEn = course ? course.title?.en : (pkg ? pkg.name?.en : "Certificate");
+
+    console.log('=== CREATING CERTIFICATE WITH DATA ===');
+    console.log('studentNameAr:', studentNameAr);
+    console.log('studentNameEn:', studentNameEn);
+    console.log('courseNameAr:', courseNameAr);
+    console.log('courseNameEn:', courseNameEn);
+    console.log('=======================================');
+
     const certificate = await Certificate.create({
       userId: userId || undefined, // Optional now
       studentMemberId: studentMemberId || undefined,
@@ -107,8 +128,8 @@ class CertificateService {
         en: studentNameEn,
       },
       courseName: {
-        ar: course ? course.title.ar : (pkg ? pkg.name.ar : "Certificate"),
-        en: course ? course.title.en : (pkg ? pkg.name.en : "Certificate"),
+        ar: courseNameAr || 'الدورة',
+        en: courseNameEn || 'Course',
       },
       issuedAt: new Date(),
       issuedBy: issuerUserId,
@@ -489,7 +510,8 @@ class CertificateService {
   async generateCertificatePDF(certificateId) {
     const certificate = await Certificate.findById(certificateId)
       .populate("userId", "fullName")
-      .populate("courseId", "title certificateSettings");
+      .populate("courseId", "title certificateSettings")
+      .populate("packageId", "name");  // Add package populate
 
     if (!certificate) {
       throw new Error("Certificate not found");
@@ -503,6 +525,7 @@ class CertificateService {
     console.log('certificate.courseName:', certificate.courseName);
     console.log('certificate.userId:', certificate.userId);
     console.log('certificate.courseId:', certificate.courseId);
+    console.log('certificate.packageId:', certificate.packageId);
     console.log('==============================');
 
     // Get template (use default if not specified)
@@ -575,19 +598,35 @@ class CertificateService {
     let studentNameData = certificate.studentName;
     let courseNameData = certificate.courseName;
 
+    // Check if studentName data is valid
+    const hasValidStudentName = studentNameData && 
+      (studentNameData.ar || studentNameData.en) && 
+      (studentNameData.ar !== '' || studentNameData.en !== '');
+
+    // Check if courseName data is valid
+    const hasValidCourseName = courseNameData && 
+      (courseNameData.ar || courseNameData.en) && 
+      (courseNameData.ar !== '' || courseNameData.en !== '');
+
     // Fallback: Get student name from populated user if missing
-    if (!studentNameData || (!studentNameData.ar && !studentNameData.en)) {
+    if (!hasValidStudentName) {
       if (certificate.userId && certificate.userId.fullName) {
         studentNameData = certificate.userId.fullName;
         console.log('Using student name from populated user:', studentNameData);
       }
     }
 
-    // Fallback: Get course name from populated course if missing
-    if (!courseNameData || (!courseNameData.ar && !courseNameData.en)) {
+    // Fallback: Get course/package name from populated relations if missing
+    if (!hasValidCourseName) {
+      // Try course first
       if (certificate.courseId && certificate.courseId.title) {
         courseNameData = certificate.courseId.title;
         console.log('Using course name from populated course:', courseNameData);
+      }
+      // Then try package
+      else if (certificate.packageId && certificate.packageId.name) {
+        courseNameData = certificate.packageId.name;
+        console.log('Using package name from populated package:', courseNameData);
       }
     }
 
