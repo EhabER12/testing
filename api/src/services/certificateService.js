@@ -537,7 +537,7 @@ class CertificateService {
       };
     }
 
-    // Prepare certificate data
+    // Prepare certificate data with locale hint
     const certificateData = {
       certificateNumber: certificate.certificateNumber,
       studentName: certificate.studentName,
@@ -546,10 +546,23 @@ class CertificateService {
       metadata: certificate.metadata,
     };
 
-    // Generate PDF
+    // Determine preferred locale based on certificate data
+    // If student name has Arabic characters, use Arabic locale
+    let preferredLocale = null;
+    const studentNameAr = certificate.studentName?.ar || '';
+    const studentNameEn = certificate.studentName?.en || '';
+    
+    if (studentNameAr && /[\u0600-\u06FF]/.test(studentNameAr)) {
+      preferredLocale = 'ar';
+    } else if (studentNameEn) {
+      preferredLocale = 'en';
+    }
+
+    // Generate PDF with locale preference
     const pdfBuffer = await pdfGenerationService.generateCertificatePDF(
       certificateData,
-      template
+      template,
+      preferredLocale
     );
 
     // Save PDF

@@ -6,10 +6,10 @@ const placeholderSchema = new mongoose.Schema(
     x: { type: Number, required: true },
     y: { type: Number, required: true },
     fontSize: { type: Number, default: 24 },
-    fontFamily: { type: String, default: "Arial" },
+    fontFamily: { type: String, default: "Cairo" },
     color: { type: String, default: "#000000" },
     align: { type: String, enum: ["left", "center", "right"], default: "center" },
-    fontWeight: { type: String, enum: ["normal", "bold"], default: "normal" },
+    fontWeight: { type: String, enum: ["normal", "bold", "500", "600", "700", "800"], default: "normal" },
   },
   { _id: false }
 );

@@ -3,7 +3,6 @@ import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const fontkit = require("fontkit");
 const arabicReshaper = require("arabic-reshaper");
-const { getDirection } = require("string-direction");
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -14,7 +13,22 @@ const __dirname = path.dirname(__filename);
 
 class PDFGenerationService {
   /**
-   * Reshape and reverse Arabic text for PDF
+   * Check if text contains Arabic characters
+   */
+  containsArabic(text) {
+    return /[\u0600-\u06FF]/.test(text);
+  }
+
+  /**
+   * Check if text contains Latin characters
+   */
+  containsLatin(text) {
+    return /[a-zA-Z]/.test(text);
+  }
+
+  /**
+   * Reshape and process Arabic text for PDF rendering
+   * Handles mixed Arabic/English text properly
    */
   reshapeArabic(text) {
     if (!text) return "";
@@ -23,17 +37,21 @@ class PDFGenerationService {
     const stringText = String(text);
 
     // Check if text contains Arabic characters
-    const isArabic = /[\u0600-\u06FF]/.test(stringText);
-    if (!isArabic) return stringText;
+    const hasArabic = this.containsArabic(stringText);
+    if (!hasArabic) return stringText;
 
     try {
-      // Reshape Arabic characters (handle joining)
-      const reshaped = arabicReshaper.reshape(stringText);
-
-      // Reverse for RTL display in PDF
-      // Note: This simple reverse can mess up mixed English/Arabic
-      // but is necessary for basic RTL support in pdf-lib
-      return reshaped.split("").reverse().join("");
+      // Check for mixed content (Arabic + Latin)
+      const hasLatin = this.containsLatin(stringText);
+      
+      if (hasLatin) {
+        // Mixed content: process segments separately
+        return this.processMixedText(stringText);
+      } else {
+        // Pure Arabic: reshape and reverse
+        const reshaped = arabicReshaper.reshape(stringText);
+        return reshaped.split("").reverse().join("");
+      }
     } catch (error) {
       console.error("Arabic reshaping error for text:", stringText, error);
       return stringText;
@@ -41,9 +59,69 @@ class PDFGenerationService {
   }
 
   /**
-   * Font mapping: Maps font family names to .ttf filenames
+   * Process mixed Arabic/English text
+   * Segments text and processes each part appropriately
    */
-  getFontFilename(fontFamily) {
+  processMixedText(text) {
+    // Split by word boundaries while preserving delimiters
+    const segments = text.split(/(\s+)/);
+    const processedSegments = [];
+
+    for (const segment of segments) {
+      if (/^\s+$/.test(segment)) {
+        // Whitespace - keep as is
+        processedSegments.push(segment);
+      } else if (this.containsArabic(segment)) {
+        // Arabic segment - reshape and reverse
+        try {
+          const reshaped = arabicReshaper.reshape(segment);
+          processedSegments.push(reshaped.split("").reverse().join(""));
+        } catch (e) {
+          processedSegments.push(segment);
+        }
+      } else {
+        // Latin/numbers - keep as is
+        processedSegments.push(segment);
+      }
+    }
+
+    // For RTL text, reverse the order of segments
+    return processedSegments.reverse().join("");
+  }
+
+  /**
+   * Detect locale from certificate data
+   * Returns 'ar' for Arabic, 'en' for English
+   */
+  detectLocale(certificateData) {
+    // Check if student name has Arabic characters
+    let name = "";
+    if (typeof certificateData.studentName === "string") {
+      name = certificateData.studentName;
+    } else if (certificateData.studentName?.ar) {
+      // If we have bilingual data, prefer Arabic for Arabic-first platforms
+      name = certificateData.studentName.ar;
+    }
+    
+    // If student name contains Arabic, use Arabic locale
+    if (this.containsArabic(name)) {
+      return "ar";
+    }
+    
+    // Otherwise use English
+    return "en";
+  }
+
+  /**
+   * Font mapping: Maps font family names to .ttf filenames
+   * Note: Font weight variants would need separate font files
+   * For now, we use Regular variants and simulate bold with stroke
+   */
+  getFontFilename(fontFamily, fontWeight = "normal") {
+    // Map font weight strings to standardized values
+    const normalizedWeight = this.normalizeFontWeight(fontWeight);
+    
+    // For now, use regular variants (font files for different weights would need to be added)
     const fontMap = {
       "Cairo": "Cairo-Regular.ttf",
       "Amiri": "Amiri-Regular.ttf",
@@ -57,6 +135,42 @@ class PDFGenerationService {
     };
 
     return fontMap[fontFamily] || "Cairo-Regular.ttf";
+  }
+
+  /**
+   * Normalize font weight to standard values
+   */
+  normalizeFontWeight(fontWeight) {
+    if (!fontWeight) return "normal";
+    
+    const weight = String(fontWeight).toLowerCase();
+    
+    // Map numeric weights to descriptive values
+    const weightMap = {
+      "100": "thin",
+      "200": "extralight",
+      "300": "light",
+      "400": "normal",
+      "500": "medium",
+      "600": "semibold",
+      "700": "bold",
+      "800": "extrabold",
+      "900": "black",
+      "normal": "normal",
+      "bold": "bold",
+      "medium": "medium",
+    };
+    
+    return weightMap[weight] || "normal";
+  }
+
+  /**
+   * Check if font weight is bold-like (for simulated bold)
+   */
+  isBoldWeight(fontWeight) {
+    const weight = this.normalizeFontWeight(fontWeight);
+    return ["bold", "semibold", "extrabold", "black", "600", "700", "800", "900"].includes(weight) || 
+           ["bold", "semibold", "extrabold", "black"].includes(weight);
   }
 
   /**
@@ -94,9 +208,10 @@ class PDFGenerationService {
    * Generate certificate PDF
    * @param {Object} certificateData
    * @param {Object} template
+   * @param {String} preferredLocale - Optional locale preference ('ar' or 'en')
    * @returns {Promise<Buffer>} PDF buffer
    */
-  async generateCertificatePDF(certificateData, template) {
+  async generateCertificatePDF(certificateData, template, preferredLocale = null) {
     try {
       // Validate inputs
       if (!certificateData) {
@@ -108,19 +223,34 @@ class PDFGenerationService {
       }
 
       // Convert Mongoose document to plain object if needed
-      const templateObj = typeof template.toObject === 'function' ? template.toObject() : template;
-      const placeholders = templateObj.placeholders || {};
+      const templateObj = typeof template.toObject === 'function' 
+        ? template.toObject() 
+        : (template._doc ? { ...template._doc } : { ...template });
+      
+      // Deep clone placeholders to avoid reference issues
+      const placeholders = templateObj.placeholders 
+        ? JSON.parse(JSON.stringify(templateObj.placeholders)) 
+        : {};
+
+      // Ensure certificateData is a plain object
+      const data = typeof certificateData.toObject === 'function' 
+        ? certificateData.toObject() 
+        : (certificateData._doc ? { ...certificateData._doc } : { ...certificateData });
+
+      // Detect locale from certificate data or use preferred/default
+      const locale = preferredLocale || this.detectLocale(data) || "ar";
 
       console.log('Generating certificate PDF with template:', {
         templateId: templateObj._id || templateObj.id,
         templateName: templateObj.name,
-        hasPlaceholders: !!templateObj.placeholders,
-        placeholdersKeys: templateObj.placeholders ? Object.keys(templateObj.placeholders) : [],
+        hasPlaceholders: !!placeholders,
+        placeholdersKeys: Object.keys(placeholders),
         isFallback: templateObj.isFallback,
+        locale: locale,
         certificateData: {
-          certificateNumber: certificateData.certificateNumber,
-          studentName: certificateData.studentName,
-          courseName: certificateData.courseName
+          certificateNumber: data.certificateNumber,
+          studentName: data.studentName,
+          courseName: data.courseName
         }
       });
 
@@ -217,27 +347,32 @@ class PDFGenerationService {
         });
       }
 
-      // Helper function to draw text
+      // Helper function to draw text with proper coordinate transformation
       const drawText = async (text, placeholderConfig, defaultY) => {
         if (!placeholderConfig || !text) return;
 
-        // Reshape if Arabic
-        const processedText = this.reshapeArabic(text);
-
+        // Get configuration with defaults
         const config = {
-          x: placeholderConfig.x !== undefined ? placeholderConfig.x : width / 2,
-          y: placeholderConfig.y !== undefined ? placeholderConfig.y : defaultY,
-          fontSize: placeholderConfig.fontSize || 24,
+          x: placeholderConfig.x !== undefined ? Number(placeholderConfig.x) : width / 2,
+          y: placeholderConfig.y !== undefined ? Number(placeholderConfig.y) : defaultY,
+          fontSize: Number(placeholderConfig.fontSize) || 24,
           color: this.hexToRgb(placeholderConfig.color || "#000000"),
           align: placeholderConfig.align || "center",
           fontFamily: placeholderConfig.fontFamily || "Cairo",
           fontWeight: placeholderConfig.fontWeight || "normal",
         };
 
+        // Process text for Arabic/RTL if needed
+        const processedText = this.reshapeArabic(String(text));
+
         // Validate coordinates are within page bounds
-        if (config.x < 0 || config.x > width || config.y < 0 || config.y > height) {
-          console.warn(`Text position out of bounds: x=${config.x}, y=${config.y}`);
-          return;
+        if (config.x < 0 || config.x > width) {
+          console.warn(`Text X position out of bounds: x=${config.x}, adjusting`);
+          config.x = Math.max(0, Math.min(config.x, width));
+        }
+        if (config.y < 0 || config.y > height) {
+          console.warn(`Text Y position out of bounds: y=${config.y}, adjusting`);
+          config.y = Math.max(0, Math.min(config.y, height));
         }
 
         // Load font if not in cache
@@ -253,6 +388,7 @@ class PDFGenerationService {
         const font = fontCache[config.fontFamily];
         const textWidth = font.widthOfTextAtSize(processedText, config.fontSize);
 
+        // Calculate X position based on alignment
         let xPosition = config.x;
         if (config.align === "center") {
           xPosition = config.x - textWidth / 2;
@@ -261,47 +397,68 @@ class PDFGenerationService {
         }
 
         // Ensure text doesn't go off the page
-        if (xPosition < 0) xPosition = 0;
-        if (xPosition + textWidth > width) xPosition = width - textWidth;
+        xPosition = Math.max(10, Math.min(xPosition, width - textWidth - 10));
 
-        page.drawText(processedText, {
-          x: xPosition,
-          y: height - config.y - config.fontSize, // Adjust Y coordinate for PDF and font height
-          size: config.fontSize,
-          font: font,
-          color: config.color,
-        });
+        // Transform Y coordinate: Web uses top-down, PDF uses bottom-up
+        // The y value from frontend is distance from TOP, we need distance from BOTTOM
+        const pdfY = height - config.y - config.fontSize;
+
+        // Ensure Y is within bounds
+        const safePdfY = Math.max(10, Math.min(pdfY, height - 10));
+
+        // Check if we should simulate bold
+        const isBold = this.isBoldWeight(config.fontWeight);
+
+        // Draw text (simulate bold by drawing multiple times with slight offset if needed)
+        if (isBold) {
+          // Draw text multiple times with slight offset to simulate bold
+          const offsets = [[0, 0], [0.5, 0], [0, 0.5], [0.5, 0.5]];
+          for (const [ox, oy] of offsets) {
+            page.drawText(processedText, {
+              x: xPosition + ox,
+              y: safePdfY + oy,
+              size: config.fontSize,
+              font: font,
+              color: config.color,
+            });
+          }
+        } else {
+          page.drawText(processedText, {
+            x: xPosition,
+            y: safePdfY,
+            size: config.fontSize,
+            font: font,
+            color: config.color,
+          });
+        }
       };
 
-      // Get text values
-      const locale = "ar"; // Default to Arabic for Quran platform
+      // Get text values based on locale
       
-      // Ensure certificateData is a plain object if it came from Mongoose
-      const data = typeof certificateData.toObject === 'function' ? certificateData.toObject() : certificateData;
-
       // Handle student name (could be string or object with ar/en)
-      let studentName = "Student";
+      let studentName = locale === "ar" ? "الطالب" : "Student";
       if (typeof data.studentName === "string") {
         studentName = data.studentName;
       } else if (data.studentName && typeof data.studentName === "object") {
         studentName = data.studentName[locale] ||
-          data.studentName.en ||
           data.studentName.ar ||
-          "Student";
+          data.studentName.en ||
+          (locale === "ar" ? "الطالب" : "Student");
       }
 
       // Handle course name (could be string or object with ar/en)
-      let courseName = "Course";
+      let courseName = locale === "ar" ? "الدورة" : "Course";
       if (typeof data.courseName === "string") {
         courseName = data.courseName;
       } else if (data.courseName && typeof data.courseName === "object") {
         courseName = data.courseName[locale] ||
-          data.courseName.en ||
           data.courseName.ar ||
-          "Course";
+          data.courseName.en ||
+          (locale === "ar" ? "الدورة" : "Course");
       }
 
       console.log('Resolved text values:', {
+        locale,
         studentName,
         courseName,
         originalStudentName: data.studentName,

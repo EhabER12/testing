@@ -328,11 +328,38 @@ export default function CertificateDesignerPage() {
     e.stopPropagation();
     if (!containerRef.current) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const offsetX = (e.clientX - rect.left) / previewScale;
-    const offsetY = (e.clientY - rect.top) / previewScale;
+    // Get the container and element positions
+    const containerRect = containerRef.current.getBoundingClientRect();
+    
+    // Calculate mouse position in unscaled coordinates (relative to the canvas)
+    const mouseXInCanvas = (e.clientX - containerRect.left) / previewScale;
+    const mouseYInCanvas = (e.clientY - containerRect.top) / previewScale;
 
-    setDragOffset({ x: offsetX, y: offsetY });
+    // Get the current element's position for calculating drag offset
+    let elementX = 0;
+    let elementY = 0;
+    
+    if (type === "standard") {
+      const k = indexOrKey as keyof typeof design.placeholders;
+      const p = design.placeholders[k] as Placeholder;
+      elementX = p.x;
+      elementY = p.y;
+    } else if (type === "custom") {
+      const p = design.placeholders.customText[indexOrKey as number];
+      elementX = p.x;
+      elementY = p.y;
+    } else if (type === "image") {
+      const img = design.placeholders.images[indexOrKey as number];
+      elementX = img.x;
+      elementY = img.y;
+    }
+
+    // The offset is the difference between where the mouse clicked and the element's stored position
+    // This allows dragging from anywhere on the element
+    setDragOffset({ 
+      x: mouseXInCanvas - elementX, 
+      y: mouseYInCanvas - elementY 
+    });
     setIsDragging(true);
 
     if (type === "standard") {
@@ -351,40 +378,25 @@ export default function CertificateDesignerPage() {
     if (!isDragging || !containerRef.current) return;
 
     const containerRect = containerRef.current.getBoundingClientRect();
-    // Calculate mouse position relative to container
-    const mouseX = (e.clientX - containerRect.left) / previewScale;
-    const mouseY = (e.clientY - containerRect.top) / previewScale;
+    
+    // Calculate mouse position in unscaled coordinates (relative to canvas)
+    const mouseXInCanvas = (e.clientX - containerRect.left) / previewScale;
+    const mouseYInCanvas = (e.clientY - containerRect.top) / previewScale;
 
-    // Calculate new element position (top-left) by subtracting offset
-    // Note: This assumes we want to move the top-left of the element to mouse position minus offset
-    // Which effectively keeps the mouse at the same relative point on the element
-    // wait, I only have the offset from the element top-left.
-    // So new_x = mouseX - dragOffset.x? No. dragOffset was clicked point relative to element top-left?
-    // Let's refine:
-    // We need element current x,y.
-    // Actually simpler:
-    // Update X/Y to (mouseX) - (dragOffset from element origin).
-    // In handleMouseDown, offsetX/Y is relative to element.
-    // So NewX = MouseXInContainer - OffsetX.
+    // Calculate new element position by subtracting the drag offset
+    const newX = Math.round(mouseXInCanvas - dragOffset.x);
+    const newY = Math.round(mouseYInCanvas - dragOffset.y);
 
-    // MousePosInContainer
-    const currentX = Math.round(mouseX);
-    const currentY = Math.round(mouseY);
-
-    // We need the internal offset calculated in MouseDown.
-    // Let's correct handleMouseDown to calculate offset from ELEMENT top-left.
-    // e.currentTarget is the ELEMENT. rect is element rect.
-    // So offsetX/Y IS correct.
-
-    const newX = Math.round(mouseX - dragOffset.x);
-    const newY = Math.round(mouseY - dragOffset.y);
+    // Clamp values to stay within canvas bounds
+    const clampedX = Math.max(0, Math.min(newX, design.width));
+    const clampedY = Math.max(0, Math.min(newY, design.height));
 
     if (activeType === "standard") {
-      updatePlaceholder(activePlaceholder, { x: newX, y: newY });
+      updatePlaceholder(activePlaceholder, { x: clampedX, y: clampedY });
     } else if (activeType === "custom") {
-      updatePlaceholder("", { x: newX, y: newY }, "custom", activeIndex);
+      updatePlaceholder("", { x: clampedX, y: clampedY }, "custom", activeIndex);
     } else if (activeType === "image") {
-      updateImage(activeIndex, { x: newX, y: newY });
+      updateImage(activeIndex, { x: clampedX, y: clampedY });
     }
   };
 
@@ -616,6 +628,33 @@ export default function CertificateDesignerPage() {
                       if (!p) return null;
                       return (
                         <div className="space-y-4">
+                          {/* Position Controls */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">{isRtl ? "الموقع X" : "Position X"}</Label>
+                              <Input 
+                                type="number" 
+                                value={p.x} 
+                                onChange={(e) => updatePlaceholder(k, { x: parseInt(e.target.value) || 0 })} 
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{isRtl ? "الموقع Y" : "Position Y"}</Label>
+                              <Input 
+                                type="number" 
+                                value={p.y} 
+                                onChange={(e) => updatePlaceholder(k, { y: parseInt(e.target.value) || 0 })} 
+                              />
+                            </div>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => updatePlaceholder(k, { x: Math.round(design.width / 2) })} 
+                            className="w-full"
+                          >
+                            {isRtl ? "توسيط أفقي" : "Center Horizontally"}
+                          </Button>
                           <div className="space-y-2">
                             <div className="flex justify-between text-xs">
                               <Label>{isRtl ? "حجم الخط" : "Font Size"}</Label>
@@ -711,6 +750,33 @@ export default function CertificateDesignerPage() {
                                 onChange={(e) => updatePlaceholder("", { text: e.target.value }, "custom", activeIndex)}
                               />
                             </div>
+                            {/* Position Controls */}
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-1">
+                                <Label className="text-xs">{isRtl ? "الموقع X" : "Position X"}</Label>
+                                <Input 
+                                  type="number" 
+                                  value={design.placeholders.customText[activeIndex].x} 
+                                  onChange={(e) => updatePlaceholder("", { x: parseInt(e.target.value) || 0 }, "custom", activeIndex)} 
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">{isRtl ? "الموقع Y" : "Position Y"}</Label>
+                                <Input 
+                                  type="number" 
+                                  value={design.placeholders.customText[activeIndex].y} 
+                                  onChange={(e) => updatePlaceholder("", { y: parseInt(e.target.value) || 0 }, "custom", activeIndex)} 
+                                />
+                              </div>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => updatePlaceholder("", { x: Math.round(design.width / 2) }, "custom", activeIndex)} 
+                              className="w-full"
+                            >
+                              {isRtl ? "توسيط أفقي" : "Center Horizontally"}
+                            </Button>
                             <div className="space-y-2">
                               <div className="flex justify-between text-xs">
                                 <Label>{isRtl ? "حجم الخط" : "Font Size"}</Label>
@@ -773,6 +839,25 @@ export default function CertificateDesignerPage() {
 
                         {activeIndex !== -1 && design.placeholders.images[activeIndex] && (
                           <div className="space-y-4">
+                            {/* Position Controls */}
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-1">
+                                <Label className="text-xs">{isRtl ? "الموقع X" : "Position X"}</Label>
+                                <Input 
+                                  type="number" 
+                                  value={design.placeholders.images[activeIndex].x} 
+                                  onChange={(e) => updateImage(activeIndex, { x: parseInt(e.target.value) || 0 })} 
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">{isRtl ? "الموقع Y" : "Position Y"}</Label>
+                                <Input 
+                                  type="number" 
+                                  value={design.placeholders.images[activeIndex].y} 
+                                  onChange={(e) => updateImage(activeIndex, { y: parseInt(e.target.value) || 0 })} 
+                                />
+                              </div>
+                            </div>
                             <div className="grid grid-cols-2 gap-2">
                               <div className="space-y-1">
                                 <Label className="text-xs">{isRtl ? "العرض" : "Width"}</Label>
@@ -783,6 +868,20 @@ export default function CertificateDesignerPage() {
                                 <Input type="number" value={design.placeholders.images[activeIndex].height} onChange={(e) => updateImage(activeIndex, { height: parseInt(e.target.value) })} />
                               </div>
                             </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => {
+                                const img = design.placeholders.images[activeIndex];
+                                updateImage(activeIndex, { 
+                                  x: Math.round((design.width - img.width) / 2), 
+                                  y: Math.round((design.height - img.height) / 2) 
+                                });
+                              }} 
+                              className="w-full"
+                            >
+                              {isRtl ? "توسيط في الصفحة" : "Center on Page"}
+                            </Button>
                             <Button variant="destructive" size="sm" onClick={() => removeElement("image", activeIndex)} className="w-full">
                               <Trash2 className="h-4 w-4 mr-2" /> {isRtl ? "حذف الصورة" : "Remove Image"}
                             </Button>
@@ -847,29 +946,47 @@ export default function CertificateDesignerPage() {
                   const p = design.placeholders[k] as Placeholder;
                   const isActive = activeType === "standard" && activePlaceholder === k;
 
+                  // Get sample text for this placeholder
+                  const sampleText = k === "studentName" ? (isRtl ? "اسم الطالب هنا" : "Student Name Here") :
+                    k === "courseName" ? (isRtl ? "اسم الدورة القرآنية" : "Quran Course Name") :
+                    k === "issuedDate" ? "2026-01-25" :
+                    "CERT-2026-XXXX";
+
+                  // Calculate position based on alignment (mimicking PDF behavior)
+                  // For center/right alignment, we position based on x as the anchor point
+                  let leftPos: string | number = p.x * previewScale;
+                  let transform = "";
+                  
+                  if (p.align === "center") {
+                    // X is the center point - position at x and translate -50%
+                    leftPos = p.x * previewScale;
+                    transform = "translateX(-50%)";
+                  } else if (p.align === "right") {
+                    // X is the right edge point - position at x and translate -100%
+                    leftPos = p.x * previewScale;
+                    transform = "translateX(-100%)";
+                  }
+                  // For left alignment, x is already the left edge
+
                   return (
                     <div
                       key={k}
                       onMouseDown={(e) => handleMouseDown(e, "standard", k)}
-                      className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
+                      className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move whitespace-nowrap ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
                         top: p.y * previewScale,
-                        left: p.align === "center" ? 0 : p.align === "right" ? "auto" : p.x * previewScale,
-                        right: p.align === "right" ? (design.width - p.x) * previewScale : "auto",
-                        width: p.align === "center" ? "100%" : "auto",
-                        textAlign: (p.align || "center") as React.CSSProperties["textAlign"],
+                        left: leftPos,
+                        transform: transform,
                         color: p.color,
                         fontSize: p.fontSize * previewScale,
                         fontFamily: p.fontFamily,
-                        fontWeight: p.fontWeight,
-                        lineHeight: 1,
-                        padding: `${4 * previewScale}px`,
+                        fontWeight: p.fontWeight as any,
+                        lineHeight: 1.2,
+                        padding: `${4 * previewScale}px ${8 * previewScale}px`,
+                        direction: isRtl || /[\u0600-\u06FF]/.test(sampleText) ? "rtl" : "ltr",
                       }}
                     >
-                      {k === "studentName" ? (isRtl ? "اسم الطالب هنا" : "Student Name") :
-                        k === "courseName" ? (isRtl ? "اسم الدورة القرآنية" : "Quran Course Name") :
-                          k === "issuedDate" ? "2026-01-11" :
-                            "CERT-2026-XXXX"}
+                      {sampleText}
                     </div>
                   );
                 })}
@@ -877,26 +994,39 @@ export default function CertificateDesignerPage() {
                 {/* Custom Text Placeholders */}
                 {design.placeholders.customText.map((p, idx) => {
                   const isActive = activeType === "custom" && activeIndex === idx;
+                  const text = p.text || "Custom Text";
+                  
+                  // Calculate position based on alignment (mimicking PDF behavior)
+                  let leftPos: string | number = p.x * previewScale;
+                  let transform = "";
+                  
+                  if (p.align === "center") {
+                    leftPos = p.x * previewScale;
+                    transform = "translateX(-50%)";
+                  } else if (p.align === "right") {
+                    leftPos = p.x * previewScale;
+                    transform = "translateX(-100%)";
+                  }
+
                   return (
                     <div
                       key={`custom-${idx}`}
                       onMouseDown={(e) => handleMouseDown(e, "custom", idx)}
-                      className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
+                      className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move whitespace-nowrap ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
                         top: p.y * previewScale,
-                        left: p.align === "center" ? 0 : p.align === "right" ? "auto" : p.x * previewScale,
-                        right: p.align === "right" ? (design.width - p.x) * previewScale : "auto",
-                        width: p.align === "center" ? "100%" : "auto",
-                        textAlign: (p.align || "center") as React.CSSProperties["textAlign"],
+                        left: leftPos,
+                        transform: transform,
                         color: p.color,
                         fontSize: p.fontSize * previewScale,
                         fontFamily: p.fontFamily,
-                        fontWeight: p.fontWeight,
-                        lineHeight: 1,
-                        padding: `${4 * previewScale}px`,
+                        fontWeight: p.fontWeight as any,
+                        lineHeight: 1.2,
+                        padding: `${4 * previewScale}px ${8 * previewScale}px`,
+                        direction: /[\u0600-\u06FF]/.test(text) ? "rtl" : "ltr",
                       }}
                     >
-                      {p.text || "Custom Text"}
+                      {text}
                     </div>
                   );
                 })}
