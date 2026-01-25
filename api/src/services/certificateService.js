@@ -495,6 +495,16 @@ class CertificateService {
       throw new Error("Certificate not found");
     }
 
+    // DEBUG: Log raw certificate data
+    console.log('=== RAW CERTIFICATE DATA ===');
+    console.log('certificate._id:', certificate._id);
+    console.log('certificate.certificateNumber:', certificate.certificateNumber);
+    console.log('certificate.studentName:', certificate.studentName);
+    console.log('certificate.courseName:', certificate.courseName);
+    console.log('certificate.userId:', certificate.userId);
+    console.log('certificate.courseId:', certificate.courseId);
+    console.log('==============================');
+
     // Get template (use default if not specified)
     let template = null;
 
@@ -561,13 +571,41 @@ class CertificateService {
     });
 
     // Prepare certificate data with locale hint
+    // Use fallbacks from populated relations if direct values are missing
+    let studentNameData = certificate.studentName;
+    let courseNameData = certificate.courseName;
+
+    // Fallback: Get student name from populated user if missing
+    if (!studentNameData || (!studentNameData.ar && !studentNameData.en)) {
+      if (certificate.userId && certificate.userId.fullName) {
+        studentNameData = certificate.userId.fullName;
+        console.log('Using student name from populated user:', studentNameData);
+      }
+    }
+
+    // Fallback: Get course name from populated course if missing
+    if (!courseNameData || (!courseNameData.ar && !courseNameData.en)) {
+      if (certificate.courseId && certificate.courseId.title) {
+        courseNameData = certificate.courseId.title;
+        console.log('Using course name from populated course:', courseNameData);
+      }
+    }
+
     const certificateData = {
       certificateNumber: certificate.certificateNumber,
-      studentName: certificate.studentName,
-      courseName: certificate.courseName,
+      studentName: studentNameData || { ar: 'الطالب', en: 'Student' },
+      courseName: courseNameData || { ar: 'الدورة', en: 'Course' },
       issuedAt: certificate.issuedAt,
       metadata: certificate.metadata,
     };
+
+    // DEBUG: Log the certificate data being sent to PDF generation
+    console.log('=== CERTIFICATE DATA FOR PDF ===');
+    console.log('certificateNumber:', certificateData.certificateNumber);
+    console.log('studentName:', JSON.stringify(certificateData.studentName));
+    console.log('courseName:', JSON.stringify(certificateData.courseName));
+    console.log('issuedAt:', certificateData.issuedAt);
+    console.log('=================================');
 
     // Determine preferred locale based on certificate data
     // If student name has Arabic characters, use Arabic locale

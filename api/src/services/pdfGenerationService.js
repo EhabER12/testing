@@ -441,7 +441,20 @@ class PDFGenerationService {
 
       // Helper function to draw text with proper coordinate transformation and RTL support
       const drawText = async (text, placeholderConfig, defaultY) => {
-        if (!placeholderConfig || !text) return;
+        console.log('=== drawText called ===');
+        console.log('text:', text);
+        console.log('placeholderConfig:', placeholderConfig);
+        console.log('defaultY:', defaultY);
+        
+        if (!text) {
+          console.log('ERROR: text is empty/null, skipping draw');
+          return;
+        }
+        
+        if (!placeholderConfig) {
+          console.log('ERROR: placeholderConfig is empty/null, skipping draw');
+          return;
+        }
 
         // Log the raw placeholder config for debugging
         console.log('Raw placeholder config:', JSON.stringify(placeholderConfig, null, 2));
@@ -574,11 +587,16 @@ class PDFGenerationService {
       // Get text values based on locale and content language detection
       // Helper to get best text value considering both locale preference and content language
       const getBilingualText = (textData, defaultAr, defaultEn) => {
+        console.log('getBilingualText called with:', { textData, defaultAr, defaultEn, locale });
+        
         if (!textData) {
-          return locale === "ar" ? defaultAr : defaultEn;
+          const result = locale === "ar" ? defaultAr : defaultEn;
+          console.log('textData is falsy, returning default:', result);
+          return result;
         }
         
         if (typeof textData === "string") {
+          console.log('textData is string, returning:', textData);
           return textData;
         }
         
@@ -587,17 +605,25 @@ class PDFGenerationService {
           const arText = textData.ar || defaultAr;
           const enText = textData.en || defaultEn;
           
+          console.log('textData is object:', { arText, enText });
+          
           // Prefer the locale-appropriate text, but fall back to the other
           if (locale === "ar") {
             // For Arabic locale, prefer Arabic text
-            return arText || enText;
+            const result = arText || enText;
+            console.log('Arabic locale, returning:', result);
+            return result;
           } else {
             // For English locale, prefer English text, but use Arabic if English is empty
-            return enText || arText;
+            const result = enText || arText;
+            console.log('English locale, returning:', result);
+            return result;
           }
         }
         
-        return locale === "ar" ? defaultAr : defaultEn;
+        const result = locale === "ar" ? defaultAr : defaultEn;
+        console.log('Fallback, returning default:', result);
+        return result;
       };
 
       // Handle student name (could be string or object with ar/en)
