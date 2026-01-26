@@ -85,7 +85,7 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    dispatch(getCourses());
+    dispatch(getCourses({}));
   }, [dispatch]);
 
   useEffect(() => {
@@ -139,12 +139,14 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
 
   const updateQuestion = (index: number, updates: Partial<QuizQuestion>) => {
     const newQuestions = [...questions];
+    const currentQuestion = newQuestions[index];
+    
     newQuestions[index] = { 
-      ...newQuestions[index], 
+      ...currentQuestion, 
       ...updates,
       explanation: updates.explanation 
-        ? { ...newQuestions[index].explanation, ...updates.explanation }
-        : newQuestions[index].explanation
+        ? { ...(currentQuestion.explanation || { ar: "", en: "" }), ...updates.explanation }
+        : currentQuestion.explanation
     };
     setQuestions(newQuestions);
   };
@@ -208,11 +210,12 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
 
     setLoading(true);
     try {
+      const { courseId, sectionId, ...restFormData } = formData;
       const data = { 
-        ...formData, 
+        ...restFormData, 
         questions,
-        courseId: formData.linkedTo === "general" ? undefined : formData.courseId,
-        sectionId: formData.linkedTo === "section" ? formData.sectionId : undefined
+        courseId: formData.linkedTo === "general" ? undefined : (courseId || undefined),
+        sectionId: formData.linkedTo === "section" ? (sectionId || undefined) : undefined
       };
       let result;
       if (isEdit && initialData) {
@@ -224,7 +227,6 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
       }
       
       if (formData.linkedTo === "general" && result?.slug && !isEdit) {
-        toast.success(isRtl ? "تم إنشاء الاختبار بنجاح" : "Quiz created successfully");
         router.push(`/dashboard/quizzes/${result.id || result._id}/edit`);
         return;
       }

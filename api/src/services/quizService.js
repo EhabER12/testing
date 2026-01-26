@@ -6,13 +6,49 @@ import Section from "../models/sectionModel.js";
 import notificationService from "./notificationService.js";
 
 class QuizService {
+  // Helper to clean bilingual objects
+  _cleanBilingual(obj) {
+    if (!obj) return undefined;
+    const hasAr = typeof obj.ar === "string" && obj.ar.trim().length > 0;
+    const hasEn = typeof obj.en === "string" && obj.en.trim().length > 0;
+
+    if (!hasAr && !hasEn) return undefined;
+
+    // If one is missing, use the other as fallback to satisfy 'required: true' in sub-schema
+    const cleanObj = {
+      ar: hasAr ? obj.ar : obj.en,
+      en: hasEn ? obj.en : obj.ar,
+    };
+
+    return cleanObj;
+  }
+
   // Create Quiz (Admin/Teacher)
   async createQuiz(data, createdBy) {
-    // Handle empty sectionId
-    if (data.sectionId === "") {
+    // Handle empty strings for optional IDs
+    if (data.sectionId === "" || data.sectionId === null) {
       delete data.sectionId;
     }
-    
+    if (data.courseId === "" || data.courseId === null) {
+      delete data.courseId;
+    }
+
+    // Clean bilingual fields
+    if (data.title) data.title = this._cleanBilingual(data.title);
+    if (data.description) data.description = this._cleanBilingual(data.description);
+
+    if (data.questions) {
+      data.questions = data.questions.map((q) => {
+        const cleanedQ = { ...q };
+        cleanedQ.questionText = this._cleanBilingual(q.questionText);
+        cleanedQ.explanation = this._cleanBilingual(q.explanation);
+        if (q.choices) {
+          cleanedQ.choices = q.choices.map((c) => this._cleanBilingual(c));
+        }
+        return cleanedQ;
+      });
+    }
+
     const quiz = await Quiz.create({
       ...data,
       createdBy,
@@ -130,8 +166,27 @@ class QuizService {
     }
 
     // Handle empty sectionId
-    if (updates.sectionId === "") {
+    if (updates.sectionId === "" || updates.sectionId === null) {
       updates.sectionId = null;
+    }
+    if (updates.courseId === "" || updates.courseId === null) {
+      updates.courseId = null;
+    }
+
+    // Clean bilingual fields
+    if (updates.title) updates.title = this._cleanBilingual(updates.title);
+    if (updates.description) updates.description = this._cleanBilingual(updates.description);
+
+    if (updates.questions) {
+      updates.questions = updates.questions.map((q) => {
+        const cleanedQ = { ...q };
+        cleanedQ.questionText = this._cleanBilingual(q.questionText);
+        cleanedQ.explanation = this._cleanBilingual(q.explanation);
+        if (q.choices) {
+          cleanedQ.choices = q.choices.map((c) => this._cleanBilingual(c));
+        }
+        return cleanedQ;
+      });
     }
 
     const oldPublished = quiz.isPublished;

@@ -71,7 +71,7 @@ export default function QuizzesPage() {
     }
 
     dispatch(getQuizzes());
-    dispatch(getCourses());
+    dispatch(getCourses({}));
   }, [dispatch, user, router]);
 
   const handleDelete = async (id: string) => {

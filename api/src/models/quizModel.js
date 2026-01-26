@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import slugify from "slugify";
-import { nanoid } from "nanoid";
+import { v4 as uuidv4 } from "uuid";
 
 // Bilingual text schema
 const bilingualTextSchema = new mongoose.Schema(
@@ -177,7 +177,8 @@ quizSchema.pre("save", async function (next) {
       lower: true,
       strict: true,
     });
-    this.slug = `${titleSlug}-${nanoid(6)}`;
+    // Use first 8 characters of UUID for uniqueness
+    this.slug = `${titleSlug}-${uuidv4().substring(0, 8)}`;
     this.isPublic = true; // General quizzes are public by default
   }
   next();
