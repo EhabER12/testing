@@ -30,9 +30,16 @@ class PackageService {
     // Add enrolled count from StudentMember
     const packagesWithStats = await Promise.all(
       packages.map(async (pkg) => {
+        const pkgObj = pkg.toJSON();
+        
         const enrolled = await StudentMember.countDocuments({
           packageId: pkg._id,
-          status: { $in: ["active", "due_soon"] },
+          status: { $in: ["active", "due_soon", "overdue"] },
+        });
+
+        const active = await StudentMember.countDocuments({
+          packageId: pkg._id,
+          status: "active",
         });
 
         const total = await StudentMember.countDocuments({
@@ -40,10 +47,11 @@ class PackageService {
         });
 
         return {
-          ...pkg.toJSON(),
+          ...pkgObj,
           stats: {
-            ...pkg.stats,
+            ...(pkgObj.stats || {}),
             enrolledCount: enrolled,
+            activeCount: active,
             totalCount: total,
           },
         };
@@ -66,18 +74,25 @@ class PackageService {
     // Get enrolled students
     const enrolledCount = await StudentMember.countDocuments({
       packageId: pkg._id,
-      status: { $in: ["active", "due_soon"] },
+      status: { $in: ["active", "due_soon", "overdue"] },
+    });
+
+    const activeCount = await StudentMember.countDocuments({
+      packageId: pkg._id,
+      status: "active",
     });
 
     const totalCount = await StudentMember.countDocuments({
       packageId: pkg._id,
     });
 
+    const pkgObj = pkg.toJSON();
     return {
-      ...pkg.toJSON(),
+      ...pkgObj,
       stats: {
-        ...pkg.stats,
+        ...(pkgObj.stats || {}),
         enrolledCount,
+        activeCount,
         totalCount,
       },
     };

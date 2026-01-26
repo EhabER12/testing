@@ -143,7 +143,7 @@ export const getDashboardStats = async (req, res, next) => {
       Progress.countDocuments(),
       Progress.countDocuments({ isCompleted: true }),
       Certificate.countDocuments({ status: "issued" }),
-      StudentMember.countDocuments({ status: "active" }),
+      StudentMember.countDocuments({ status: { $in: ["active", "due_soon", "overdue"] } }),
       // Teacher Queries
       TeacherGroup.countDocuments(),
       User.countDocuments({ role: "teacher", "teacherInfo.isApproved": true }),
