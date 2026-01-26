@@ -611,9 +611,13 @@ class PDFGenerationService {
         // Ensure text doesn't go off the page
         xPosition = Math.max(10, Math.min(xPosition, width - textWidth - 10));
 
-        // Transform Y coordinate: Web uses top-down, PDF uses bottom-up
-        // The y value from frontend is distance from TOP, we need distance from BOTTOM
-        const pdfY = height - config.y - config.fontSize;
+        // Transform Y coordinate: Web uses top-down (Y from top), PDF uses bottom-up (Y from bottom)
+        // In web/CSS: Y is the TOP of the text element (distance from page top)
+        // In pdf-lib: Y is the BASELINE of the text (distance from page bottom)
+        // Text baseline is approximately 75-80% down from the top of text (ascent ratio)
+        // So: pdf_y = height - (web_y + fontSize * 0.75)
+        const ascent = config.fontSize * 0.75;
+        const pdfY = height - config.y - ascent;
 
         // Ensure Y is within bounds
         const safePdfY = Math.max(10, Math.min(pdfY, height - 10));
