@@ -2,6 +2,12 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "@/lib/axios";
 import { BilingualText } from "./courseService";
 
+const extractErrorMessage = (error: any): string => {
+  const apiMessage = error?.response?.data?.error?.message;
+  const flatMessage = error?.response?.data?.message;
+  return apiMessage || flatMessage || error?.message || error?.toString();
+};
+
 export interface Package {
   id: string;
   _id?: string;
@@ -84,9 +90,7 @@ export const getPackages = createAsyncThunk(
       const response = await axios.get(`/packages?${params.toString()}`);
       return response.data.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch packages"
-      );
+      return rejectWithValue(extractErrorMessage(error));
     }
   }
 );
@@ -99,9 +103,7 @@ export const getPackage = createAsyncThunk(
       const response = await axios.get(`/packages/${id}`);
       return response.data.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch package"
-      );
+      return rejectWithValue(extractErrorMessage(error));
     }
   }
 );
@@ -114,9 +116,7 @@ export const createPackage = createAsyncThunk(
       const response = await axios.post("/packages", data);
       return response.data.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to create package"
-      );
+      return rejectWithValue(extractErrorMessage(error));
     }
   }
 );
@@ -132,9 +132,7 @@ export const updatePackage = createAsyncThunk(
       const response = await axios.put(`/packages/${id}`, data);
       return response.data.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to update package"
-      );
+      return rejectWithValue(extractErrorMessage(error));
     }
   }
 );
@@ -147,9 +145,7 @@ export const deletePackage = createAsyncThunk(
       await axios.delete(`/packages/${id}`);
       return id;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to delete package"
-      );
+      return rejectWithValue(extractErrorMessage(error));
     }
   }
 );
@@ -162,9 +158,7 @@ export const getPackageStats = createAsyncThunk(
       const response = await axios.get(`/packages/${id}/stats`);
       return response.data.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch package stats"
-      );
+      return rejectWithValue(extractErrorMessage(error));
     }
   }
 );
@@ -177,9 +171,7 @@ export const getPackageStudents = createAsyncThunk(
       const response = await axios.get(`/packages/${id}/students`);
       return response.data.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch package students"
-      );
+      return rejectWithValue(extractErrorMessage(error));
     }
   }
 );

@@ -1,5 +1,6 @@
 import Package from "../models/packageModel.js";
 import StudentMember from "../models/studentMemberModel.js";
+import { NotFoundError, ValidationError } from "../utils/apiError.js";
 
 class PackageService {
   // Create package
@@ -59,7 +60,7 @@ class PackageService {
       .populate("updatedBy", "fullName email");
 
     if (!pkg) {
-      throw new Error("Package not found");
+      throw new NotFoundError("Package");
     }
 
     // Get enrolled students
@@ -87,7 +88,7 @@ class PackageService {
     const pkg = await Package.findById(packageId);
 
     if (!pkg) {
-      throw new Error("Package not found");
+      throw new NotFoundError("Package");
     }
 
     Object.keys(updates).forEach((key) => {
@@ -105,7 +106,7 @@ class PackageService {
     const pkg = await Package.findById(packageId);
 
     if (!pkg) {
-      throw new Error("Package not found");
+      throw new NotFoundError("Package");
     }
 
     // Check if any students are enrolled
@@ -115,12 +116,12 @@ class PackageService {
     });
 
     if (enrolledCount > 0) {
-      throw new Error(
+      throw new ValidationError(
         `Cannot delete package. ${enrolledCount} student(s) are still enrolled.`
       );
     }
 
-    await pkg.deleteOne();
+    await Package.deleteOne({ _id: pkg._id });
     return { message: "Package deleted successfully" };
   }
 
@@ -129,7 +130,7 @@ class PackageService {
     const pkg = await Package.findById(packageId);
 
     if (!pkg) {
-      throw new Error("Package not found");
+      throw new NotFoundError("Package");
     }
 
     // Get students by status
