@@ -679,33 +679,15 @@ export default function CertificateDesignerPage() {
                       if (!p) return null;
                       return (
                         <div className="space-y-4">
-                          {/* Position Controls */}
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-xs">{isRtl ? "الموقع X" : "Position X"}</Label>
-                              <Input 
-                                type="number" 
-                                value={p.x} 
-                                onChange={(e) => updatePlaceholder(k, { x: parseInt(e.target.value) || 0 })} 
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">{isRtl ? "الموقع Y" : "Position Y"}</Label>
-                              <Input 
-                                type="number" 
-                                value={p.y} 
-                                onChange={(e) => updatePlaceholder(k, { y: parseInt(e.target.value) || 0 })} 
-                              />
-                            </div>
+                          {/* Y Position Control - text is always centered horizontally */}
+                          <div className="space-y-1">
+                            <Label className="text-xs">{isRtl ? "الموقع الرأسي (Y)" : "Vertical Position (Y)"}</Label>
+                            <Input 
+                              type="number" 
+                              value={p.y} 
+                              onChange={(e) => updatePlaceholder(k, { y: parseInt(e.target.value) || 0 })} 
+                            />
                           </div>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => updatePlaceholder(k, { x: Math.round(design.width / 2) })} 
-                            className="w-full"
-                          >
-                            {isRtl ? "توسيط أفقي" : "Center Horizontally"}
-                          </Button>
                           <div className="space-y-2">
                             <div className="flex justify-between text-xs">
                               <Label>{isRtl ? "حجم الخط" : "Font Size"}</Label>
@@ -759,22 +741,6 @@ export default function CertificateDesignerPage() {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-2">
-                            <Label>{isRtl ? "محاذاة النص" : "Text Alignment"}</Label>
-                            <Select
-                              value={p.align || "center"}
-                              onValueChange={(val) => updatePlaceholder(k, { align: val })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="left">{isRtl ? "يسار" : "Left"}</SelectItem>
-                                <SelectItem value="center">{isRtl ? "وسط" : "Center"}</SelectItem>
-                                <SelectItem value="right">{isRtl ? "يمين" : "Right"}</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
                         </div>
                       );
                     })()}
@@ -801,33 +767,15 @@ export default function CertificateDesignerPage() {
                                 onChange={(e) => updatePlaceholder("", { text: e.target.value }, "custom", activeIndex)}
                               />
                             </div>
-                            {/* Position Controls */}
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="space-y-1">
-                                <Label className="text-xs">{isRtl ? "الموقع X" : "Position X"}</Label>
-                                <Input 
-                                  type="number" 
-                                  value={design.placeholders.customText[activeIndex].x} 
-                                  onChange={(e) => updatePlaceholder("", { x: parseInt(e.target.value) || 0 }, "custom", activeIndex)} 
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-xs">{isRtl ? "الموقع Y" : "Position Y"}</Label>
-                                <Input 
-                                  type="number" 
-                                  value={design.placeholders.customText[activeIndex].y} 
-                                  onChange={(e) => updatePlaceholder("", { y: parseInt(e.target.value) || 0 }, "custom", activeIndex)} 
-                                />
-                              </div>
+                            {/* Y Position Control - text is always centered horizontally */}
+                            <div className="space-y-1">
+                              <Label className="text-xs">{isRtl ? "الموقع الرأسي (Y)" : "Vertical Position (Y)"}</Label>
+                              <Input 
+                                type="number" 
+                                value={design.placeholders.customText[activeIndex].y} 
+                                onChange={(e) => updatePlaceholder("", { y: parseInt(e.target.value) || 0 }, "custom", activeIndex)} 
+                              />
                             </div>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => updatePlaceholder("", { x: Math.round(design.width / 2) }, "custom", activeIndex)} 
-                              className="w-full"
-                            >
-                              {isRtl ? "توسيط أفقي" : "Center Horizontally"}
-                            </Button>
                             <div className="space-y-2">
                               <div className="flex justify-between text-xs">
                                 <Label>{isRtl ? "حجم الخط" : "Font Size"}</Label>
@@ -1003,27 +951,14 @@ export default function CertificateDesignerPage() {
                     k === "issuedDate" ? "2026-01-25" :
                     "CERT-2026-XXXX";
 
-                  // Calculate position based on alignment (mimicking PDF behavior)
-                  // For center/right alignment, we position based on x as the anchor point
-                  let leftPos: string | number = p.x * previewScale;
-                  let transform = "";
-                  
-                  if (p.align === "center") {
-                    // X is the center point - position at x and translate -50%
-                    leftPos = p.x * previewScale;
-                    transform = "translateX(-50%)";
-                  } else if (p.align === "right") {
-                    // X is the right edge point - position at x and translate -100%
-                    leftPos = p.x * previewScale;
-                    transform = "translateX(-100%)";
-                  }
-                  // For left alignment, x is already the left edge
+                  // Always centered horizontally
+                  const leftPos = (design.width / 2) * previewScale;
+                  const transform = "translateX(-50%)";
 
                   return (
                     <div
                       key={k}
-                      onMouseDown={(e) => handleMouseDown(e, "standard", k)}
-                      className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move whitespace-nowrap ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
+                      className={`absolute pointer-events-auto select-none border-2 transition-colors whitespace-nowrap ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
                         top: p.y * previewScale,
                         left: leftPos,
@@ -1047,23 +982,14 @@ export default function CertificateDesignerPage() {
                   const isActive = activeType === "custom" && activeIndex === idx;
                   const text = p.text || "Custom Text";
                   
-                  // Calculate position based on alignment (mimicking PDF behavior)
-                  let leftPos: string | number = p.x * previewScale;
-                  let transform = "";
-                  
-                  if (p.align === "center") {
-                    leftPos = p.x * previewScale;
-                    transform = "translateX(-50%)";
-                  } else if (p.align === "right") {
-                    leftPos = p.x * previewScale;
-                    transform = "translateX(-100%)";
-                  }
+                  // Always centered horizontally
+                  const leftPos = (design.width / 2) * previewScale;
+                  const transform = "translateX(-50%)";
 
                   return (
                     <div
                       key={`custom-${idx}`}
-                      onMouseDown={(e) => handleMouseDown(e, "custom", idx)}
-                      className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move whitespace-nowrap ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
+                      className={`absolute pointer-events-auto select-none border-2 transition-colors whitespace-nowrap ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
                         top: p.y * previewScale,
                         left: leftPos,

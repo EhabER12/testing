@@ -537,13 +537,13 @@ class PDFGenerationService {
         const rawFontFamily = placeholderConfig.fontFamily;
         const rawFontWeight = placeholderConfig.fontWeight;
 
-        // Build config with explicit property extraction
+        // Build config - X is always center, only fontSize and color are configurable
         const config = {
-          x: rawX !== undefined && rawX !== null ? Number(rawX) : width / 2,
+          x: width / 2, // Always center horizontally
           y: rawY !== undefined && rawY !== null ? Number(rawY) : defaultY,
           fontSize: rawFontSize !== undefined && rawFontSize !== null && rawFontSize > 0 ? Number(rawFontSize) : 24,
           color: this.hexToRgb(rawColor && typeof rawColor === 'string' ? rawColor : "#000000"),
-          align: rawAlign && typeof rawAlign === 'string' ? rawAlign : "center",
+          align: "center", // Always center
           fontFamily: rawFontFamily && typeof rawFontFamily === 'string' ? rawFontFamily : "Cairo",
           fontWeight: rawFontWeight && typeof rawFontWeight === 'string' ? rawFontWeight : "normal",
         };
@@ -592,21 +592,8 @@ class PDFGenerationService {
         const font = fontCache[config.fontFamily];
         const textWidth = font.widthOfTextAtSize(processedText, config.fontSize);
 
-        // Calculate X position based on alignment AND text direction
-        // For RTL text, alignment interpretation may need adjustment
-        let xPosition = config.x;
-        let effectiveAlign = config.align;
-
-        // For center alignment, both LTR and RTL work the same
-        if (effectiveAlign === "center") {
-          xPosition = config.x - textWidth / 2;
-        } else if (effectiveAlign === "right") {
-          // Right alignment: text ends at x position
-          xPosition = config.x - textWidth;
-        } else if (effectiveAlign === "left") {
-          // Left alignment: text starts at x position
-          xPosition = config.x;
-        }
+        // Calculate X position - always centered
+        let xPosition = config.x - textWidth / 2;
 
         // Ensure text doesn't go off the page
         xPosition = Math.max(10, Math.min(xPosition, width - textWidth - 10));
@@ -629,7 +616,6 @@ class PDFGenerationService {
           xPosition,
           safePdfY,
           textWidth,
-          effectiveAlign,
           isBold,
         });
 
