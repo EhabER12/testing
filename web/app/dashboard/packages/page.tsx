@@ -56,6 +56,7 @@ import {
   TrendingUp,
   Eye,
 } from "lucide-react";
+import { toast } from "react-hot-toast";
 import type { Package, CreatePackageData } from "@/store/services/packageService";
 
 export default function PackagesPage() {
@@ -73,7 +74,6 @@ export default function PackagesPage() {
   const [formData, setFormData] = useState<CreatePackageData>({
     name: { ar: "", en: "" },
     description: { ar: "", en: "" },
-    type: "tahfeez",
 
     price: 0,
     currency: "EGP",
@@ -107,7 +107,6 @@ export default function PackagesPage() {
       setFormData({
         name: pkg.name,
         description: pkg.description || { ar: "", en: "" },
-        type: pkg.type,
 
         price: pkg.price,
         currency: pkg.currency,
@@ -123,7 +122,6 @@ export default function PackagesPage() {
       setFormData({
         name: { ar: "", en: "" },
         description: { ar: "", en: "" },
-        type: "tahfeez",
 
         price: 0,
         currency: "EGP",
@@ -163,9 +161,11 @@ export default function PackagesPage() {
     ) {
       try {
         await dispatch(deletePackage(id)).unwrap();
+        toast.success(t("admin.packages.packageDeleted") || "Package deleted successfully");
         dispatch(getPackages());
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to delete package:", err);
+        toast.error(err || "Failed to delete package. It might have active subscriptions.");
       }
     }
   };
@@ -346,16 +346,6 @@ export default function PackagesPage() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">
-                    <div>
-                      {getTextValue(pkg.name)}
-                      {pkg.isPopular && (
-                        <Badge className="ml-2 bg-yellow-100 text-yellow-800">
-                          {t("admin.packages.isPopular") || "Popular"}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
                   <TableCell>{formatCurrency(pkg.price, pkg.currency)}</TableCell>
                   <TableCell>
                     {pkg.duration.value}{" "}
@@ -443,27 +433,6 @@ export default function PackagesPage() {
               >
                 {t("admin.packages.englishContent") || "English"}
               </Button>
-            </div>
-
-            {/* Package Type */}
-            <div className="grid gap-2">
-              <Label>{t("admin.packages.type") || "Package Type"}</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, type: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tahfeez">{t("admin.packages.types.tahfeez") || "Tahfeez"}</SelectItem>
-                  <SelectItem value="group">{t("admin.packages.types.group") || "Group"}</SelectItem>
-                  <SelectItem value="individual">{t("admin.packages.types.individual") || "Individual"}</SelectItem>
-                  <SelectItem value="custom">{t("admin.packages.types.custom") || "Custom"}</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Package Name */}

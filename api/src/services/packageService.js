@@ -17,10 +17,6 @@ class PackageService {
   async getAllPackages(filters = {}) {
     const query = {};
 
-    if (filters.type) {
-      query.type = filters.type;
-    }
-
     if (filters.isActive !== undefined) {
       query.isActive = filters.isActive;
     }

@@ -182,8 +182,8 @@ export default function AccountClient({
                     <CardTitle>{isArabic ? "اشتراكات البرامج" : "Program Subscriptions"}</CardTitle>
                     <CardDescription>
                       {isArabic
-                        ? "اشتراكاتك في برامج التحفيظ والخدمات الأخرى"
-                        : "Your subscriptions to Tahfeez programs and other services"}
+                        ? "اشتراكاتك في البرامج والخدمات المختلفة"
+                        : "Your subscriptions to programs and services"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

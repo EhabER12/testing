@@ -442,7 +442,7 @@ export default function DashboardPage() {
               <Card className="bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    {isRtl ? "أعضاء التحفيظ" : "Student Members"}
+                    {isRtl ? "طلاب الباقات" : "Package Students"}
                   </CardTitle>
                   <Users className="h-4 w-4 text-rose-600" />
                 </CardHeader>

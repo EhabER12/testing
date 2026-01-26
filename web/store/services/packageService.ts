@@ -7,7 +7,6 @@ export interface Package {
   _id?: string;
   name: BilingualText;
   description?: BilingualText;
-  type: "tahfeez" | "group" | "individual" | "custom";
   price: number;
   currency: "EGP" | "SAR" | "USD";
   duration: {
@@ -43,7 +42,6 @@ export interface Package {
 export interface CreatePackageData {
   name: BilingualText;
   description?: BilingualText;
-  type: "tahfeez" | "group" | "individual" | "custom";
   price: number;
   currency: "EGP" | "SAR" | "USD";
   duration: {

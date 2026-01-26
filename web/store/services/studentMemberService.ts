@@ -21,7 +21,6 @@ export interface StudentMember {
     id: string;
     _id?: string;
     name: BilingualText;
-    type: string;
   };
   packagePrice?: number;
   renewalHistory: any[];

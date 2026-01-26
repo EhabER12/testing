@@ -26,28 +26,14 @@ export default function PackagesPage() {
   const dispatch = useAppDispatch();
 
   const { packages, isLoading } = useAppSelector((state) => state.packages);
-  const [filterType, setFilterType] = useState<string>("all");
 
   useEffect(() => {
     dispatch(getPackages({ isActive: true }));
   }, [dispatch]);
 
-  const filteredPackages = packages.filter((pkg) => 
-    filterType === "all" || pkg.type === filterType
-  );
-
   const getLocalizedText = (text: any) => {
     if (!text) return "";
     return text[locale] || text.en || text.ar || "";
-  };
-
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "tahfeez": return <Star className="h-5 w-5 text-yellow-500" />;
-      case "individual": return <Zap className="h-5 w-5 text-blue-500" />;
-      case "group": return <Sparkles className="h-5 w-5 text-purple-500" />;
-      default: return <Shield className="h-5 w-5 text-green-500" />;
-    }
   };
 
   if (isLoading) {
@@ -71,28 +57,9 @@ export default function PackagesPage() {
         </p>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex justify-center gap-2 mb-12 overflow-x-auto pb-2">
-        {[
-          { id: "all", label: isRtl ? "الكل" : "All" },
-          { id: "tahfeez", label: isRtl ? "تحفيظ" : "Tahfeez" },
-          { id: "individual", label: isRtl ? "فردي" : "Individual" },
-          { id: "group", label: isRtl ? "مجموعات" : "Groups" },
-        ].map((tab) => (
-          <Button
-            key={`tab-${tab.id}`}
-            variant={filterType === tab.id ? "default" : "outline"}
-            onClick={() => setFilterType(tab.id)}
-            className="rounded-full"
-          >
-            {tab.label}
-          </Button>
-        ))}
-      </div>
-
       {/* Pricing Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredPackages.map((pkg: Package, index: number) => (
+        {packages.map((pkg: Package, index: number) => (
           <Card 
             key={pkg.id || pkg._id || `pkg-${index}`} 
             className={`relative flex flex-col h-full transition-all duration-300 hover:shadow-xl border-2 ${
@@ -108,12 +75,6 @@ export default function PackagesPage() {
             )}
 
             <CardHeader>
-              <div className="flex items-center gap-2 mb-2">
-                {getIcon(pkg.type)}
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  {pkg.type}
-                </span>
-              </div>
               <CardTitle className="text-2xl font-bold">{getLocalizedText(pkg.name)}</CardTitle>
               <CardDescription className="line-clamp-2">
                 {getLocalizedText(pkg.description)}
@@ -164,7 +125,7 @@ export default function PackagesPage() {
         ))}
       </div>
 
-      {filteredPackages.length === 0 && (
+      {packages.length === 0 && (
         <div className="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed">
           <p className="text-muted-foreground">
             {isRtl ? "لا توجد باقات متاحة حالياً." : "No packages available at the moment."}

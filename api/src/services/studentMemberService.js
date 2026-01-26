@@ -358,7 +358,7 @@ export class StudentMemberService {
       // Default template
       template = `مرحباً {{name}}،
 
-نذكرك بأن موعد تجديد اشتراكك في برنامج التحفيظ سيكون في {{dueDate}}.
+نذكرك بأن موعد تجديد اشتراكك في البرنامج سيكون في {{dueDate}}.
 
 الأيام المتبقية: {{daysLeft}} يوم
 

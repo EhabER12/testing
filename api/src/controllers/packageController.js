@@ -19,10 +19,9 @@ export const createPackage = async (req, res, next) => {
 // Get all packages
 export const getAllPackages = async (req, res, next) => {
   try {
-    const { type, isActive } = req.query;
+    const { isActive } = req.query;
     const filters = {};
 
-    if (type) filters.type = type;
     if (isActive !== undefined) filters.isActive = isActive === "true";
 
     const packages = await packageService.getAllPackages(filters);

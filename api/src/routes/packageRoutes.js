@@ -19,7 +19,7 @@ router.get("/:id", getPackageById);
 // Admin/Moderator routes
 router.post("/", protect, authorize("admin", "moderator"), createPackage);
 router.put("/:id", protect, authorize("admin", "moderator"), updatePackage);
-router.delete("/:id", protect, authorize("admin"), deletePackage);
+router.delete("/:id", protect, authorize("admin", "moderator"), deletePackage);
 router.get("/:id/stats", protect, authorize("admin", "moderator"), getPackageStats);
 router.get("/:id/students", protect, authorize("admin", "moderator"), getPackageStudents);
 

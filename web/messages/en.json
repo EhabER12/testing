@@ -890,7 +890,6 @@
       "deletePackage": "Delete Package",
       "packageName": "Package Name",
       "packageDescription": "Package Description",
-      "packageType": "Package Type",
       "price": "Price",
       "currency": "Currency",
       "duration": "Duration",
@@ -918,12 +917,6 @@
       "viewStudents": "View Students",
       "students": "Students",
       "monthlyPrice": "Monthly Price",
-      "types": {
-        "tahfeez": "Tahfeez",
-        "group": "Group",
-        "individual": "Individual",
-        "custom": "Custom"
-      },
       "units": {
         "day": "Day",
         "week": "Week",
