@@ -14,8 +14,9 @@ import {
   checkCertificateEligibility,
   getQuizStatistics,
   getAllQuizAttempts,
+  getQuizBySlug,
 } from "../controllers/quizController.js";
-import { protect, authorize } from "../middlewares/authMiddleware.js";
+import { protect, authorize, optionalAuth } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
@@ -28,10 +29,11 @@ router.get(
 );
 
 // Public/Student routes
+router.get("/public/:slug", optionalAuth, getQuizBySlug);
 router.get("/my/all", protect, getMyQuizzes);
 router.get("/course/:courseId", protect, getQuizzesByCourse);
 router.get("/section/:sectionId", protect, getQuizzesBySection);
-router.get("/:id", protect, getQuizById);
+router.get("/:id", optionalAuth, getQuizById);
 router.post("/:quizId/attempt", protect, submitQuizAttempt);
 router.get("/:quizId/attempts/me", protect, getUserAttempts);
 router.get("/:quizId/attempts/me/best", protect, getUserBestAttempt);

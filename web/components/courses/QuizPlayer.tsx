@@ -45,6 +45,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
   const { currentQuiz, bestAttempt, lastAttempt, isLoading, isSubmitting } = useAppSelector(
     (state) => state.quizzes
   );
+  const { user } = useAppSelector((state) => state.auth);
 
   const [gameState, setGameState] = useState<"start" | "playing" | "results">("start");
   const [currentQuestionIndex, setCurrentIndex] = useState(0);
@@ -54,9 +55,11 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
   useEffect(() => {
     if (quizId) {
       dispatch(getQuiz(quizId));
-      dispatch(getUserBestAttempt(quizId));
+      if (user) {
+        dispatch(getUserBestAttempt(quizId));
+      }
     }
-  }, [dispatch, quizId]);
+  }, [dispatch, quizId, user]);
 
   useEffect(() => {
     let timer: any;
@@ -165,6 +168,16 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
             <div className="bg-red-50 p-4 rounded-lg flex items-center gap-3 text-red-800 border border-red-100">
               <AlertCircle className="h-5 w-5" />
               <p>{isRtl ? "لقد استنفدت جميع المحاولات المتاحة لهذا الاختبار" : "You have reached the maximum number of attempts for this quiz"}</p>
+            </div>
+          ) : !user && currentQuiz.linkedTo === "general" ? (
+            <div className="space-y-4">
+              <div className="bg-blue-50 p-4 rounded-lg flex items-center gap-3 text-blue-800 border border-blue-100">
+                <AlertCircle className="h-5 w-5" />
+                <p>{isRtl ? "يرجى تسجيل الدخول لحفظ نتائجك وتتبع محاولاتك" : "Please login to save your results and track attempts"}</p>
+              </div>
+              <Button onClick={() => window.location.href = `/${locale}/login?redirect=${encodeURIComponent(window.location.pathname)}`} className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg">
+                {isRtl ? "تسجيل الدخول" : "Login to Take Quiz"}
+              </Button>
             </div>
           ) : (
             <Button onClick={handleStart} className="w-full bg-genoun-green hover:bg-genoun-green/90 h-12 text-lg">

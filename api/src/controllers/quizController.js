@@ -41,13 +41,35 @@ export const createQuiz = async (req, res, next) => {
   }
 };
 
+// Get Quiz by Slug (Public)
+export const getQuizBySlug = async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    const includeAnswers = req.user && (req.user.role === "admin" || req.user.role === "teacher");
+
+    const quiz = await quizService.getQuizBySlug(slug, includeAnswers);
+
+    res.status(200).json({
+      success: true,
+      data: quiz,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get Quiz by ID
 export const getQuizById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const includeAnswers = req.user.role === "admin" || req.user.role === "teacher";
+    const includeAnswers = req.user && (req.user.role === "admin" || req.user.role === "teacher");
 
     const quiz = await quizService.getQuizById(id, includeAnswers);
+
+    // If quiz is not public and no user is logged in
+    if (!quiz.isPublic && !req.user) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
 
     res.status(200).json({
       success: true,

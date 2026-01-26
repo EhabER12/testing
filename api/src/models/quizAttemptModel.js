@@ -17,7 +17,7 @@ const quizAttemptSchema = new mongoose.Schema(
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
-      required: [true, "Course ID is required"],
+      required: false,
       index: true,
     },
 

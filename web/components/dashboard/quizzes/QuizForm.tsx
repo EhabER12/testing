@@ -71,7 +71,7 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
     description: { ar: "", en: "" },
     courseId: searchParams.get("courseId") || "",
     sectionId: searchParams.get("sectionId") || "",
-    linkedTo: (searchParams.get("linkedTo") as "course" | "section") || "course",
+    linkedTo: (searchParams.get("linkedTo") as "course" | "section" | "general") || "course",
     passingScore: 70,
     timeLimit: null as number | null,
     attemptsAllowed: null as number | null,
@@ -182,7 +182,7 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
       toast.error(isRtl ? "يرجى إدخال العنوان باللغتين" : "Please enter title in both languages");
       return;
     }
-    if (!formData.courseId) {
+    if (formData.linkedTo !== "general" && !formData.courseId) {
       toast.error(isRtl ? "يرجى اختيار الدورة" : "Please select a course");
       return;
     }
@@ -211,15 +211,24 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
       const data = { 
         ...formData, 
         questions,
+        courseId: formData.linkedTo === "general" ? undefined : formData.courseId,
         sectionId: formData.linkedTo === "section" ? formData.sectionId : undefined
       };
+      let result;
       if (isEdit && initialData) {
-        await dispatch(updateQuiz({ id: (initialData.id || initialData._id)!, data })).unwrap();
+        result = await dispatch(updateQuiz({ id: (initialData.id || initialData._id)!, data })).unwrap();
         toast.success(isRtl ? "تم تحديث الاختبار بنجاح" : "Quiz updated successfully");
       } else {
-        await dispatch(createQuiz(data)).unwrap();
+        result = await dispatch(createQuiz(data)).unwrap();
         toast.success(isRtl ? "تم إنشاء الاختبار بنجاح" : "Quiz created successfully");
       }
+      
+      if (formData.linkedTo === "general" && result?.slug && !isEdit) {
+        toast.success(isRtl ? "تم إنشاء الاختبار بنجاح" : "Quiz created successfully");
+        router.push(`/dashboard/quizzes/${result.id || result._id}/edit`);
+        return;
+      }
+      
       router.push("/dashboard/quizzes");
     } catch (error: any) {
       toast.error(error || "Failed to save quiz");
@@ -437,22 +446,32 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>{isRtl ? "الدورة التدريبية" : "Course"}</Label>
-                  <Select 
-                    value={formData.courseId} 
-                    onValueChange={(val) => setFormData({ ...formData, courseId: val, sectionId: "" })}
-                  >
-                    <SelectTrigger><SelectValue placeholder={isRtl ? "اختر الدورة" : "Select Course"} /></SelectTrigger>
-                    <SelectContent>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id || course._id} value={(course.id || course._id)!}>{getTextValue(course.title)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {formData.linkedTo === "general" && initialData?.slug && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                  <Label className="text-blue-700 font-bold">{isRtl ? "رابط الاختبار العام" : "Public Quiz Link"}</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      readOnly 
+                      value={`${window.location.origin}/quizzes/p/${initialData.slug}`} 
+                      className="bg-white"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/quizzes/p/${initialData.slug}`);
+                        toast.success(isRtl ? "تم نسخ الرابط" : "Link copied");
+                      }}
+                    >
+                      {isRtl ? "نسخ" : "Copy"}
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-blue-500">
+                    {isRtl ? "يمكن لأي شخص لديه هذا الرابط إجراء الاختبار" : "Anyone with this link can take the quiz"}
+                  </p>
                 </div>
-
+              )}
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>{isRtl ? "نوع الربط" : "Linked To"}</Label>
                   <Select 
@@ -461,11 +480,29 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="general">{isRtl ? "اختبار عام (رابط خارجي)" : "General Quiz (Public Link)"}</SelectItem>
                       <SelectItem value="course">{isRtl ? "الدورة مباشرة" : "Main Course"}</SelectItem>
                       <SelectItem value="section">{isRtl ? "قسم محدد" : "Specific Section"}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {formData.linkedTo !== "general" && (
+                  <div className="space-y-2">
+                    <Label>{isRtl ? "الدورة التدريبية" : "Course"}</Label>
+                    <Select 
+                      value={formData.courseId} 
+                      onValueChange={(val) => setFormData({ ...formData, courseId: val, sectionId: "" })}
+                    >
+                      <SelectTrigger><SelectValue placeholder={isRtl ? "اختر الدورة" : "Select Course"} /></SelectTrigger>
+                      <SelectContent>
+                        {courses.map((course) => (
+                          <SelectItem key={course.id || course._id} value={(course.id || course._id)!}>{getTextValue(course.title)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {formData.linkedTo === "section" && (
                   <div className="space-y-2">

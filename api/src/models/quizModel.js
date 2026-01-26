@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import slugify from "slugify";
+import { nanoid } from "nanoid";
 
 // Bilingual text schema
 const bilingualTextSchema = new mongoose.Schema(
@@ -48,11 +50,12 @@ const quizSchema = new mongoose.Schema(
       type: bilingualTextSchema,
     },
 
-    // Linked to Section OR Course
+    // Linked to Section OR Course OR General
     linkedTo: {
       type: String,
-      enum: ["section", "course"],
+      enum: ["section", "course", "general"],
       required: true,
+      default: "course",
     },
     sectionId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -62,8 +65,19 @@ const quizSchema = new mongoose.Schema(
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
-      required: [true, "Course ID is required"],
+      required: function() {
+        return this.linkedTo !== "general";
+      },
       index: true,
+    },
+    slug: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    isPublic: {
+      type: Boolean,
+      default: false,
     },
 
     // Settings
@@ -154,6 +168,20 @@ const quizSchema = new mongoose.Schema(
 // Indexes
 quizSchema.index({ courseId: 1, linkedTo: 1 });
 quizSchema.index({ sectionId: 1 });
+quizSchema.index({ slug: 1 });
+
+// Pre-save: Generate slug for general quizzes
+quizSchema.pre("save", async function (next) {
+  if (this.linkedTo === "general" && !this.slug) {
+    const titleSlug = slugify(this.title.en || this.title.ar, {
+      lower: true,
+      strict: true,
+    });
+    this.slug = `${titleSlug}-${nanoid(6)}`;
+    this.isPublic = true; // General quizzes are public by default
+  }
+  next();
+});
 
 // Virtual: total points
 quizSchema.virtual("totalPoints").get(function () {

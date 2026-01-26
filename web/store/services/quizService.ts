@@ -19,7 +19,9 @@ export interface Quiz {
   sectionId?: any;
   title: BilingualText;
   description?: BilingualText;
-  linkedTo: "course" | "section";
+  linkedTo: "course" | "section" | "general";
+  slug?: string;
+  isPublic?: boolean;
   questions: QuizQuestion[];
   passingScore: number;
   attemptsAllowed: number | null;
@@ -40,9 +42,9 @@ export interface Quiz {
 }
 
 export interface CreateQuizData {
-  courseId: string;
+  courseId?: string;
   sectionId?: string;
-  linkedTo: "course" | "section";
+  linkedTo: "course" | "section" | "general";
   title: BilingualText;
   description?: BilingualText;
   questions: QuizQuestion[];
@@ -76,6 +78,21 @@ export interface QuizAttempt {
   attemptNumber: number;
   completedAt: string;
 }
+
+// Get quiz by slug
+export const getQuizBySlug = createAsyncThunk(
+  "quizzes/getBySlug",
+  async (slug: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`/quizzes/public/${slug}`);
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch quiz"
+      );
+    }
+  }
+);
 
 // Get all quizzes
 export const getQuizzes = createAsyncThunk(

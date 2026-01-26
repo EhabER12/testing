@@ -21,6 +21,27 @@ class QuizService {
     return quiz;
   }
 
+  // Get Quiz by Slug (Public)
+  async getQuizBySlug(slug, includeAnswers = false) {
+    const quizDoc = await Quiz.findOne({ slug, isPublished: true })
+      .populate("createdBy", "fullName");
+
+    if (!quizDoc) {
+      throw new Error("Quiz not found");
+    }
+
+    const quiz = quizDoc.toJSON();
+
+    if (!includeAnswers) {
+      quiz.questions = quiz.questions.map((q) => {
+        const { correctAnswer, explanation, ...rest } = q;
+        return rest;
+      });
+    }
+
+    return quiz;
+  }
+
   // Get Quiz by ID
   async getQuizById(quizId, includeAnswers = false) {
     const quizDoc = await Quiz.findById(quizId)
@@ -212,14 +233,14 @@ class QuizService {
       };
     });
 
+    // Calculate percentage
     const percentage = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
     const passed = percentage >= quiz.passingScore;
 
     // Create attempt
-    const attempt = await QuizAttempt.create({
+    const attemptData = {
       userId,
       quizId,
-      courseId: quiz.courseId,
       answers: gradedAnswers,
       score: Math.round(percentage * 100) / 100, // percentage for frontend
       percentage: Math.round(percentage * 100) / 100,
@@ -228,14 +249,22 @@ class QuizService {
       passed,
       attemptNumber: attemptsCount + 1,
       completedAt: new Date(),
-    });
+    };
 
-    // Update progress
-    try {
-      const progressService = (await import("./progressService.js")).default;
-      await progressService.markQuizProgress(userId, quizId, Math.round(percentage * 100) / 100, passed, attempt._id);
-    } catch (progressError) {
-      console.log("Failed to update quiz progress:", progressError.message);
+    if (quiz.courseId) {
+      attemptData.courseId = quiz.courseId;
+    }
+
+    const attempt = await QuizAttempt.create(attemptData);
+
+    // Update progress (only if tied to a course)
+    if (quiz.courseId) {
+      try {
+        const progressService = (await import("./progressService.js")).default;
+        await progressService.markQuizProgress(userId, quizId, Math.round(percentage * 100) / 100, passed, attempt._id);
+      } catch (progressError) {
+        console.log("Failed to update quiz progress:", progressError.message);
+      }
     }
 
     // Update quiz stats

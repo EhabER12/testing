@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import {
   getQuizzes,
   getQuiz,
+  getQuizBySlug,
   createQuiz,
   updateQuiz,
   deleteQuiz,
@@ -107,6 +108,19 @@ const quizSlice = createSlice({
         state.currentQuiz = action.payload;
       })
       .addCase(getQuiz.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      // Get quiz by slug
+      .addCase(getQuizBySlug.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(getQuizBySlug.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.currentQuiz = action.payload;
+      })
+      .addCase(getQuizBySlug.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
