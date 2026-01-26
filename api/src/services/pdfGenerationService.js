@@ -58,30 +58,74 @@ class PDFGenerationService {
 
   /**
    * Reshape and process Arabic text for PDF rendering
-   * Uses arabic-reshaper for proper glyph shaping
+   * 
+   * arabic-reshaper.convertArabic() converts Arabic text to Presentation Forms
+   * which are already in the correct visual order for left-to-right rendering.
+   * DO NOT reverse the output - it's already in display order.
    */
   reshapeArabic(text) {
     if (!text) return "";
     const stringText = String(text);
     
+    // If no Arabic, return as-is
     if (!this.containsArabic(stringText)) return stringText;
 
     try {
-      const hasLatin = this.containsLatin(stringText);
-      const hasNumbers = /\d/.test(stringText);
-      
-      if (hasLatin || hasNumbers) {
-        return this.processBidiText(stringText);
-      } else {
-        // Pure Arabic: reshape and reverse
-        const reshaped = arabicReshaper.reshape(stringText);
-        return reshaped.split("").reverse().join("");
-      }
+      // Convert to Arabic Presentation Forms (connected letter shapes)
+      // The output is already in visual LTR order - DO NOT REVERSE
+      return arabicReshaper.convertArabic(stringText);
     } catch (error) {
-      console.error("Arabic reshaping error:", error.message, "for text:", stringText.substring(0, 50));
-      // Fallback: just reverse the text
-      return stringText.split("").reverse().join("");
+      console.error("Arabic text processing error:", error.message);
+      return stringText;
     }
+  }
+
+  /**
+   * Reverse a string properly (handles surrogate pairs)
+   */
+  reverseString(str) {
+    // Use Array.from to handle Unicode properly (including surrogate pairs)
+    return Array.from(str).reverse().join('');
+  }
+
+  /**
+   * Process mixed Arabic/Latin/Number text for PDF (BiDi)
+   */
+  processMixedBidiText(text) {
+    // First convert to presentation forms
+    const shaped = arabicReshaper.convertArabic(text);
+    
+    // Split into runs of Arabic vs non-Arabic
+    const runs = [];
+    let currentRun = '';
+    let currentIsArabic = null;
+    
+    for (const char of Array.from(shaped)) {
+      const isArabic = this.containsArabic(char);
+      
+      if (currentIsArabic === null) {
+        currentIsArabic = isArabic;
+        currentRun = char;
+      } else if (isArabic === currentIsArabic || (!isArabic && /[\s]/.test(char))) {
+        currentRun += char;
+      } else {
+        if (currentRun) runs.push({ text: currentRun, rtl: currentIsArabic });
+        currentRun = char;
+        currentIsArabic = isArabic;
+      }
+    }
+    if (currentRun) runs.push({ text: currentRun, rtl: currentIsArabic });
+    
+    // For RTL base direction: reverse run order, and reverse RTL runs internally
+    const processedRuns = runs.map(run => {
+      if (run.rtl) {
+        return this.reverseString(run.text);
+      }
+      return run.text;
+    });
+    
+    // Reverse the order of runs for RTL base
+    return processedRuns.reverse().join('');
   }
 
   /**
@@ -129,7 +173,8 @@ class PDFGenerationService {
       const processedRuns = runs.map(run => {
         if (run.type === 'rtl') {
           try {
-            const reshaped = arabicReshaper.reshape(run.text);
+            // Note: arabic-reshaper uses convertArabic, not reshape
+            const reshaped = arabicReshaper.convertArabic(run.text);
             return { text: reshaped.split("").reverse().join(""), type: 'rtl' };
           } catch (e) {
             return { text: run.text.split("").reverse().join(""), type: 'rtl' };
@@ -151,6 +196,14 @@ class PDFGenerationService {
   }
 
   /**
+   * Get text direction based on content
+   */
+  getTextDirection(text) {
+    if (!text) return 'ltr';
+    return this.isRtlText(text) ? 'rtl' : 'ltr';
+  }
+
+  /**
    * Detect locale from certificate data
    */
   detectLocale(certificateData) {
@@ -166,24 +219,27 @@ class PDFGenerationService {
 
   /**
    * Get font filename with weight support
+   * NOTE: For Arabic text, Amiri is preferred as it has full Arabic glyph support
    */
   getFontFilename(fontFamily, fontWeight = "normal") {
     const normalizedWeight = this.normalizeFontWeight(fontWeight);
     const isBold = this.isBoldWeight(fontWeight);
     
     // Font map with weight variants
+    // For Arabic fonts, we prioritize those with proper Arabic glyph coverage
+    // Use NotoKufiArabic as it has better Presentation Forms support
     const fontMap = {
-      "Cairo": { regular: "Cairo-Regular.ttf", bold: "Cairo-Bold.ttf" },
-      "Amiri": { regular: "Amiri-Regular.ttf", bold: "Amiri-Bold.ttf" },
-      "Tajawal": { regular: "Tajawal-Regular.ttf", bold: "Tajawal-Bold.ttf" },
-      "Almarai": { regular: "Almarai-Regular.ttf", bold: "Almarai-Bold.ttf" },
-      "Noto Kufi Arabic": { regular: "NotoKufiArabic-Regular.ttf", bold: "NotoKufiArabic-Bold.ttf" },
+      "Cairo": { regular: "NotoKufiArabic-Regular.ttf", bold: "NotoKufiArabic-Regular.ttf" },
+      "Amiri": { regular: "Amiri-Regular.ttf", bold: "Amiri-Regular.ttf" },
+      "Tajawal": { regular: "Tajawal-Regular.ttf", bold: "Tajawal-Regular.ttf" },
+      "Almarai": { regular: "Almarai-Regular.ttf", bold: "Almarai-Regular.ttf" },
+      "Noto Kufi Arabic": { regular: "NotoKufiArabic-Regular.ttf", bold: "NotoKufiArabic-Regular.ttf" },
       "Great Vibes": { regular: "GreatVibes-Regular.ttf", bold: "GreatVibes-Regular.ttf" },
-      "Dancing Script": { regular: "DancingScript-Regular.ttf", bold: "DancingScript-Bold.ttf" },
+      "Dancing Script": { regular: "DancingScript-Regular.ttf", bold: "DancingScript-Regular.ttf" },
       "Pacifico": { regular: "Pacifico-Regular.ttf", bold: "Pacifico-Regular.ttf" },
     };
 
-    const fontConfig = fontMap[fontFamily] || fontMap["Cairo"];
+    const fontConfig = fontMap[fontFamily] || fontMap["Cairo"]; // Default to NotoKufiArabic via Cairo mapping
     return isBold ? fontConfig.bold : fontConfig.regular;
   }
 
@@ -646,8 +702,9 @@ class PDFGenerationService {
       console.log('raw courseName:', JSON.stringify(data.courseName));
       console.log('==========================');
 
+      // Format date - always use English format to avoid BiDi issues
       const issuedDate = new Date(data.issuedAt || Date.now()).toLocaleDateString(
-        locale === "ar" ? "ar-EG" : "en-US",
+        "en-US",
         { year: "numeric", month: "long", day: "numeric" }
       );
 

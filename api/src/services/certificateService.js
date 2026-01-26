@@ -521,11 +521,11 @@ class CertificateService {
     console.log('=== RAW CERTIFICATE DATA ===');
     console.log('certificate._id:', certificate._id);
     console.log('certificate.certificateNumber:', certificate.certificateNumber);
-    console.log('certificate.studentName:', certificate.studentName);
-    console.log('certificate.courseName:', certificate.courseName);
-    console.log('certificate.userId:', certificate.userId);
-    console.log('certificate.courseId:', certificate.courseId);
-    console.log('certificate.packageId:', certificate.packageId);
+    console.log('certificate.studentName:', JSON.stringify(certificate.studentName));
+    console.log('certificate.courseName:', JSON.stringify(certificate.courseName));
+    console.log('certificate.userId:', certificate.userId ? { _id: certificate.userId._id, fullName: certificate.userId.fullName } : null);
+    console.log('certificate.courseId:', certificate.courseId ? { _id: certificate.courseId._id, title: certificate.courseId.title } : null);
+    console.log('certificate.packageId:', certificate.packageId ? { _id: certificate.packageId._id, name: certificate.packageId.name } : null);
     console.log('==============================');
 
     // Get template (use default if not specified)
@@ -603,65 +603,69 @@ class CertificateService {
     });
 
     // Prepare certificate data with locale hint
-    // Use fallbacks from populated relations if direct values are missing
-    let studentNameData = certificate.studentName;
-    let courseNameData = certificate.courseName;
+    // ALWAYS use fresh data from populated relations for accuracy
+    // Stored values in certificate might be stale or empty
+    
+    // Get student name - prefer populated user data over stored values
+    let studentNameData = { ar: '', en: '' };
+    if (certificate.userId && certificate.userId.fullName) {
+      // Use fresh data from populated user
+      studentNameData = {
+        ar: certificate.userId.fullName.ar || certificate.userId.fullName.en || '',
+        en: certificate.userId.fullName.en || certificate.userId.fullName.ar || ''
+      };
+      console.log('Using fresh student name from populated user:', JSON.stringify(studentNameData));
+    } else if (certificate.studentName && (certificate.studentName.ar || certificate.studentName.en)) {
+      // Fallback to stored values if no populated user
+      studentNameData = certificate.studentName;
+      console.log('Using stored student name:', JSON.stringify(studentNameData));
+    }
 
-    // DEBUG: Log initial values
-    console.log('=== INITIAL CERTIFICATE DATA ===');
+    // Get course/package name - ALWAYS prefer populated relation data
+    let courseNameData = { ar: '', en: '' };
+    if (certificate.courseId && certificate.courseId.title) {
+      // Use fresh data from populated course
+      courseNameData = {
+        ar: certificate.courseId.title.ar || certificate.courseId.title.en || '',
+        en: certificate.courseId.title.en || certificate.courseId.title.ar || ''
+      };
+      console.log('Using fresh course name from populated course:', JSON.stringify(courseNameData));
+    } else if (certificate.packageId && certificate.packageId.name) {
+      // Use fresh data from populated package
+      courseNameData = {
+        ar: certificate.packageId.name.ar || certificate.packageId.name.en || '',
+        en: certificate.packageId.name.en || certificate.packageId.name.ar || ''
+      };
+      console.log('Using fresh package name from populated package:', JSON.stringify(courseNameData));
+    } else if (certificate.courseName && (certificate.courseName.ar || certificate.courseName.en)) {
+      // Last resort: use stored values
+      courseNameData = certificate.courseName;
+      console.log('Using stored course name:', JSON.stringify(courseNameData));
+    }
+
+    // DEBUG: Log resolved values
+    console.log('=== RESOLVED DATA FROM POPULATED RELATIONS ===');
     console.log('studentNameData:', JSON.stringify(studentNameData));
     console.log('courseNameData:', JSON.stringify(courseNameData));
 
-    // Check if studentName data is valid (has actual content, not just empty strings)
-    const hasValidStudentName = studentNameData && 
-      typeof studentNameData === 'object' &&
-      ((studentNameData.ar && studentNameData.ar.trim()) || (studentNameData.en && studentNameData.en.trim()));
-
-    // Check if courseName data is valid
-    const hasValidCourseName = courseNameData && 
-      typeof courseNameData === 'object' &&
-      ((courseNameData.ar && courseNameData.ar.trim()) || (courseNameData.en && courseNameData.en.trim()));
+    // Check if data is valid (has actual content)
+    const hasValidStudentName = (studentNameData.ar && studentNameData.ar.trim()) || 
+                                (studentNameData.en && studentNameData.en.trim());
+    const hasValidCourseName = (courseNameData.ar && courseNameData.ar.trim()) || 
+                               (courseNameData.en && courseNameData.en.trim());
 
     console.log('hasValidStudentName:', hasValidStudentName);
     console.log('hasValidCourseName:', hasValidCourseName);
 
-    // Fallback: Get student name from populated user if missing
+    // Apply defaults if data is still missing
     if (!hasValidStudentName) {
-      console.log('Student name invalid, checking populated user...');
-      if (certificate.userId && certificate.userId.fullName) {
-        studentNameData = {
-          ar: certificate.userId.fullName.ar || certificate.userId.fullName.en || 'الطالب',
-          en: certificate.userId.fullName.en || certificate.userId.fullName.ar || 'Student'
-        };
-        console.log('Using student name from populated user:', JSON.stringify(studentNameData));
-      } else {
-        studentNameData = { ar: 'الطالب', en: 'Student' };
-        console.log('Using default student name');
-      }
+      console.log('No valid student name found, using defaults');
+      studentNameData = { ar: 'الطالب', en: 'Student' };
     }
 
-    // Fallback: Get course/package name from populated relations if missing
     if (!hasValidCourseName) {
-      console.log('Course name invalid, checking populated relations...');
-      // Try course first
-      if (certificate.courseId && certificate.courseId.title) {
-        courseNameData = {
-          ar: certificate.courseId.title.ar || certificate.courseId.title.en || 'الدورة',
-          en: certificate.courseId.title.en || certificate.courseId.title.ar || 'Course'
-        };
-        console.log('Using course name from populated course:', JSON.stringify(courseNameData));
-      }
-      // Then try package
-      else if (certificate.packageId && certificate.packageId.name) {
-        courseNameData = {
-          ar: certificate.packageId.name.ar || certificate.packageId.name.en || 'الباقة',
-          en: certificate.packageId.name.en || certificate.packageId.name.ar || 'Package'
-        };
-        console.log('Using package name from populated package:', JSON.stringify(courseNameData));
-      } else {
-        courseNameData = { ar: 'الدورة', en: 'Course' };
-        console.log('Using default course name');
-      }
+      console.log('No valid course name found, using defaults');
+      courseNameData = { ar: 'الدورة', en: 'Course' };
     }
 
     // Ensure we have valid objects with trimmed values
@@ -721,46 +725,15 @@ class CertificateService {
   }
 
   /**
-   * Get certificate PDF (generate if not exists)
+   * Get certificate PDF (always regenerate for data freshness)
    */
   async getCertificatePDF(certificateId) {
     try {
-      const certificate = await Certificate.findById(certificateId);
-
-      if (!certificate) {
-        throw new Error("Certificate not found");
-      }
-
-      // Always regenerate PDF if:
-      // 1. PDF was never generated, OR
-      // 2. PDF URL is missing, OR
-      // 3. PDF file doesn't exist on disk
-      const shouldRegenerate = !certificate.pdfGenerated || !certificate.pdfUrl;
-
-      if (shouldRegenerate) {
-        console.log(`Regenerating PDF for certificate ${certificate.certificateNumber}`);
-        const { pdfBuffer } = await this.generateCertificatePDF(certificateId);
-        return pdfBuffer;
-      }
-
-      // Try to read existing PDF
-      try {
-        const pdfPath = path.join(
-          process.cwd(),
-          "uploads",
-          "certificates",
-          `${certificate.certificateNumber}.pdf`
-        );
-        const pdfBuffer = await fs.readFile(pdfPath);
-        console.log(`Using existing PDF for certificate ${certificate.certificateNumber}`);
-        return pdfBuffer;
-      } catch (error) {
-        console.error('Error reading existing PDF:', error.message);
-        // Regenerate if file not found
-        console.log(`Regenerating PDF for certificate ${certificate.certificateNumber} due to file read error`);
-        const { pdfBuffer } = await this.generateCertificatePDF(certificateId);
-        return pdfBuffer;
-      }
+      // Always regenerate PDF to ensure data freshness and correct course/student info
+      // Old cached PDFs might have stale or incorrect data
+      console.log(`Generating fresh PDF for certificate ${certificateId}`);
+      const { pdfBuffer } = await this.generateCertificatePDF(certificateId);
+      return pdfBuffer;
     } catch (error) {
       console.error('Error in getCertificatePDF:', error);
       throw error;
