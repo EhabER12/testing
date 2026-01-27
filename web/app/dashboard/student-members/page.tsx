@@ -95,6 +95,7 @@ export default function StudentMembersPage() {
   const [importResult, setImportResult] = useState<any>(null);
   const [selectedPackageId, setSelectedPackageId] = useState<string>("all");
   const [selectedGovernorate, setSelectedGovernorate] = useState<string>("all");
+  const [showOverdueOnly, setShowOverdueOnly] = useState<boolean>(false);
 
   const { studentMembers, isLoading } = useAppSelector((state) => state.studentMembers);
   const { packages } = useAppSelector((state) => state.packages);
@@ -339,6 +340,20 @@ export default function StudentMembersPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Select value={showOverdueOnly ? "overdue" : "all"} onValueChange={(val) => setShowOverdueOnly(val === "overdue")}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder={isRtl ? "حالة الدفع" : "Payment Status"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{isRtl ? "جميع الطلاب" : "All Students"}</SelectItem>
+                    <SelectItem value="overdue">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                        {isRtl ? "المتأخرين فقط" : "Overdue Only"}
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardHeader>
@@ -374,6 +389,7 @@ export default function StudentMembersPage() {
                     {studentMembers
                       .filter(s => selectedPackageId === "all" || (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId))
                       .filter(s => selectedGovernorate === "all" || s.governorate === selectedGovernorate)
+                      .filter(s => !showOverdueOnly || s.status === "overdue")
                       .map((student, index) => (
                         <TableRow key={student.id || student._id || index}>
                           <TableCell className="font-medium">
@@ -434,10 +450,10 @@ export default function StudentMembersPage() {
                           </TableCell>
                         </TableRow>
                       ))}
-                    {studentMembers.filter(s => selectedPackageId === "all" || (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).filter(s => selectedGovernorate === "all" || s.governorate === selectedGovernorate).length === 0 && (
+                    {studentMembers.filter(s => selectedPackageId === "all" || (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).filter(s => selectedGovernorate === "all" || s.governorate === selectedGovernorate).filter(s => !showOverdueOnly || s.status === "overdue").length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} className="h-24 text-center">
-                          {isRtl ? "لا يوجد طلاب في هذه الباقة" : "No students in this package"}
+                          {isRtl ? "لا يوجد طلاب يطابقون الفلاتر المحددة" : "No students match the selected filters"}
                         </TableCell>
                       </TableRow>
                     )}
