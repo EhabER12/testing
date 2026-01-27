@@ -222,6 +222,10 @@ const authorityBarSchema = new mongoose.Schema({
     ar: { type: String, default: "موثوق من قبل المؤسسات الرائدة" },
     en: { type: String, default: "Trusted by Leading Institutions" },
   },
+  order: {
+    type: Number,
+    default: 1,
+  },
   items: [{
     icon: { type: String, default: "shield" }, // shield, users, award, check, star
     text: {
@@ -244,6 +248,10 @@ const reviewsSectionSchema = new mongoose.Schema({
   subtitle: {
     ar: { type: String, default: "ماذا يقول طلابنا عنا" },
     en: { type: String, default: "What our students say about us" },
+  },
+  order: {
+    type: Number,
+    default: 6,
   },
   showRating: {
     type: Boolean,
@@ -274,6 +282,10 @@ const whyGenounSchema = new mongoose.Schema({
   subtitle: {
     ar: { type: String, default: "منصة متكاملة لحفظ القرآن الكريم" },
     en: { type: String, default: "Complete platform for Quran memorization" },
+  },
+  order: {
+    type: Number,
+    default: 2,
   },
   features: [{
     icon: { type: String, default: "book" }, // book, users, award, video, check

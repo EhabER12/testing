@@ -167,6 +167,7 @@ export interface AuthorityBarItem {
 export interface AuthorityBarSettings {
   isEnabled: boolean;
   title: { ar: string; en: string };
+  order?: number;
   items: AuthorityBarItem[];
 }
 
@@ -175,6 +176,7 @@ export interface ReviewsSectionSettings {
   isEnabled: boolean;
   title: { ar: string; en: string };
   subtitle: { ar: string; en: string };
+  order?: number;
   showRating: boolean;
   showDate: boolean;
   displayCount: number;
@@ -191,6 +193,7 @@ export interface WhyGenounSettings {
   isEnabled: boolean;
   title: { ar: string; en: string };
   subtitle: { ar: string; en: string };
+  order?: number;
   features: WhyGenounFeature[];
 }
 

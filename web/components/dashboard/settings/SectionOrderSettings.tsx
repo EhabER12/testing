@@ -6,59 +6,105 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { HomepageSections } from "@/store/services/settingsService";
+import { HomepageSections, AuthorityBarSettings, ReviewsSectionSettings, WhyGenounSettings } from "@/store/services/settingsService";
 import { GripVertical, Eye, EyeOff, ArrowUp, ArrowDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SectionOrderItem {
-  key: keyof HomepageSections;
+  key: string;
   label: { ar: string; en: string };
   order: number;
   isEnabled: boolean;
+  type: 'homepage' | 'authority' | 'reviews' | 'whyGenoun';
 }
 
 interface SectionOrderSettingsProps {
   sections: HomepageSections;
   setSections: (sections: HomepageSections) => void;
+  authorityBar: AuthorityBarSettings;
+  setAuthorityBar: (settings: AuthorityBarSettings) => void;
+  reviewsSettings: ReviewsSectionSettings;
+  setReviewsSettings: (settings: ReviewsSectionSettings) => void;
+  whyGenounSettings: WhyGenounSettings;
+  setWhyGenounSettings: (settings: WhyGenounSettings) => void;
   formLang: "en" | "ar";
 }
 
 export const SectionOrderSettings: React.FC<SectionOrderSettingsProps> = ({
   sections,
   setSections,
+  authorityBar,
+  setAuthorityBar,
+  reviewsSettings,
+  setReviewsSettings,
+  whyGenounSettings,
+  setWhyGenounSettings,
   formLang,
 }) => {
   const [orderedSections, setOrderedSections] = useState<SectionOrderItem[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   // Section labels
-  const sectionLabels: Record<keyof HomepageSections, { ar: string; en: string }> = {
+  const allSectionLabels: Record<string, { ar: string; en: string }> = {
     hero: { ar: "القسم الرئيسي", en: "Hero Section" },
+    authorityBar: { ar: "شريط الثقة", en: "Authority Bar" },
     features: { ar: "المميزات", en: "Features" },
+    whyGenoun: { ar: "لماذا جنون", en: "Why Genoun" },
     services: { ar: "الخدمات", en: "Services" },
     stats: { ar: "الإحصائيات", en: "Statistics" },
     about: { ar: "من نحن", en: "About Us" },
+    testimonials: { ar: "آراء الطلاب", en: "Reviews" },
     cta: { ar: "دعوة للعمل", en: "Call to Action" },
-    testimonials: { ar: "الشهادات", en: "Testimonials" },
   };
 
   // Initialize ordered sections from props
   useEffect(() => {
-    const items: SectionOrderItem[] = Object.keys(sections).map((key) => {
-      const sectionKey = key as keyof HomepageSections;
-      const section = sections[sectionKey];
-      return {
-        key: sectionKey,
-        label: sectionLabels[sectionKey],
+    const items: SectionOrderItem[] = [];
+
+    // Add homepage sections
+    (Object.keys(sections) as Array<keyof HomepageSections>).forEach((key) => {
+      const section = sections[key];
+      items.push({
+        key: key,
+        label: allSectionLabels[key] || { ar: key, en: key },
         order: section.order ?? 0,
         isEnabled: section.isEnabled,
-      };
+        type: 'homepage',
+      });
     });
 
-    // Sort by order
-    items.sort((a, b) => a.order - b.order);
-    setOrderedSections(items);
-  }, [sections]);
+    // Add authority bar
+    items.push({
+      key: 'authorityBar',
+      label: allSectionLabels.authorityBar,
+      order: authorityBar.order ?? 1,
+      isEnabled: authorityBar.isEnabled,
+      type: 'authority',
+    });
+
+    // Add reviews section
+    items.push({
+      key: 'testimonials',
+      label: allSectionLabels.testimonials,
+      order: reviewsSettings.order ?? 6,
+      isEnabled: reviewsSettings.isEnabled,
+      type: 'reviews',
+    });
+
+    // Add why genoun section
+    items.push({
+      key: 'whyGenoun',
+      label: allSectionLabels.whyGenoun,
+      order: whyGenounSettings.order ?? 2,
+      isEnabled: whyGenounSettings.isEnabled,
+      type: 'whyGenoun',
+    });
+
+    // Remove duplicates and sort by order
+    const uniqueItems = Array.from(new Map(items.map(item => [item.key, item])).values());
+    uniqueItems.sort((a, b) => a.order - b.order);
+    setOrderedSections(uniqueItems);
+  }, [sections, authorityBar, reviewsSettings, whyGenounSettings]);
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -72,10 +118,7 @@ export const SectionOrderSettings: React.FC<SectionOrderSettingsProps> = ({
     const newOrdered = [...orderedSections];
     const draggedItem = newOrdered[draggedIndex];
     
-    // Remove dragged item
     newOrdered.splice(draggedIndex, 1);
-    
-    // Insert at new position
     newOrdered.splice(index, 0, draggedItem);
     
     setOrderedSections(newOrdered);
@@ -113,17 +156,43 @@ export const SectionOrderSettings: React.FC<SectionOrderSettingsProps> = ({
   const applyOrderChanges = (ordered?: SectionOrderItem[]) => {
     const items = ordered || orderedSections;
     const updatedSections = { ...sections };
+    let updatedAuthorityBar = { ...authorityBar };
+    let updatedReviewsSettings = { ...reviewsSettings };
+    let updatedWhyGenounSettings = { ...whyGenounSettings };
 
     items.forEach((item, index) => {
-      // Create a completely new object to avoid mutation
-      updatedSections[item.key] = {
-        ...sections[item.key],
-        order: index,
-        isEnabled: item.isEnabled,
-      };
+      if (item.type === 'homepage' && item.key in sections) {
+        const sectionKey = item.key as keyof HomepageSections;
+        updatedSections[sectionKey] = {
+          ...sections[sectionKey],
+          order: index,
+          isEnabled: item.isEnabled,
+        };
+      } else if (item.type === 'authority') {
+        updatedAuthorityBar = {
+          ...authorityBar,
+          order: index,
+          isEnabled: item.isEnabled,
+        };
+      } else if (item.type === 'reviews') {
+        updatedReviewsSettings = {
+          ...reviewsSettings,
+          order: index,
+          isEnabled: item.isEnabled,
+        };
+      } else if (item.type === 'whyGenoun') {
+        updatedWhyGenounSettings = {
+          ...whyGenounSettings,
+          order: index,
+          isEnabled: item.isEnabled,
+        };
+      }
     });
 
     setSections(updatedSections);
+    setAuthorityBar(updatedAuthorityBar);
+    setReviewsSettings(updatedReviewsSettings);
+    setWhyGenounSettings(updatedWhyGenounSettings);
   };
 
   const handleOrderInputChange = (index: number, value: string) => {
@@ -133,7 +202,6 @@ export const SectionOrderSettings: React.FC<SectionOrderSettingsProps> = ({
     const newOrdered = [...orderedSections];
     newOrdered[index].order = newOrder;
     
-    // Sort by new order
     newOrdered.sort((a, b) => a.order - b.order);
     setOrderedSections(newOrdered);
     applyOrderChanges(newOrdered);

@@ -123,12 +123,12 @@ export default function HomeClient({
   // Create array of sections with their order
   const sections = [
     { key: 'hero', order: getSectionOrder('hero'), enabled: isSectionEnabled('hero'), component: <HeroSection locale={locale} settings={settings || undefined} /> },
-    { key: 'authorityBar', order: 0.5, enabled: true, component: <AuthorityBar locale={locale} settings={settings || undefined} /> },
-    { key: 'features', order: getSectionOrder('features'), enabled: isSectionEnabled('features'), component: <WhyGenoun locale={locale} settings={settings || undefined} /> },
+    { key: 'authorityBar', order: settings?.authorityBar?.order ?? 1, enabled: settings?.authorityBar?.isEnabled !== false, component: <AuthorityBar locale={locale} settings={settings || undefined} /> },
+    { key: 'whyGenoun', order: settings?.whyGenounSettings?.order ?? 2, enabled: settings?.whyGenounSettings?.isEnabled !== false, component: <WhyGenoun locale={locale} /> },
     { key: 'services', order: getSectionOrder('services'), enabled: isSectionEnabled('services'), component: <ServicesSection locale={locale} settings={settings || undefined} /> },
-    { key: 'about', order: getSectionOrder('about'), enabled: isSectionEnabled('about'), component: <MethodologySection locale={locale} settings={settings || undefined} /> },
-    { key: 'stats', order: getSectionOrder('stats'), enabled: isSectionEnabled('stats'), component: <ResultsSection locale={locale} settings={settings || undefined} /> },
-    { key: 'testimonials', order: getSectionOrder('testimonials'), enabled: isSectionEnabled('testimonials'), component: <ReviewsSection ref={reviewsRef} locale={locale} reviews={reviews} settings={settings || undefined} /> },
+    { key: 'about', order: getSectionOrder('about'), enabled: isSectionEnabled('about'), component: <MethodologySection locale={locale} /> },
+    { key: 'stats', order: getSectionOrder('stats'), enabled: isSectionEnabled('stats'), component: <ResultsSection locale={locale} /> },
+    { key: 'testimonials', order: settings?.reviewsSettings?.order ?? 6, enabled: settings?.reviewsSettings?.isEnabled !== false, component: <ReviewsSection ref={reviewsRef} locale={locale} reviews={reviews} settings={settings || undefined} /> },
     { key: 'cta', order: getSectionOrder('cta'), enabled: isSectionEnabled('cta'), component: <CTASection locale={locale} settings={settings || undefined} /> },
   ];
 

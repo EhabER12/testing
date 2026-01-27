@@ -1350,7 +1350,7 @@ export default function SettingsDashboardPage() {
               heroBackgroundPreview={heroBackgroundPreview}
               setHeroBackgroundPreview={setHeroBackgroundPreview}
               onHeroBackgroundFileChange={(file) => {
-                setFormData((prev) => ({ ...prev, heroBackgroundFile: file }));
+                setFormData((prev) => ({ ...prev, heroBackgroundFile: file || undefined }));
               }}
             />
 
@@ -1381,6 +1381,12 @@ export default function SettingsDashboardPage() {
             <SectionOrderSettings
               sections={homepageSections}
               setSections={setHomepageSections}
+              authorityBar={authorityBar}
+              setAuthorityBar={setAuthorityBar}
+              reviewsSettings={reviewsSettings}
+              setReviewsSettings={setReviewsSettings}
+              whyGenounSettings={whyGenounSettings}
+              setWhyGenounSettings={setWhyGenounSettings}
               formLang={formLang}
             />
           </TabsContent>
