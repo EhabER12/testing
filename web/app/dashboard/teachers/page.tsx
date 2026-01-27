@@ -123,12 +123,6 @@ export default function TeachersManagementPage() {
   const { studentMembers = [] } = useAppSelector((state) => state.studentMembers);
   const { user } = useAppSelector((state) => state.auth);
 
-  // Debug logging
-  useEffect(() => {
-    console.log("Student Members Data:", studentMembers);
-    console.log("Student Members Count:", studentMembers?.length || 0);
-  }, [studentMembers]);
-
   useEffect(() => {
     if (!isAuthenticated() || !user) {
       router.push("/login");
@@ -199,20 +193,27 @@ export default function TeachersManagementPage() {
   };
 
   const handleAddStudent = async () => {
-    if (!selectedGroup || !selectedStudentId) return;
+    if (!selectedGroup || !selectedStudentId) {
+      alert(isRtl ? "الرجاء اختيار مجموعة وطالب" : "Please select a group and student");
+      return;
+    }
     try {
+      console.log("Adding student:", selectedStudentId, "to group:", selectedGroup.id || selectedGroup._id);
       await dispatch(
         addStudentToGroup({
           groupId: (selectedGroup.id || selectedGroup._id)!,
           studentId: selectedStudentId,
         })
       ).unwrap();
+      alert(isRtl ? "تم إضافة الطالب بنجاح!" : "Student added successfully!");
       setIsAddStudentDialogOpen(false);
       setSelectedStudentId("");
       // Refresh the groups list to show updated student counts
       await dispatch(getTeacherGroups());
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to add student:", err);
+      const errorMsg = err?.message || err?.toString() || "Unknown error";
+      alert(isRtl ? `فشل إضافة الطالب: ${errorMsg}` : `Failed to add student: ${errorMsg}`);
     }
   };
 
@@ -927,26 +928,45 @@ export default function TeachersManagementPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+            <Select 
+              value={selectedStudentId} 
+              onValueChange={(val) => {
+                console.log("Student selected:", val);
+                setSelectedStudentId(val);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={t("admin.teachers.selectStudent")} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
                 {studentMembers && studentMembers.length > 0 ? (
-                  studentMembers.map((student) => {
-                    const studentId = (student.id || student._id)!;
-                    const isAlreadyInGroup = selectedGroup?.students.some(s => (s.studentId.id || s.studentId._id) === studentId);
-                    
-                    const studentName = getTextValue(student.studentName || student.name || { ar: "طالب", en: "Student" });
-                    const phoneNumber = student.whatsappNumber || student.phone || "N/A";
-                    
-                    return (
-                      <SelectItem key={studentId} value={studentId} disabled={isAlreadyInGroup}>
-                        {studentName} ({phoneNumber})
-                        {isAlreadyInGroup && ` - ${t("admin.teachers.alreadyInGroup")}`}
-                      </SelectItem>
-                    );
-                  })
+                  (() => {
+                    const availableStudents = studentMembers.filter((student) => {
+                      const studentId = (student.id || student._id)!;
+                      const isAlreadyInGroup = selectedGroup?.students.some(s => (s.studentId.id || s.studentId._id) === studentId);
+                      return !isAlreadyInGroup;
+                    });
+
+                    if (availableStudents.length === 0) {
+                      return (
+                        <SelectItem value="no-students" disabled>
+                          {isRtl ? "جميع الطلاب مضافين بالفعل" : "All students already added"}
+                        </SelectItem>
+                      );
+                    }
+
+                    return availableStudents.map((student) => {
+                      const studentId = (student.id || student._id)!;
+                      const studentName = getTextValue(student.studentName || student.name || { ar: "طالب", en: "Student" });
+                      const phoneNumber = student.whatsappNumber || student.phone || "N/A";
+                      
+                      return (
+                        <SelectItem key={studentId} value={studentId}>
+                          {studentName} ({phoneNumber})
+                        </SelectItem>
+                      );
+                    });
+                  })()
                 ) : (
                   <SelectItem value="no-students" disabled>
                     {t("admin.teachers.noStudents")}
@@ -954,15 +974,23 @@ export default function TeachersManagementPage() {
                 )}
               </SelectContent>
             </Select>
+            {selectedStudentId && (
+              <p className="text-sm text-green-600 mt-2">
+                {isRtl ? "تم اختيار طالب" : "Student selected"}: {selectedStudentId}
+              </p>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddStudentDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsAddStudentDialogOpen(false);
+              setSelectedStudentId("");
+            }}>
               {t("admin.common.cancel")}
             </Button>
             <Button
               className="bg-genoun-green hover:bg-genoun-green/90"
               onClick={handleAddStudent}
-              disabled={!selectedStudentId}
+              disabled={!selectedStudentId || selectedStudentId === "no-students"}
             >
               {t("admin.teachers.addStudent")}
             </Button>
