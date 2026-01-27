@@ -5,7 +5,7 @@ const quizAttemptSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "User ID is required"],
+      required: false, // Allow guest attempts
       index: true,
     },
     quizId: {

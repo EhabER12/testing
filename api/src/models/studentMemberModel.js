@@ -20,6 +20,10 @@ const studentMemberSchema = new mongoose.Schema(
       required: [true, "Phone number is required"],
       index: true,
     },
+    governorate: {
+      type: String,
+      index: true,
+    },
     age: {
       type: Number,
       min: 3,
@@ -150,6 +154,8 @@ const studentMemberSchema = new mongoose.Schema(
 // Indexes
 studentMemberSchema.index({ status: 1, nextDueDate: 1 });
 studentMemberSchema.index({ assignedTeacherId: 1, status: 1 });
+studentMemberSchema.index({ governorate: 1, status: 1 });
+studentMemberSchema.index({ packageId: 1, governorate: 1 });
 
 // Virtual: Days left until renewal
 studentMemberSchema.virtual("daysLeft").get(function () {

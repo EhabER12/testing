@@ -105,6 +105,7 @@ export class StudentMemberService {
         const memberData = {
           name: { ar: record.name, en: record.name },
           phone: record.phone,
+          governorate: record.governorate || record.province || "", // Support both column names
           packageId: pkg._id,
           startDate: startDate,
           billingDay: billingDay,
@@ -130,12 +131,13 @@ export class StudentMemberService {
 
   // Get all student members with filters
   async getAllMembers(filters = {}, options = {}) {
-    const { status, assignedTeacherId, search } = filters;
+    const { status, assignedTeacherId, governorate, search } = filters;
 
     const query = {};
 
     if (status) query.status = status;
     if (assignedTeacherId) query.assignedTeacherId = assignedTeacherId;
+    if (governorate) query.governorate = governorate;
 
     if (search) {
       query.$or = [

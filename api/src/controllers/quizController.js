@@ -170,7 +170,7 @@ export const submitQuizAttempt = async (req, res, next) => {
     }
 
     const attempt = await quizService.submitQuizAttempt(
-      req.user._id,
+      req.user?._id,
       quizId,
       answers
     );

@@ -47,6 +47,7 @@ export default function EditStudentMemberPage() {
         nameAr: "",
         nameEn: "",
         phone: "",
+        governorate: "",
         status: "",
         packageId: "",
         startDate: "",
@@ -80,6 +81,7 @@ export default function EditStudentMemberPage() {
                 nameAr: currentStudentMember.name?.ar || "",
                 nameEn: currentStudentMember.name?.en || "",
                 phone: currentStudentMember.phone || "",
+                governorate: currentStudentMember.governorate || "",
                 status: currentStudentMember.status || "active",
                 packageId: currentStudentMember.packageId?.id || currentStudentMember.packageId?._id || "",
                 startDate: currentStudentMember.startDate ? format(new Date(currentStudentMember.startDate), "yyyy-MM-dd") : "",
@@ -100,6 +102,7 @@ export default function EditStudentMemberPage() {
                 // Ideally we should have separate fields or just one name field that maps to both if simple
                 // Let's support separate if UI allows, here standard simple edit
                 phone: formData.phone,
+                governorate: formData.governorate,
                 status: formData.status as any,
                 packageId: formData.packageId,
                 startDate: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
@@ -179,6 +182,14 @@ export default function EditStudentMemberPage() {
                                     value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                     required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>{isRtl ? "المحافظة" : "Governorate"}</Label>
+                                <Input
+                                    value={formData.governorate}
+                                    onChange={(e) => setFormData({ ...formData, governorate: e.target.value })}
+                                    placeholder={isRtl ? "مثال: القاهرة" : "e.g., Cairo"}
                                 />
                             </div>
                             <div className="space-y-2">

@@ -247,18 +247,21 @@ class QuizService {
       throw new Error("Quiz is not published yet");
     }
 
-    // Check previous attempts
-    const previousAttempts = await QuizAttempt.find({ userId, quizId });
-    const attemptsCount = previousAttempts.length;
+    // Check previous attempts (only for registered users)
+    let attemptsCount = 0;
+    if (userId) {
+      const previousAttempts = await QuizAttempt.find({ userId, quizId });
+      attemptsCount = previousAttempts.length;
 
-    if (
-      quiz.attemptsAllowed &&
-      quiz.attemptsAllowed > 0 &&
-      attemptsCount >= quiz.attemptsAllowed
-    ) {
-      throw new Error(
-        `Maximum attempts (${quiz.attemptsAllowed}) reached for this quiz`
-      );
+      if (
+        quiz.attemptsAllowed &&
+        quiz.attemptsAllowed > 0 &&
+        attemptsCount >= quiz.attemptsAllowed
+      ) {
+        throw new Error(
+          `Maximum attempts (${quiz.attemptsAllowed}) reached for this quiz`
+        );
+      }
     }
 
     // Calculate score

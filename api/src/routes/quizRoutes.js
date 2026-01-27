@@ -34,7 +34,7 @@ router.get("/my/all", protect, getMyQuizzes);
 router.get("/course/:courseId", protect, getQuizzesByCourse);
 router.get("/section/:sectionId", protect, getQuizzesBySection);
 router.get("/:id", optionalAuth, getQuizById);
-router.post("/:quizId/attempt", protect, submitQuizAttempt);
+router.post("/:quizId/attempt", optionalAuth, submitQuizAttempt);
 router.get("/:quizId/attempts/me", protect, getUserAttempts);
 router.get("/:quizId/attempts/me/best", protect, getUserBestAttempt);
 router.get(

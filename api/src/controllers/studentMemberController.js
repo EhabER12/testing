@@ -12,6 +12,7 @@ export const getMembers = async (req, res, next) => {
     const filters = {
       status: req.query.status,
       assignedTeacherId: req.query.assignedTeacherId,
+      governorate: req.query.governorate,
       search: req.query.search,
     };
 

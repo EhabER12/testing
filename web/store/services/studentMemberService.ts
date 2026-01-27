@@ -13,6 +13,7 @@ export interface StudentMember {
   };
   name: BilingualText;
   phone: string;
+  governorate?: string;
   startDate: string;
   billingDay: number;
   nextDueDate: string;

@@ -169,20 +169,18 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
               <AlertCircle className="h-5 w-5" />
               <p>{isRtl ? "لقد استنفدت جميع المحاولات المتاحة لهذا الاختبار" : "You have reached the maximum number of attempts for this quiz"}</p>
             </div>
-          ) : !user && currentQuiz.linkedTo === "general" ? (
+          ) : (
             <div className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg flex items-center gap-3 text-blue-800 border border-blue-100">
-                <AlertCircle className="h-5 w-5" />
-                <p>{isRtl ? "يرجى تسجيل الدخول لحفظ نتائجك وتتبع محاولاتك" : "Please login to save your results and track attempts"}</p>
-              </div>
-              <Button onClick={() => window.location.href = `/${locale}/login?redirect=${encodeURIComponent(window.location.pathname)}`} className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg">
-                {isRtl ? "تسجيل الدخول" : "Login to Take Quiz"}
+              {!user && currentQuiz.linkedTo === "general" && (
+                <div className="bg-blue-50 p-3 rounded-lg flex items-center gap-3 text-blue-800 border border-blue-100 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  <p>{isRtl ? "ستتمكن من إجراء الاختبار كضيف، لكن لن يتم حفظ نتائجك في حساب." : "You can take the quiz as a guest, but your results won't be saved to an account."}</p>
+                </div>
+              )}
+              <Button onClick={handleStart} className="w-full bg-genoun-green hover:bg-genoun-green/90 h-12 text-lg">
+                {isRtl ? "ابدأ الاختبار" : "Start Quiz"}
               </Button>
             </div>
-          ) : (
-            <Button onClick={handleStart} className="w-full bg-genoun-green hover:bg-genoun-green/90 h-12 text-lg">
-              {isRtl ? "ابدأ الاختبار" : "Start Quiz"}
-            </Button>
           )}
         </CardContent>
       </Card>
