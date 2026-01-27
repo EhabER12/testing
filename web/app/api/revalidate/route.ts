@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
 // Secret token to protect the revalidation endpoint
@@ -18,7 +18,7 @@ const REVALIDATE_SECRET =
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { secret, path, all } = body;
+    const { secret, path, all, tag } = body;
 
     // Validate secret token
     if (secret !== REVALIDATE_SECRET) {
@@ -26,6 +26,17 @@ export async function POST(request: NextRequest) {
         { success: false, message: "Invalid secret token" },
         { status: 401 }
       );
+    }
+
+    // Revalidate by tag (most efficient)
+    if (tag) {
+      console.log(`🔄 Revalidating tag: ${tag}`);
+      revalidateTag(tag);
+      return NextResponse.json({
+        success: true,
+        message: `Tag revalidated: ${tag}`,
+        timestamp: new Date().toISOString(),
+      });
     }
 
     // Revalidate all major paths
@@ -39,16 +50,34 @@ export async function POST(request: NextRequest) {
         "/en/services",
         "/ar/articles",
         "/en/articles",
+        "/ar/courses",
+        "/en/courses",
       ];
 
+      console.log('🔄 Revalidating all paths:', paths);
+      
+      // Also revalidate settings tag
+      try {
+        revalidateTag('settings');
+        console.log('✅ Revalidated settings tag');
+      } catch (err) {
+        console.error('❌ Failed to revalidate settings tag:', err);
+      }
+      
       for (const p of paths) {
-        revalidatePath(p);
+        try {
+          revalidatePath(p, 'page');
+          console.log(`✅ Revalidated: ${p}`);
+        } catch (err) {
+          console.error(`❌ Failed to revalidate ${p}:`, err);
+        }
       }
 
       return NextResponse.json({
         success: true,
         message: "All paths revalidated",
         revalidated: paths,
+        timestamp: new Date().toISOString(),
       });
     }
 

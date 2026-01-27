@@ -24,6 +24,14 @@ export const getSettings = async (req, res, next) => {
 export const getPublicSettings = async (req, res, next) => {
   try {
     const settings = await settingsService.getPublicSettings();
+    
+    // Set cache headers to prevent aggressive caching
+    res.set({
+      'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=30',
+      'CDN-Cache-Control': 'max-age=60',
+      'Vercel-CDN-Cache-Control': 'max-age=60',
+    });
+    
     return ApiResponse.success(res, settings);
   } catch (error) {
     next(error);
@@ -53,17 +61,27 @@ export const updateSettings = async (req, res, next) => {
       const webUrl = process.env.WEB_URL || 'http://localhost:3000';
       const revalidateSecret = process.env.REVALIDATE_SECRET || 'genoun-revalidate-secret';
       
-      await fetch(`${webUrl}/api/revalidate`, {
+      console.log('🔄 Triggering cache revalidation...');
+      const revalidateResponse = await fetch(`${webUrl}/api/revalidate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           secret: revalidateSecret,
           all: true
-        })
+        }),
+        // Add timeout to prevent hanging
+        signal: AbortSignal.timeout(5000)
       });
+      
+      const revalidateResult = await revalidateResponse.json();
+      console.log('✅ Cache revalidation result:', revalidateResult);
+      
+      if (!revalidateResult.success) {
+        console.error('⚠️ Cache revalidation failed:', revalidateResult.message);
+      }
     } catch (revalidateError) {
       // Log but don't fail the request if revalidation fails
-      console.error('Failed to trigger cache revalidation:', revalidateError);
+      console.error('❌ Failed to trigger cache revalidation:', revalidateError.message || revalidateError);
     }
 
     return ApiResponse.success(res, settings, "Settings updated successfully");

@@ -58,7 +58,11 @@ async function getReviewsData() {
 async function getSettingsData() {
   try {
     const res = await fetch(`${API_BASE}/settings/public`, {
-      next: { revalidate: 600 }, // Cache for 10 minutes (settings change rarely)
+      next: { 
+        revalidate: 60, // Cache for 1 minute (reduced from 10 minutes)
+        tags: ['settings'] // Add cache tag for targeted revalidation
+      },
+      cache: 'no-store', // Disable Next.js caching, rely on API cache headers
     });
     const data = await res.json();
     return data.settings || data.data || null;
