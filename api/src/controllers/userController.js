@@ -153,11 +153,16 @@ export const rejectTeacher = async (req, res, next) => {
 
 // @desc    Assign student to teacher
 // @route   POST /api/users/:id/assign-student
-// @access  Private/Admin
+// @access  Private/Admin/Teacher
 export const assignStudent = async (req, res, next) => {
   try {
     const { id: teacherId } = req.params;
     const { studentId } = req.body;
+
+    // If user is a teacher, they can only assign students to themselves
+    if (req.user.role === "teacher" && teacherId !== req.user._id.toString()) {
+      return ApiResponse.error(res, "You can only assign students to yourself", 403);
+    }
 
     const result = await userService.assignStudentToTeacher(studentId, teacherId);
 
@@ -169,10 +174,16 @@ export const assignStudent = async (req, res, next) => {
 
 // @desc    Remove student from teacher
 // @route   POST /api/users/:id/remove-student
-// @access  Private/Admin
+// @access  Private/Admin/Teacher
 export const removeStudent = async (req, res, next) => {
   try {
+    const { id: teacherId } = req.params;
     const { studentId } = req.body;
+
+    // If user is a teacher, they can only remove their own students
+    if (req.user.role === "teacher" && teacherId !== req.user._id.toString()) {
+      return ApiResponse.error(res, "You can only remove your own students", 403);
+    }
 
     await userService.removeStudentFromTeacher(studentId);
 

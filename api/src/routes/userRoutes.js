@@ -53,13 +53,13 @@ router.post(
 router.post(
   "/:id/assign-student",
   protect,
-  authorize("admin"),
+  authorize("admin", "teacher"),
   assignStudent
 );
 router.post(
   "/:id/remove-student",
   protect,
-  authorize("admin"),
+  authorize("admin", "teacher"),
   removeStudent
 );
 router.get(
