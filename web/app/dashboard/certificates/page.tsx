@@ -16,6 +16,7 @@ import {
 } from "@/store/services/certificateService";
 import { getCourses, Course } from "@/store/services/courseService";
 import { getAllUsers } from "@/store/services/userService";
+import { getStudentMembers } from "@/store/services/studentMemberService";
 import { resetStatus } from "@/store/slices/certificateSlice";
 import { isAuthenticated, isAdmin } from "@/store/services/authService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
@@ -88,6 +89,7 @@ export default function CertificatesPage() {
   const [issueDialog, setIssueDialog] = useState({
     open: false,
     userId: "",
+    studentMemberId: "",
     courseId: "",
     templateId: "",
   });
@@ -104,6 +106,7 @@ export default function CertificatesPage() {
 
   const { courses } = useAppSelector((state) => state.courses);
   const { users } = useAppSelector((state) => state.userManagement);
+  const { studentMembers } = useAppSelector((state) => state.studentMembers);
   const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
@@ -121,12 +124,13 @@ export default function CertificatesPage() {
     dispatch(getCourses({}));
     dispatch(getAllUsers());
     dispatch(getAllTemplates());
+    dispatch(getStudentMembers());
   }, [dispatch, user, router]);
 
   useEffect(() => {
     if (isSuccess && issueDialog.open) {
       toast.success(isRtl ? "تم إصدار الشهادة بنجاح" : "Certificate issued successfully");
-      setIssueDialog({ open: false, userId: "", courseId: "", templateId: "" });
+      setIssueDialog({ open: false, userId: "", studentMemberId: "", courseId: "", templateId: "" });
       dispatch(resetStatus());
     }
   }, [isSuccess, issueDialog.open, dispatch, isRtl]);
@@ -154,21 +158,36 @@ export default function CertificatesPage() {
   };
 
   const handleReissue = async (id: string) => {
+    const cert = certificates.find(c => (c.id || c._id) === id);
+    const isRevoked = cert?.status === "revoked";
+    
     if (
       confirm(
         isRtl
-          ? "هل أنت متأكد من حذف هذه الشهادة وإصدار شهادة جديدة؟"
-          : "Are you sure you want to delete this certificate and issue a new one?"
+          ? isRevoked 
+            ? "هل أنت متأكد من استعادة هذه الشهادة إلى حالة مصدرة؟"
+            : "هل أنت متأكد من إلغاء هذه الشهادة؟"
+          : isRevoked
+            ? "Are you sure you want to restore this certificate to issued status?"
+            : "Are you sure you want to revoke this certificate?"
       )
     ) {
       setReissueLoading(id);
       try {
         await dispatch(reissueCertificate(id)).unwrap();
-        toast.success(isRtl ? "تم إصدار شهادة جديدة بنجاح" : "New certificate issued successfully");
+        toast.success(
+          isRtl 
+            ? isRevoked 
+              ? "تم استعادة الشهادة بنجاح" 
+              : "تم إلغاء الشهادة بنجاح"
+            : isRevoked
+              ? "Certificate restored successfully"
+              : "Certificate revoked successfully"
+        );
         dispatch(getCertificates());
       } catch (err) {
-        console.warn("Failed to reissue certificate:", err);
-        toast.error(typeof err === 'string' ? err : "Failed to reissue certificate");
+        console.warn("Failed to toggle certificate status:", err);
+        toast.error(typeof err === 'string' ? err : "Failed to toggle certificate status");
       } finally {
         setReissueLoading(null);
       }
@@ -189,7 +208,7 @@ export default function CertificatesPage() {
   };
 
   const handleIssue = async () => {
-    if (!issueDialog.userId || !issueDialog.courseId) {
+    if ((!issueDialog.userId && !issueDialog.studentMemberId) || !issueDialog.courseId) {
       toast.error(isRtl ? "يرجى اختيار الطالب والدورة" : "Please select a student and a course");
       return;
     }
@@ -197,7 +216,8 @@ export default function CertificatesPage() {
     setIssueLoading(true);
     try {
       await dispatch(issueCertificate({
-        userId: issueDialog.userId,
+        userId: issueDialog.userId || undefined,
+        studentMemberId: issueDialog.studentMemberId || undefined,
         courseId: issueDialog.courseId,
         templateId: (issueDialog.templateId && issueDialog.templateId !== "none") ? issueDialog.templateId : undefined
       })).unwrap();
@@ -300,7 +320,7 @@ export default function CertificatesPage() {
             </Button>
           </Link>
           <Button
-            onClick={() => setIssueDialog({ open: true, userId: "", courseId: "", templateId: "" })}
+            onClick={() => setIssueDialog({ open: true, userId: "", studentMemberId: "", courseId: "", templateId: "" })}
             className="bg-genoun-green hover:bg-genoun-green/90"
           >
             <Plus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
@@ -473,18 +493,21 @@ export default function CertificatesPage() {
                               ? isRtl ? "جاري التجديد..." : "Regenerating..."
                               : isRtl ? "تجديد PDF" : "Regenerate PDF"}
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleReissue((certificate.id || certificate._id)!)}
+                            disabled={reissueLoading === (certificate.id || certificate._id)}
+                            className={certificate.status === "revoked" ? "" : "text-orange-600"}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            {reissueLoading === (certificate.id || certificate._id)
+                              ? isRtl ? "جاري التغيير..." : "Toggling..."
+                              : certificate.status === "revoked"
+                                ? isRtl ? "استعادة الشهادة" : "Restore Certificate"
+                                : isRtl ? "إلغاء الشهادة" : "Revoke Certificate"}
+                          </DropdownMenuItem>
                           {certificate.status === "issued" && (
                             <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleReissue((certificate.id || certificate._id)!)}
-                                disabled={reissueLoading === (certificate.id || certificate._id)}
-                              >
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                {reissueLoading === (certificate.id || certificate._id)
-                                  ? isRtl ? "جاري الإصدار..." : "Reissuing..."
-                                  : isRtl ? "حذف وإعادة إصدار" : "Delete & Reissue"}
-                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-red-600"
@@ -616,7 +639,7 @@ export default function CertificatesPage() {
       <Dialog
         open={issueDialog.open}
         onOpenChange={(open) =>
-          setIssueDialog({ open, userId: "", courseId: "", templateId: "" })
+          setIssueDialog({ open, userId: "", studentMemberId: "", courseId: "", templateId: "" })
         }
       >
         <DialogContent>
@@ -632,10 +655,10 @@ export default function CertificatesPage() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label>{isRtl ? "الطالب" : "Student"}</Label>
+              <Label>{isRtl ? "الطالب (من المستخدمين)" : "Student (From Users)"}</Label>
               <Select
                 value={issueDialog.userId}
-                onValueChange={(val) => setIssueDialog({ ...issueDialog, userId: val })}
+                onValueChange={(val) => setIssueDialog({ ...issueDialog, userId: val, studentMemberId: "" })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={isRtl ? "اختر الطالب" : "Select Student"} />
@@ -644,6 +667,24 @@ export default function CertificatesPage() {
                   {users.filter(u => u && (u.id || u._id) && String(u.id || u._id) !== "").map((u, index) => (
                     <SelectItem key={u.id || u._id || `user-${index}`} value={String(u.id || u._id)}>
                       {u.fullName ? getTextValue(u.fullName) : u.name || u.email} ({u.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>{isRtl ? "أو طالب من باقة" : "Or Package Student"}</Label>
+              <Select
+                value={issueDialog.studentMemberId}
+                onValueChange={(val) => setIssueDialog({ ...issueDialog, studentMemberId: val, userId: "" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={isRtl ? "اختر طالب باقة" : "Select Package Student"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {studentMembers.filter(s => s && (s.id || s._id) && String(s.id || s._id) !== "").map((s, index) => (
+                    <SelectItem key={s.id || s._id || `student-${index}`} value={String(s.id || s._id)}>
+                      {getTextValue(s.name || s.studentName)} - {s.phone} {s.packageId ? `(${getTextValue(s.packageId.name)})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -693,7 +734,7 @@ export default function CertificatesPage() {
             <Button
               variant="outline"
               onClick={() => {
-                setIssueDialog({ open: false, userId: "", courseId: "", templateId: "" });
+                setIssueDialog({ open: false, userId: "", studentMemberId: "", courseId: "", templateId: "" });
               }}
             >
               {isRtl ? "إلغاء" : "Cancel"}
@@ -701,7 +742,7 @@ export default function CertificatesPage() {
             <Button
               className="bg-genoun-green hover:bg-genoun-green/90"
               onClick={handleIssue}
-              disabled={issueLoading || !issueDialog.userId || !issueDialog.courseId}
+              disabled={issueLoading || ((!issueDialog.userId && !issueDialog.studentMemberId) || !issueDialog.courseId)}
             >
               {issueLoading ? (isRtl ? "جاري الإصدار..." : "Issuing...") : (isRtl ? "إصدار الشهادة" : "Issue Certificate")}
             </Button>

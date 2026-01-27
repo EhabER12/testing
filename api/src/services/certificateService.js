@@ -468,38 +468,30 @@ class CertificateService {
     return certificate;
   }
 
-  // Reissue certificate
+  // Reissue certificate (toggle status)
   async reissueCertificate(certificateId, reissuedBy) {
-    const oldCertificate = await Certificate.findById(certificateId);
-    if (!oldCertificate) {
+    const certificate = await Certificate.findById(certificateId);
+    if (!certificate) {
       throw new Error("Certificate not found");
     }
 
-    // Revoke old one
-    if (oldCertificate.status !== "revoked") {
-      oldCertificate.status = "revoked";
-      oldCertificate.revokedAt = new Date();
-      oldCertificate.revokedBy = reissuedBy;
-      oldCertificate.revocationReason = "Reissued";
-      await oldCertificate.save();
+    // Toggle status
+    if (certificate.status === "revoked") {
+      // Restore to issued
+      certificate.status = "issued";
+      certificate.revokedAt = null;
+      certificate.revokedBy = null;
+      certificate.revokeReason = null;
+    } else if (certificate.status === "issued") {
+      // Revoke
+      certificate.status = "revoked";
+      certificate.revokedAt = new Date();
+      certificate.revokedBy = reissuedBy;
+      certificate.revokeReason = "Revoked by admin";
     }
 
-    // Create new one
-    const certificateNumber = this.generateCertificateNumber();
-
-    const newCertificate = await Certificate.create({
-      userId: oldCertificate.userId,
-      courseId: oldCertificate.courseId,
-      certificateNumber,
-      studentName: oldCertificate.studentName,
-      courseName: oldCertificate.courseName,
-      issuedAt: new Date(),
-      issuedBy: reissuedBy,
-      status: "issued",
-      templateId: oldCertificate.templateId,
-    });
-
-    return newCertificate;
+    await certificate.save();
+    return certificate;
   }
 
   // ============ PDF GENERATION ============
