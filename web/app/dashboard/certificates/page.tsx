@@ -96,6 +96,7 @@ export default function CertificatesPage() {
     certificateNumber: "",
   });
   const [verifyResult, setVerifyResult] = useState<any>(null);
+  const [selectedGovernorate, setSelectedGovernorate] = useState<string>("all");
 
   const { certificates, templates, isLoading, error, isSuccess } = useAppSelector(
     (state) => state.certificates
@@ -365,12 +366,27 @@ export default function CertificatesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{isRtl ? "جميع الشهادات" : "All Certificates"}</CardTitle>
-          <CardDescription>
-            {isRtl
-              ? `${certificates.length} شهادة مصدرة`
-              : `${certificates.length} certificates issued`}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>{isRtl ? "جميع الشهادات" : "All Certificates"}</CardTitle>
+              <CardDescription>
+                {isRtl
+                  ? `${certificates.length} شهادة مصدرة`
+                  : `${certificates.length} certificates issued`}
+              </CardDescription>
+            </div>
+            <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder={isRtl ? "تصفية حسب المحافظة" : "Filter by Governorate"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isRtl ? "جميع المحافظات" : "All Governorates"}</SelectItem>
+                {Array.from(new Set(certificates.map(c => c.governorate).filter(Boolean))).sort().map((gov) => (
+                  <SelectItem key={gov} value={gov!}>{gov}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {certificates.length === 0 ? (
@@ -391,6 +407,7 @@ export default function CertificatesPage() {
                 <TableRow>
                   <TableHead>{isRtl ? "رقم الشهادة" : "Certificate #"}</TableHead>
                   <TableHead>{isRtl ? "الطالب" : "Student"}</TableHead>
+                  <TableHead>{isRtl ? "المحافظة" : "Governorate"}</TableHead>
                   <TableHead>{isRtl ? "الدورة / الباقة" : "Course / Package"}</TableHead>
                   <TableHead>{isRtl ? "تاريخ الإصدار" : "Issue Date"}</TableHead>
                   <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
@@ -400,7 +417,9 @@ export default function CertificatesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {certificates.map((certificate, index) => (
+                {certificates
+                  .filter(c => selectedGovernorate === "all" || c.governorate === selectedGovernorate)
+                  .map((certificate, index) => (
                   <TableRow key={certificate.id || certificate._id || `cert-${index}`}>
                     <TableCell className="font-mono font-medium">
                       {certificate.certificateNumber}
@@ -412,6 +431,9 @@ export default function CertificatesPage() {
                           ? getTextValue(certificate.userId.fullName)
                           : (certificate.studentName ? getTextValue(certificate.studentName) : "-")}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">{certificate.governorate || "-"}</span>
                     </TableCell>
                     <TableCell>
                       {certificate.courseId
@@ -485,6 +507,13 @@ export default function CertificatesPage() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {certificates.filter(c => selectedGovernorate === "all" || c.governorate === selectedGovernorate).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      {isRtl ? "لا توجد شهادات تطابق الفلتر المحدد" : "No certificates match the selected filter"}
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           )}

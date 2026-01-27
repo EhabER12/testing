@@ -16,13 +16,24 @@ export const getAllCertificates = async (req, res, next) => {
 
     const certificates = await Certificate.find(query)
       .populate("userId", "fullName email avatar")
+      .populate("studentMemberId", "governorate name")
       .populate("courseId", "title slug thumbnail certificateSettings")
+      .populate("packageId", "name")
       .populate("issuedBy", "fullName")
       .sort({ issuedAt: -1 });
 
+    // Add governorate from studentMember to certificate object
+    const certificatesWithGovernorate = certificates.map(cert => {
+      const certObj = cert.toObject();
+      if (certObj.studentMemberId && certObj.studentMemberId.governorate) {
+        certObj.governorate = certObj.studentMemberId.governorate;
+      }
+      return certObj;
+    });
+
     res.status(200).json({
       success: true,
-      data: certificates,
+      data: certificatesWithGovernorate,
     });
   } catch (error) {
     next(error);

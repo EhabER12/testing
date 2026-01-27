@@ -26,6 +26,7 @@ export interface Certificate {
     ar: string;
     en: string;
   };
+  governorate?: string;
   certificateNumber: string;
   issuedAt: string;
   status: "issued" | "revoked";
