@@ -120,8 +120,14 @@ export default function TeachersManagementPage() {
   const { teachersWithStats, teacherGroups, isLoading, error } = useAppSelector(
     (state) => state.teacherGroups
   );
-  const { studentMembers } = useAppSelector((state) => state.studentMembers);
+  const { studentMembers = [] } = useAppSelector((state) => state.studentMembers);
   const { user } = useAppSelector((state) => state.auth);
+
+  // Debug logging
+  useEffect(() => {
+    console.log("Student Members Data:", studentMembers);
+    console.log("Student Members Count:", studentMembers?.length || 0);
+  }, [studentMembers]);
 
   useEffect(() => {
     if (!isAuthenticated() || !user) {
@@ -926,16 +932,26 @@ export default function TeachersManagementPage() {
                 <SelectValue placeholder={t("admin.teachers.selectStudent")} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
-                {studentMembers.map((student) => {
-                  const studentId = (student.id || student._id)!;
-                  const isAlreadyInGroup = selectedGroup?.students.some(s => (s.studentId.id || s.studentId._id) === studentId);
-                  return (
-                    <SelectItem key={studentId} value={studentId} disabled={isAlreadyInGroup}>
-                      {getTextValue(student.studentName)} ({student.whatsappNumber})
-                      {isAlreadyInGroup && ` - ${t("admin.teachers.alreadyInGroup")}`}
-                    </SelectItem>
-                  );
-                })}
+                {studentMembers && studentMembers.length > 0 ? (
+                  studentMembers.map((student) => {
+                    const studentId = (student.id || student._id)!;
+                    const isAlreadyInGroup = selectedGroup?.students.some(s => (s.studentId.id || s.studentId._id) === studentId);
+                    
+                    const studentName = getTextValue(student.studentName || student.name || { ar: "طالب", en: "Student" });
+                    const phoneNumber = student.whatsappNumber || student.phone || "N/A";
+                    
+                    return (
+                      <SelectItem key={studentId} value={studentId} disabled={isAlreadyInGroup}>
+                        {studentName} ({phoneNumber})
+                        {isAlreadyInGroup && ` - ${t("admin.teachers.alreadyInGroup")}`}
+                      </SelectItem>
+                    );
+                  })
+                ) : (
+                  <SelectItem value="no-students" disabled>
+                    {t("admin.teachers.noStudents")}
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -971,16 +987,26 @@ export default function TeachersManagementPage() {
                     <SelectValue placeholder={t("admin.teachers.selectStudent")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
-                    {studentMembers.map((student) => {
-                      const studentId = student.id || student._id;
-                      const isAssigned = teacherStudents.some(s => (s.id || s._id) === studentId);
-                      if (isAssigned) return null;
-                      return (
-                        <SelectItem key={studentId} value={studentId!}>
-                          {getTextValue(student.studentName)} ({student.whatsappNumber})
-                        </SelectItem>
-                      );
-                    })}
+                    {studentMembers && studentMembers.length > 0 ? (
+                      studentMembers.map((student) => {
+                        const studentId = student.id || student._id;
+                        const isAssigned = teacherStudents.some(s => (s.id || s._id) === studentId);
+                        if (isAssigned) return null;
+                        
+                        const studentName = getTextValue(student.studentName || student.name || { ar: "طالب", en: "Student" });
+                        const phoneNumber = student.whatsappNumber || student.phone || "N/A";
+                        
+                        return (
+                          <SelectItem key={studentId} value={studentId!}>
+                            {studentName} ({phoneNumber})
+                          </SelectItem>
+                        );
+                      })
+                    ) : (
+                      <SelectItem value="no-students" disabled>
+                        {t("admin.teachers.noStudents")}
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

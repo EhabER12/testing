@@ -52,7 +52,8 @@ export const getStudentMembers = createAsyncThunk(
   "studentMembers/getAll",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get("/student-members");
+      // Request all records without pagination for dropdown lists
+      const response = await axios.get("/student-members?limit=9999");
       return response.data.data;
     } catch (error: any) {
       return rejectWithValue(
