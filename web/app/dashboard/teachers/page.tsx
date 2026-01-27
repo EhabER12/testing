@@ -339,18 +339,18 @@ export default function TeachersManagementPage() {
 
   return (
     <div
-      className={`flex-1 space-y-4 p-4 md:p-8 pt-4 md:pt-6 ${isRtl ? "text-right" : ""}`}
+      className={`flex-1 space-y-4 p-4 md:p-6 lg:p-8 pt-4 md:pt-6 ${isRtl ? "text-right" : ""}`}
       dir={isRtl ? "rtl" : "ltr"}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
             {t("admin.teachers.title")}
           </h2>
-          <p className="text-muted-foreground">{t("admin.teachers.description")}</p>
+          <p className="text-muted-foreground text-sm md:text-base">{t("admin.teachers.description")}</p>
         </div>
         <Button
-          className="bg-genoun-green hover:bg-genoun-green/90"
+          className="bg-genoun-green hover:bg-genoun-green/90 w-full sm:w-auto"
           onClick={() => {
             resetForm();
             setIsCreateDialogOpen(true);
@@ -389,7 +389,8 @@ export default function TeachersManagementPage() {
                   </p>
                 </div>
               ) : (
-                <Table>
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead></TableHead>
@@ -488,7 +489,7 @@ export default function TeachersManagementPage() {
                                     <Badge variant="outline">{group.students.length} {t("admin.teachers.totalStudents")}</Badge>
                                   </div>
                                   {group.students.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground text-center py-4">{t("admin.teachers.noGroups")}</p>
+                                    <p className="text-xs text-muted-foreground text-center py-4">{t("admin.teachers.noStudents")}</p>
                                   ) : (
                                     <Table>
                                       <TableHeader>
@@ -558,6 +559,7 @@ export default function TeachersManagementPage() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -568,19 +570,20 @@ export default function TeachersManagementPage() {
           <TabsContent value="my-students">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
                     <CardTitle>{t("admin.teachers.myStudents")}</CardTitle>
                     <CardDescription>{teacherStudents.length} {t("admin.teachers.totalStudents")}</CardDescription>
                   </div>
-                  <Button onClick={() => setIsManageStudentsOpen(true)}>
+                  <Button onClick={() => setIsManageStudentsOpen(true)} className="w-full sm:w-auto">
                     <UserPlus className="h-4 w-4 mr-2" />
                     {t("admin.teachers.addStudent")}
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("admin.teachers.studentName")}</TableHead>
@@ -619,6 +622,7 @@ export default function TeachersManagementPage() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -629,7 +633,9 @@ export default function TeachersManagementPage() {
           <Card>
             <CardHeader>
               <CardTitle>{t("admin.teachers.allTeachers")}</CardTitle>
-              <CardDescription>{teachersWithStats.length} {t("admin.teachers.noTeachers")}</CardDescription>
+              <CardDescription>
+                {teachersWithStats.length} {teachersWithStats.length === 1 ? t("admin.teachers.teacher") : t("admin.teachers.teachers")}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -639,12 +645,12 @@ export default function TeachersManagementPage() {
                     <Card key={teacherId} className="overflow-hidden hover:shadow-md transition-shadow">
                       <CardHeader className="bg-muted/30 pb-4">
                         <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-full bg-genoun-green/10 flex items-center justify-center text-genoun-green font-bold text-lg">
+                          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-genoun-green/10 flex items-center justify-center text-genoun-green font-bold text-base sm:text-lg flex-shrink-0">
                             {getTextValue(teacher.fullName).charAt(0)}
                           </div>
-                          <div>
-                            <CardTitle className="text-base">{getTextValue(teacher.fullName)}</CardTitle>
-                            <CardDescription className="text-xs truncate max-w-[150px]">{teacher.email}</CardDescription>
+                          <div className="min-w-0 flex-1">
+                            <CardTitle className="text-sm sm:text-base truncate">{getTextValue(teacher.fullName)}</CardTitle>
+                            <CardDescription className="text-xs truncate">{teacher.email}</CardDescription>
                           </div>
                         </div>
                       </CardHeader>
@@ -682,12 +688,12 @@ export default function TeachersManagementPage() {
                           <div className="flex gap-2">
                             <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => handleOpenManageStudents(teacher)}>
                               <Users className="h-3 w-3 mr-1" />
-                              {t("admin.teachers.students")}
+                              <span className="hidden sm:inline">{t("admin.teachers.students")}</span>
                             </Button>
                             <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
                               <Link href={`/dashboard/users?search=${teacher.email}`}>
                                 <Settings className="h-3 w-3 mr-1" />
-                                {t("admin.teachers.actions")}
+                                <span className="hidden sm:inline">{t("admin.teachers.actions")}</span>
                               </Link>
                             </Button>
                           </div>
@@ -713,7 +719,7 @@ export default function TeachersManagementPage() {
           }
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {isEditDialogOpen ? t("admin.teachers.editGroup") : t("admin.teachers.createGroup")}
@@ -935,7 +941,7 @@ export default function TeachersManagementPage() {
       </Dialog>
 
       <Dialog open={isManageStudentsOpen} onOpenChange={setIsManageStudentsOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {isTeacher() ? t("admin.teachers.myStudents") : `${t("admin.teachers.manageStudents")} - ${getTextValue(selectedTeacherForStudents?.fullName || "")}`}
@@ -943,8 +949,8 @@ export default function TeachersManagementPage() {
           </DialogHeader>
 
           <div className="space-y-6">
-            <div className="flex items-end gap-4 p-4 border rounded-lg bg-muted/20">
-              <div className="flex-1 space-y-2">
+            <div className="flex flex-col sm:flex-row items-end gap-4 p-4 border rounded-lg bg-muted/20">
+              <div className="flex-1 w-full space-y-2">
                 <Label>{t("admin.teachers.addStudent")}</Label>
                 <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
                   <SelectTrigger>
@@ -964,13 +970,14 @@ export default function TeachersManagementPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleAssignStudentToTeacher} disabled={!selectedStudentId}>
+              <Button onClick={handleAssignStudentToTeacher} disabled={!selectedStudentId} className="w-full sm:w-auto">
                 <UserPlus className="h-4 w-4 mr-2" />
                 {t("admin.teachers.addStudent")}
               </Button>
             </div>
 
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("admin.teachers.studentName")}</TableHead>
@@ -1007,6 +1014,7 @@ export default function TeachersManagementPage() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
