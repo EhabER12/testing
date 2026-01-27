@@ -60,6 +60,7 @@ import { AiArticlesSettings } from "@/components/dashboard/settings/AiArticlesSe
 import { MarketingBannersSettings } from "@/components/dashboard/settings/MarketingBannersSettings";
 import { NavbarSettings } from "@/components/dashboard/settings/NavbarSettings";
 import { HomepageSectionsSettings } from "@/components/dashboard/settings/HomepageSectionsSettings";
+import { SectionOrderSettings } from "@/components/dashboard/settings/SectionOrderSettings";
 import { PromoModalSettings } from "@/components/dashboard/settings/PromoModalSettings";
 import { EmailSettings } from "@/components/dashboard/settings/EmailSettings";
 import { AuthorityBarSettings as AuthorityBarSettingsComponent } from "@/components/dashboard/settings/AuthorityBarSettings";
@@ -126,13 +127,13 @@ export default function SettingsDashboardPage() {
   const [activeTab, setActiveTab] = useState("general");
   const [navbarLinks, setNavbarLinks] = useState<NavbarLink[]>([]);
   const [homepageSections, setHomepageSections] = useState<HomepageSections>({
-    hero: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
-    features: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
-    services: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
-    stats: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
-    about: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
-    cta: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
-    testimonials: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true },
+    hero: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 0 },
+    features: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 1 },
+    services: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 2 },
+    stats: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 3 },
+    about: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 4 },
+    cta: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 5 },
+    testimonials: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 6 },
   });
   const [promoModal, setPromoModal] = useState<PromoModalSettingsType>({
     isEnabled: false,
@@ -596,6 +597,9 @@ export default function SettingsDashboardPage() {
             <TabsTrigger value="sections">
               {isRtl ? "الأقسام" : "Sections"}
             </TabsTrigger>
+            <TabsTrigger value="section-order">
+              {isRtl ? "ترتيب الأقسام" : "Section Order"}
+            </TabsTrigger>
             <TabsTrigger value="modal">
               {isRtl ? "نافذة العرض" : "Promo Modal"}
             </TabsTrigger>
@@ -604,9 +608,6 @@ export default function SettingsDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="homepage">
               {isRtl ? "الصفحة الرئيسية" : "Homepage"}
-            </TabsTrigger>
-            <TabsTrigger value="sections">
-              {isRtl ? "الأقسام" : "Sections"}
             </TabsTrigger>
             <TabsTrigger value="email">
               {isRtl ? "البريد الإلكتروني" : "Email"}
@@ -1372,6 +1373,15 @@ export default function SettingsDashboardPage() {
               settings={whyGenounSettings}
               onChange={setWhyGenounSettings}
               lang={formLang}
+            />
+          </TabsContent>
+
+          <TabsContent value="section-order" className="space-y-6">
+            {/* NEW: Section Order Management */}
+            <SectionOrderSettings
+              sections={homepageSections}
+              setSections={setHomepageSections}
+              formLang={formLang}
             />
           </TabsContent>
 

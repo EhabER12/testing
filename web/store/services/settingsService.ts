@@ -117,6 +117,7 @@ export interface SectionConfig {
   buttonLink: string;
   isEnabled: boolean;
   backgroundImage?: string;
+  order?: number;
 }
 
 export interface HomepageSections {

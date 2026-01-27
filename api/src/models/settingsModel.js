@@ -116,6 +116,10 @@ const sectionConfigSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  order: {
+    type: Number,
+    default: 0,
+  },
 });
 
 // Promo Modal Schema
