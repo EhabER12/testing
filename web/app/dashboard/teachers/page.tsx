@@ -393,13 +393,13 @@ export default function TeachersManagementPage() {
                   <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead></TableHead>
-                      <TableHead>{t("admin.teachers.groupName")}</TableHead>
-                      <TableHead>{t("admin.teachers.teacher")}</TableHead>
-                      <TableHead>{t("admin.teachers.groupType")}</TableHead>
-                      <TableHead>{t("admin.teachers.students")}</TableHead>
-                      <TableHead>{t("admin.teachers.expectedRevenue")}</TableHead>
-                      <TableHead className="text-right">{t("admin.teachers.actions")}</TableHead>
+                      <TableHead className="h-10"></TableHead>
+                      <TableHead className="h-10">{t("admin.teachers.groupName")}</TableHead>
+                      <TableHead className="h-10">{t("admin.teachers.teacher")}</TableHead>
+                      <TableHead className="h-10">{t("admin.teachers.groupType")}</TableHead>
+                      <TableHead className="h-10">{t("admin.teachers.students")}</TableHead>
+                      <TableHead className="h-10">{t("admin.teachers.expectedRevenue")}</TableHead>
+                      <TableHead className="text-right h-10">{t("admin.teachers.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -494,10 +494,10 @@ export default function TeachersManagementPage() {
                                     <Table>
                                       <TableHeader>
                                         <TableRow className="hover:bg-transparent">
-                                          <TableHead className="h-8 text-[10px] uppercase">{t("admin.teachers.selectStudent")}</TableHead>
-                                          <TableHead className="h-8 text-[10px] uppercase">{t("admin.teachers.studentStatus")}</TableHead>
-                                          <TableHead className="h-8 text-[10px] uppercase">{t("admin.teachers.assignedDate")}</TableHead>
-                                          <TableHead className="h-8 text-right text-[10px] uppercase">{t("admin.teachers.actions")}</TableHead>
+                                          <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">{t("admin.teachers.selectStudent")}</TableHead>
+                                          <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">{t("admin.teachers.studentStatus")}</TableHead>
+                                          <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">{t("admin.teachers.assignedDate")}</TableHead>
+                                          <TableHead className="h-9 py-2 text-right text-[11px] font-semibold uppercase">{t("admin.teachers.actions")}</TableHead>
                                         </TableRow>
                                       </TableHeader>
                                       <TableBody>
@@ -586,10 +586,10 @@ export default function TeachersManagementPage() {
                   <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t("admin.teachers.studentName")}</TableHead>
-                      <TableHead>{t("admin.teachers.whatsapp")}</TableHead>
-                      <TableHead>{t("admin.teachers.email")}</TableHead>
-                      <TableHead className="text-right">{t("admin.teachers.actions")}</TableHead>
+                      <TableHead className="h-10">{t("admin.teachers.studentName")}</TableHead>
+                      <TableHead className="h-10">{t("admin.teachers.whatsapp")}</TableHead>
+                      <TableHead className="h-10">{t("admin.teachers.email")}</TableHead>
+                      <TableHead className="text-right h-10">{t("admin.teachers.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -980,9 +980,9 @@ export default function TeachersManagementPage() {
               <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("admin.teachers.studentName")}</TableHead>
-                  <TableHead>{t("admin.teachers.whatsapp")}</TableHead>
-                  <TableHead className="text-right">{t("admin.teachers.actions")}</TableHead>
+                  <TableHead className="h-10">{t("admin.teachers.studentName")}</TableHead>
+                  <TableHead className="h-10">{t("admin.teachers.whatsapp")}</TableHead>
+                  <TableHead className="text-right h-10">{t("admin.teachers.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
