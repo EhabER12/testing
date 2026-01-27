@@ -101,6 +101,37 @@ export default function HomeClient({
 }: HomeClientProps) {
   const reviewsRef = useRef<HTMLDivElement>(null);
 
+  // Get sections order from settings
+  const getSectionOrder = (key: string): number => {
+    if (!settings?.homepageSections) return 999;
+    const section = settings.homepageSections[key as keyof typeof settings.homepageSections];
+    return section?.order ?? 999;
+  };
+
+  // Check if section is enabled
+  const isSectionEnabled = (key: string): boolean => {
+    if (!settings?.homepageSections) return true;
+    const section = settings.homepageSections[key as keyof typeof settings.homepageSections];
+    return section?.isEnabled !== false;
+  };
+
+  // Create array of sections with their order
+  const sections = [
+    { key: 'hero', order: getSectionOrder('hero'), enabled: isSectionEnabled('hero'), component: <HeroSection locale={locale} settings={settings || undefined} /> },
+    { key: 'authorityBar', order: getSectionOrder('features'), enabled: true, component: <AuthorityBar locale={locale} settings={settings || undefined} /> },
+    { key: 'features', order: getSectionOrder('features'), enabled: isSectionEnabled('features'), component: <WhyGenoun locale={locale} settings={settings || undefined} /> },
+    { key: 'services', order: getSectionOrder('services'), enabled: isSectionEnabled('services'), component: <ServicesSection locale={locale} /> },
+    { key: 'about', order: getSectionOrder('about'), enabled: isSectionEnabled('about'), component: <MethodologySection locale={locale} /> },
+    { key: 'stats', order: getSectionOrder('stats'), enabled: isSectionEnabled('stats'), component: <ResultsSection locale={locale} /> },
+    { key: 'testimonials', order: getSectionOrder('testimonials'), enabled: isSectionEnabled('testimonials'), component: <ReviewsSection ref={reviewsRef} locale={locale} reviews={reviews} settings={settings || undefined} /> },
+    { key: 'cta', order: getSectionOrder('cta'), enabled: isSectionEnabled('cta'), component: <CTASection locale={locale} settings={settings || undefined} /> },
+  ];
+
+  // Filter and sort sections
+  const orderedSections = sections
+    .filter(s => s.enabled)
+    .sort((a, b) => a.order - b.order);
+
   useGSAP(() => {
     // Refresh ScrollTrigger after a delay to ensure proper detection
     const refreshTimer = setTimeout(() => {
@@ -151,31 +182,21 @@ export default function HomeClient({
         <PromoModal settings={settings.promoModal} locale={locale} />
       )}
 
-      {/* Hero Section - Quran Memorization */}
-      <HeroSection locale={locale} settings={settings || undefined} />
+      {/* Dynamically render ordered and enabled sections */}
+      {orderedSections.map((section) => (
+        <div key={section.key}>{section.component}</div>
+      ))}
 
-      {/* Authority Bar - Platform Recognition */}
-      <AuthorityBar locale={locale} settings={settings || undefined} />
-
-      {/* Why Choose Our Platform - Value Proposition */}
-      <WhyGenoun locale={locale} settings={settings || undefined} />
-
-      {/* Homepage Banner - Configurable */}
+      {/* Homepage Banner - Configurable (always after main sections) */}
       <HomepageBanner settings={settings || undefined} locale={locale} />
 
-      {/* Homepage Courses - Configurable */}
+      {/* Homepage Courses - Configurable (always after banner) */}
       <HomepageCourses settings={settings || undefined} locale={locale} />
 
-      {/* Reviews Section - Student Testimonials */}
-      <ReviewsSection
-        ref={reviewsRef}
-        locale={locale}
-        reviews={reviews}
-        settings={settings || undefined}
-      />
-
-      {/* Final CTA Section */}
-      <CTASection locale={locale} settings={settings || undefined} />
+      {/* Articles Section (if available) */}
+      {articles && articles.length > 0 && (
+        <ArticlesSection locale={locale} articles={articles} />
+      )}
     </main>
   );
 }
