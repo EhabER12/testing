@@ -101,6 +101,11 @@ export default function HomeClient({
 }: HomeClientProps) {
   const reviewsRef = useRef<HTMLDivElement>(null);
 
+  // Debug: Log settings to verify order field
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    console.log('Homepage Settings:', settings?.homepageSections);
+  }
+
   // Get sections order from settings
   const getSectionOrder = (key: string): number => {
     if (!settings?.homepageSections) return 999;
@@ -118,7 +123,7 @@ export default function HomeClient({
   // Create array of sections with their order
   const sections = [
     { key: 'hero', order: getSectionOrder('hero'), enabled: isSectionEnabled('hero'), component: <HeroSection locale={locale} settings={settings || undefined} /> },
-    { key: 'authorityBar', order: getSectionOrder('features'), enabled: true, component: <AuthorityBar locale={locale} settings={settings || undefined} /> },
+    { key: 'authorityBar', order: 0.5, enabled: true, component: <AuthorityBar locale={locale} settings={settings || undefined} /> },
     { key: 'features', order: getSectionOrder('features'), enabled: isSectionEnabled('features'), component: <WhyGenoun locale={locale} settings={settings || undefined} /> },
     { key: 'services', order: getSectionOrder('services'), enabled: isSectionEnabled('services'), component: <ServicesSection locale={locale} settings={settings || undefined} /> },
     { key: 'about', order: getSectionOrder('about'), enabled: isSectionEnabled('about'), component: <MethodologySection locale={locale} settings={settings || undefined} /> },

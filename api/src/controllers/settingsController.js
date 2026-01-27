@@ -48,6 +48,24 @@ export const updateSettings = async (req, res, next) => {
       files.heroBackground && files.heroBackground.length > 0 ? files.heroBackground[0] : null
     );
 
+    // Trigger revalidation of homepage cache
+    try {
+      const webUrl = process.env.WEB_URL || 'http://localhost:3000';
+      const revalidateSecret = process.env.REVALIDATE_SECRET || 'genoun-revalidate-secret';
+      
+      await fetch(`${webUrl}/api/revalidate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret: revalidateSecret,
+          all: true
+        })
+      });
+    } catch (revalidateError) {
+      // Log but don't fail the request if revalidation fails
+      console.error('Failed to trigger cache revalidation:', revalidateError);
+    }
+
     return ApiResponse.success(res, settings, "Settings updated successfully");
   } catch (error) {
     next(error);
