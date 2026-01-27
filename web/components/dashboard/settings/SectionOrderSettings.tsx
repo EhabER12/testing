@@ -115,9 +115,12 @@ export const SectionOrderSettings: React.FC<SectionOrderSettingsProps> = ({
     const updatedSections = { ...sections };
 
     items.forEach((item, index) => {
-      const section = updatedSections[item.key];
-      section.order = index;
-      section.isEnabled = item.isEnabled;
+      // Create a completely new object to avoid mutation
+      updatedSections[item.key] = {
+        ...sections[item.key],
+        order: index,
+        isEnabled: item.isEnabled,
+      };
     });
 
     setSections(updatedSections);
