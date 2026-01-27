@@ -298,21 +298,9 @@ export const assignStudentToTeacher = createAsyncThunk<
     const token = state.auth.user?.token;
     if (!token) return thunkAPI.rejectWithValue("Not authorized");
 
-    const url = `/users/${teacherId}/assign-student`;
-    console.log('Attempting to assign student:', { teacherId, studentId, url });
-    
-    const response = await axiosInstance.post(url, { studentId });
-    console.log('Student assigned successfully:', response.data);
+    const response = await axiosInstance.post(`/users/${teacherId}/assign-student`, { studentId });
     return response.data;
   } catch (error: any) {
-    console.error('Failed to assign student:', error);
-    console.error('Error details:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      url: error.config?.url,
-      baseURL: error.config?.baseURL,
-    });
-    
     let message =
       (error.response && error.response.data && error.response.data.message) ||
       error.message ||

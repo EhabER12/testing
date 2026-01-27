@@ -5,11 +5,6 @@ const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 // Ensure baseURL ends with /api
 const apiUrl = baseURL.endsWith('/api') ? baseURL : `${baseURL}/api`;
 
-// Log the API URL in development
-if (process.env.NODE_ENV === 'development') {
-  console.log('API URL:', apiUrl);
-}
-
 const axiosInstance = axios.create({
   baseURL: apiUrl,
   timeout: 120000, // 120 seconds timeout for AI operations
