@@ -2,8 +2,16 @@ import axios from "axios";
 import NProgress from "nprogress";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-// Ensure baseURL ends with /api
-const apiUrl = baseURL.endsWith('/api') ? baseURL : `${baseURL}/api`;
+// Remove trailing slashes and ensure /api is only present once
+let apiUrl = baseURL.replace(/\/+$/, ''); // Remove trailing slashes
+if (!apiUrl.endsWith('/api')) {
+  apiUrl = `${apiUrl}/api`;
+}
+
+// Debug: Log the final API URL
+if (typeof window !== "undefined") {
+  console.log('Axios Base URL:', apiUrl);
+}
 
 const axiosInstance = axios.create({
   baseURL: apiUrl,
