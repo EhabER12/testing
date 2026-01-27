@@ -158,6 +158,8 @@ export default function TeachersManagementPage() {
       await dispatch(createTeacherGroup(payload)).unwrap();
       setIsCreateDialogOpen(false);
       resetForm();
+      // Refresh the groups list
+      await dispatch(getTeacherGroups());
     } catch (err) {
       console.error("Failed to create group:", err);
     }
@@ -171,6 +173,8 @@ export default function TeachersManagementPage() {
       ).unwrap();
       setIsEditDialogOpen(false);
       resetForm();
+      // Refresh the groups list
+      await dispatch(getTeacherGroups());
     } catch (err) {
       console.error("Failed to update group:", err);
     }
@@ -180,6 +184,8 @@ export default function TeachersManagementPage() {
     if (confirm(t("admin.teachers.confirmDelete"))) {
       try {
         await dispatch(deleteTeacherGroup(id)).unwrap();
+        // Refresh the groups list
+        await dispatch(getTeacherGroups());
       } catch (err) {
         console.error("Failed to delete group:", err);
       }
@@ -197,6 +203,8 @@ export default function TeachersManagementPage() {
       ).unwrap();
       setIsAddStudentDialogOpen(false);
       setSelectedStudentId("");
+      // Refresh the groups list to show updated student counts
+      await dispatch(getTeacherGroups());
     } catch (err) {
       console.error("Failed to add student:", err);
     }
@@ -206,6 +214,8 @@ export default function TeachersManagementPage() {
     if (confirm(t("admin.teachers.confirmRemoveStudent"))) {
       try {
         await dispatch(removeStudentFromGroup({ groupId, studentId })).unwrap();
+        // Refresh the groups list to show updated student counts
+        await dispatch(getTeacherGroups());
       } catch (err) {
         console.error("Failed to remove student:", err);
       }
@@ -219,6 +229,8 @@ export default function TeachersManagementPage() {
   ) => {
     try {
       await dispatch(updateStudentStatus({ groupId, studentId, status })).unwrap();
+      // Refresh the groups list to show updated student counts
+      await dispatch(getTeacherGroups());
     } catch (err) {
       console.error("Failed to update status:", err);
     }
@@ -243,6 +255,7 @@ export default function TeachersManagementPage() {
         teacherId,
         studentId: selectedStudentId
       })).unwrap();
+      // Refresh teacher students list
       await fetchTeacherStudents(teacherId);
       setSelectedStudentId("");
     } catch (err) {
@@ -259,6 +272,7 @@ export default function TeachersManagementPage() {
           teacherId,
           studentId
         })).unwrap();
+        // Refresh teacher students list
         await fetchTeacherStudents(teacherId);
       } catch (err) {
         console.error("Failed to remove student:", err);

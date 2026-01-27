@@ -1009,10 +1009,18 @@
       "englishContent": "English",
       "arabicContent": "العربية",
       "teacher": "المدرس",
+      "studentName": "اسم الطالب",
+      "whatsapp": "واتساب",
       "email": "البريد الإلكتروني",
       "approved": "مفعّل",
       "notApproved": "غير مفعّل",
-      "actions": "الإجراءات"
+      "actions": "الإجراءات",
+      "alreadyInGroup": "موجود بالفعل في المجموعة",
+      "manageStudents": "إدارة الطلاب",
+      "myStudents": "طلابي",
+      "noStudents": "لا يوجد طلاب",
+      "to": "إلى",
+      "group": "مجموعة"
     },
     "emailTemplates": {
       "title": "قوالب البريد الإلكتروني",

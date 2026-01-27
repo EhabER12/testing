@@ -1008,10 +1008,18 @@
       "englishContent": "English",
       "arabicContent": "العربية",
       "teacher": "Teacher",
+      "studentName": "Student Name",
+      "whatsapp": "WhatsApp",
       "email": "Email",
       "approved": "Approved",
       "notApproved": "Not Approved",
-      "actions": "Actions"
+      "actions": "Actions",
+      "alreadyInGroup": "Already in group",
+      "manageStudents": "Manage Students",
+      "myStudents": "My Students",
+      "noStudents": "No students found",
+      "to": "to",
+      "group": "group"
     },
     "emailTemplates": {
       "title": "Email Templates",
