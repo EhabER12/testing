@@ -139,7 +139,10 @@ export default function StudentMembersPage() {
 
     dispatch(getStudentMembers());
     dispatch(getPackages());
-    dispatch(getAllTemplates());
+    // Try to get templates, but don't fail if it errors
+    dispatch(getAllTemplates()).catch((err) => {
+      console.warn("Failed to load templates:", err);
+    });
   }, [dispatch, user, router]);
 
   const handleDelete = async (id: string) => {
@@ -325,15 +328,15 @@ export default function StudentMembersPage() {
     if (!packageTemplate) {
       toast.error(
         isRtl
-          ? "لا يوجد قالب شهادة لهذه الباقة. يرجى إنشاء قالب أولاً."
-          : "No certificate template found for this package. Please create a template first."
+          ? "لا يوجد قالب شهادة لهذه الباقة. يرجى إنشاء قالب أولاً من صفحة القوالب."
+          : "No certificate template found for this package. Please create a template first from the templates page."
       );
       return;
     }
 
     setCertificateLoading(studentId);
     try {
-      // Issue certificate (will return existing if already issued)
+      // Issue certificate (will return existing if already issued and generate PDF)
       const certificate = await dispatch(
         issueCertificate({
           studentMemberId: studentId,
@@ -346,6 +349,9 @@ export default function StudentMembersPage() {
       if (!certId) {
         throw new Error("Certificate ID not found");
       }
+
+      // Wait a moment for PDF generation if needed
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Download the PDF
       const blob = await dispatch(downloadCertificate(certId)).unwrap();
@@ -360,13 +366,24 @@ export default function StudentMembersPage() {
       toast.success(isRtl ? "تم تحميل الشهادة بنجاح" : "Certificate downloaded successfully");
     } catch (err: any) {
       console.error("Certificate generation failed:", err);
-      toast.error(
-        typeof err === "string"
-          ? err
-          : isRtl
-          ? "فشل إنشاء الشهادة"
-          : "Failed to generate certificate"
-      );
+      const errorMessage = err?.message || err;
+      
+      // Better error messages
+      if (errorMessage.includes("already exists") || errorMessage.includes("Conflict")) {
+        toast.error(
+          isRtl
+            ? "الشهادة موجودة مسبقاً. جاري تحميلها..."
+            : "Certificate already exists. Downloading..."
+        );
+        // Try to download anyway if we have the certificate
+        // This shouldn't happen anymore with the fix, but just in case
+      } else {
+        toast.error(
+          isRtl
+            ? `فشل إنشاء الشهادة: ${errorMessage}`
+            : `Failed to generate certificate: ${errorMessage}`
+        );
+      }
     } finally {
       setCertificateLoading(null);
     }

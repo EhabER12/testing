@@ -25,24 +25,52 @@ class CertificateService {
 
   // Issue certificate to a single user (Course or Package)
   async issueCertificate(userId, courseId, issuerUserId, overrideEligibility = false, manualTemplateId = null, packageId = null, studentMemberId = null) {
+    console.log('=== ISSUE CERTIFICATE REQUEST ===');
+    console.log('userId:', userId);
+    console.log('courseId:', courseId);
+    console.log('packageId:', packageId);
+    console.log('studentMemberId:', studentMemberId);
+    console.log('================================');
+
     // Check if certificate already exists
     const query = {};
-    if (courseId) query.courseId = courseId;
-    if (packageId) query.packageId = packageId;
-
-    // Uniqueness check: prefer studentMemberId if available (more specific for this flow)
-    if (studentMemberId) {
+    
+    // Build query based on what we have
+    if (studentMemberId && packageId) {
+      // For package students, check by studentMemberId + packageId
       query.studentMemberId = studentMemberId;
-    } else if (userId) {
+      query.packageId = packageId;
+    } else if (userId && courseId) {
+      // For course users, check by userId + courseId
       query.userId = userId;
+      query.courseId = courseId;
+    } else if (userId && packageId) {
+      // For package users, check by userId + packageId
+      query.userId = userId;
+      query.packageId = packageId;
     } else {
-      throw new Error("Either User ID or Student Member ID is required");
+      throw new Error("Insufficient parameters to identify certificate uniqueness");
     }
 
+    console.log('=== CHECKING EXISTING CERTIFICATE ===');
+    console.log('Query:', JSON.stringify(query));
+    
     const existing = await Certificate.findOne(query);
     if (existing) {
+      console.log('Certificate already exists:', existing.certificateNumber);
+      // Generate PDF if not already generated
+      if (!existing.pdfGenerated || !existing.pdfUrl) {
+        console.log('Generating PDF for existing certificate');
+        try {
+          await this.generateCertificatePDF(existing._id);
+        } catch (pdfErr) {
+          console.error('Failed to generate PDF for existing certificate:', pdfErr.message);
+        }
+      }
       return existing;
     }
+    console.log('No existing certificate found, creating new one');
+    console.log('=====================================');
 
     // Validate eligibility (skip if override is true)
     if (!overrideEligibility && userId && courseId) {
