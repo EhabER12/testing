@@ -467,10 +467,26 @@ export const getTeacherStats = async (req, res, next) => {
     teacherGroups.forEach(group => {
       group.students.forEach(student => {
         if (student.studentId) {
-          // Handle different name fields (studentName for StudentMember, fullName/name for others)
-          const nameObj = student.studentId.studentName || student.studentId.fullName || { en: student.studentId.name, ar: student.studentId.name };
-          // Normalize name to standard fullName structure if it's not
-          const name = nameObj.ar ? nameObj : { en: nameObj, ar: nameObj };
+          // Handle different name fields
+          // StudentMember uses 'name' as { ar: string, en: string }
+          // Other models might use 'fullName' or 'studentName'
+          let name;
+          const sid = student.studentId;
+          
+          if (sid.name && typeof sid.name === 'object' && (sid.name.ar || sid.name.en)) {
+            // StudentMember model - name is already bilingual
+            name = sid.name;
+          } else if (sid.studentName && typeof sid.studentName === 'object') {
+            name = sid.studentName;
+          } else if (sid.fullName && typeof sid.fullName === 'object') {
+            name = sid.fullName;
+          } else if (typeof sid.name === 'string') {
+            name = { ar: sid.name, en: sid.name };
+          } else if (typeof sid.fullName === 'string') {
+            name = { ar: sid.fullName, en: sid.fullName };
+          } else {
+            name = { ar: 'طالب', en: 'Student' };
+          }
 
           recentStudentsList.push({
             name: name,
