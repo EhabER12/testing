@@ -12,7 +12,12 @@ import {
   StudentMember,
 } from "@/store/services/studentMemberService";
 import { getPackages } from "@/store/services/packageService";
-import { bulkIssuePackageCertificates } from "@/store/services/certificateService";
+import {
+  bulkIssuePackageCertificates,
+  issueCertificate,
+  downloadCertificate,
+  getAllTemplates,
+} from "@/store/services/certificateService";
 
 import { isAuthenticated, isAdmin } from "@/store/services/authService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
@@ -101,6 +106,7 @@ export default function StudentMembersPage() {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("all");
   const [showOverdueOnly, setShowOverdueOnly] = useState<boolean>(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [certificateLoading, setCertificateLoading] = useState<string | null>(null);
   
   // Add Student Dialog State
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -117,6 +123,7 @@ export default function StudentMembersPage() {
 
   const { studentMembers, isLoading } = useAppSelector((state) => state.studentMembers);
   const { packages } = useAppSelector((state) => state.packages);
+  const { templates } = useAppSelector((state) => state.certificates);
   const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
@@ -132,6 +139,7 @@ export default function StudentMembersPage() {
 
     dispatch(getStudentMembers());
     dispatch(getPackages());
+    dispatch(getAllTemplates());
   }, [dispatch, user, router]);
 
   const handleDelete = async (id: string) => {
@@ -295,6 +303,75 @@ export default function StudentMembersPage() {
     }
   };
 
+  // Generate PDF certificate for individual student
+  const handleGenerateStudentCertificate = async (student: StudentMember) => {
+    const studentId = student.id || student._id;
+    if (!studentId) {
+      toast.error(isRtl ? "معرف الطالب غير صالح" : "Invalid student ID");
+      return;
+    }
+
+    // Check if student has a package
+    const packageId = student.packageId?.id || student.packageId?._id;
+    if (!packageId) {
+      toast.error(isRtl ? "الطالب غير مرتبط بباقة" : "Student is not linked to a package");
+      return;
+    }
+
+    // Check if package has a template
+    const packageTemplate = templates.find(
+      (t: any) => t.packageId === packageId || String(t.packageId) === String(packageId)
+    );
+    if (!packageTemplate) {
+      toast.error(
+        isRtl
+          ? "لا يوجد قالب شهادة لهذه الباقة. يرجى إنشاء قالب أولاً."
+          : "No certificate template found for this package. Please create a template first."
+      );
+      return;
+    }
+
+    setCertificateLoading(studentId);
+    try {
+      // Issue certificate (will return existing if already issued)
+      const certificate = await dispatch(
+        issueCertificate({
+          studentMemberId: studentId,
+          courseId: packageId, // Using packageId as courseId for package certificates
+          templateId: packageTemplate.id || packageTemplate._id,
+        })
+      ).unwrap();
+
+      const certId = certificate.id || certificate._id;
+      if (!certId) {
+        throw new Error("Certificate ID not found");
+      }
+
+      // Download the PDF
+      const blob = await dispatch(downloadCertificate(certId)).unwrap();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const studentName = getTextValue(student.studentName || student.name) || "student";
+      link.download = `certificate-${studentName.replace(/\s+/g, "_")}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+
+      toast.success(isRtl ? "تم تحميل الشهادة بنجاح" : "Certificate downloaded successfully");
+    } catch (err: any) {
+      console.error("Certificate generation failed:", err);
+      toast.error(
+        typeof err === "string"
+          ? err
+          : isRtl
+          ? "فشل إنشاء الشهادة"
+          : "Failed to generate certificate"
+      );
+    } finally {
+      setCertificateLoading(null);
+    }
+  };
+
   const getTextValue = (value: any): string => {
     if (!value) return "";
     if (typeof value === "string") return value;
@@ -341,16 +418,6 @@ export default function StudentMembersPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          {selectedPackageId !== "all" && (
-            <Button
-              onClick={handleGenerateCertificates}
-              disabled={generateLoading}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              <Award className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-              {generateLoading ? (isRtl ? "جاري الإصدار..." : "Generating...") : (isRtl ? "استخراج الشهادات" : "Generate Certificates")}
-            </Button>
-          )}
           <Button
             onClick={() => setAddDialogOpen(true)}
             className="bg-genoun-green hover:bg-genoun-green/90"
@@ -432,6 +499,42 @@ export default function StudentMembersPage() {
             ))}
           </TabsList>
         </Tabs>
+
+        {/* Bulk Certificate Generation Section - Only shown when a specific package is selected */}
+        {selectedPackageId !== "all" && (
+          <Card className="bg-purple-50 border-purple-200">
+            <CardContent className="flex items-center justify-between py-4">
+              <div className="flex items-center gap-3">
+                <Award className="h-6 w-6 text-purple-600" />
+                <div>
+                  <h3 className="font-semibold text-purple-900">
+                    {isRtl ? "إنشاء شهادات جماعية" : "Bulk Certificate Generation"}
+                  </h3>
+                  <p className="text-sm text-purple-700">
+                    {isRtl
+                      ? `إنشاء شهادات لجميع الطلاب النشطين في هذه الباقة (${studentMembers.filter(s => s.status === "active" && (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).length} طالب)`
+                      : `Generate certificates for all active students in this package (${studentMembers.filter(s => s.status === "active" && (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).length} students)`}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleGenerateCertificates}
+                disabled={generateLoading || studentMembers.filter(s => s.status === "active" && (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).length === 0}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                size="lg"
+              >
+                <Award className={`h-5 w-5 ${isRtl ? "ml-2" : "mr-2"}`} />
+                {generateLoading
+                  ? isRtl
+                    ? "جاري الإصدار..."
+                    : "Generating..."
+                  : isRtl
+                  ? "إنشاء جميع الشهادات"
+                  : "Generate All Certificates"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -585,6 +688,19 @@ export default function StudentMembersPage() {
                                     <FileText className="h-4 w-4 mr-2" />
                                     {isRtl ? "التفاصيل / تعديل" : "Details / Edit"}
                                   </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleGenerateStudentCertificate(student)}
+                                  disabled={certificateLoading === (student.id || student._id)}
+                                >
+                                  <Award className="h-4 w-4 mr-2" />
+                                  {certificateLoading === (student.id || student._id)
+                                    ? isRtl
+                                      ? "جاري الإنشاء..."
+                                      : "Generating..."
+                                    : isRtl
+                                    ? "شهادة PDF"
+                                    : "PDF Certificate"}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
