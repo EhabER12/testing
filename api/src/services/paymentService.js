@@ -515,6 +515,10 @@ export class PaymentService {
   async createPaypalPayment({ userId, courseId, productId, serviceId, amount, currency, locale, billingInfo }) {
     const config = await this.getGatewayConfig("paypal");
 
+    // Get exchange rates from settings
+    const settings = await this.settingsRepository.getSettings();
+    const exchangeRates = settings.financeSettings?.exchangeRates || {};
+
     // Map courseId to productId if present (for compatibility)
     const finalProductId = productId || courseId;
 
@@ -540,12 +544,13 @@ export class PaymentService {
 
     const payment = await this.paymentRepository.create(paymentData);
 
-    // Call PayPal API to create order
+    // Call PayPal API to create order with exchange rates
     try {
       const paypalOrder = await paypalClient.createOrder({
         amount,
         currency,
-        config: config
+        config: config,
+        exchangeRates: exchangeRates // Pass exchange rates for currency conversion
       });
 
       // Update payment with PayPal Order ID

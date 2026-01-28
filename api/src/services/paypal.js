@@ -47,9 +47,51 @@ export async function getAccessToken(config) {
 
 
 /**
+ * Convert currency to USD for PayPal
+ * @param {number} amount - Amount in original currency
+ * @param {string} currency - Original currency (EGP, SAR, USD)
+ * @param {object} exchangeRates - Exchange rates from settings
+ * @returns {object} - { amount: number, currency: 'USD', originalAmount: number, originalCurrency: string }
+ */
+function convertToUSD(amount, currency, exchangeRates = {}) {
+  // If already USD, no conversion needed
+  if (currency === "USD") {
+    return { 
+      amount, 
+      currency: "USD", 
+      originalAmount: amount, 
+      originalCurrency: currency 
+    };
+  }
+
+  // Get exchange rate for the currency (how many units = 1 USD)
+  // Default rates if not provided
+  const defaultRates = {
+    USD: 1,
+    EGP: 50.0,  // 50 EGP = 1 USD
+    SAR: 3.75,  // 3.75 SAR = 1 USD
+  };
+
+  const rates = { ...defaultRates, ...exchangeRates };
+  const rate = rates[currency] || 1;
+
+  // Convert to USD: amount / rate
+  const convertedAmount = (amount / rate).toFixed(2);
+
+  console.log(`💱 Currency Conversion: ${amount} ${currency} = ${convertedAmount} USD (rate: ${rate})`);
+
+  return {
+    amount: parseFloat(convertedAmount),
+    currency: "USD",
+    originalAmount: amount,
+    originalCurrency: currency
+  };
+}
+
+/**
  * Create PayPal order
  */
-export async function createOrder({ amount, currency = "USD", config }) {
+export async function createOrder({ amount, currency = "USD", config, exchangeRates }) {
   console.log("🧪 Creating PayPal order...", config);
 
   console.log("🧪 PayPal config debug:", {
@@ -65,6 +107,13 @@ export async function createOrder({ amount, currency = "USD", config }) {
 
   const accessToken = await getAccessToken(config);
 
+  // Convert currency to USD for PayPal
+  const converted = convertToUSD(amount, currency, exchangeRates);
+  const paypalAmount = converted.amount;
+  const paypalCurrency = converted.currency;
+
+  console.log(`💰 PayPal Order Amount: ${paypalAmount} ${paypalCurrency} (Original: ${amount} ${currency})`);
+
   try {
     const response = await axios.post(
       `${paypalApiUrl}/v2/checkout/orders`,
@@ -73,8 +122,8 @@ export async function createOrder({ amount, currency = "USD", config }) {
         purchase_units: [
           {
             amount: {
-              currency_code: currency,
-              value: amount.toString(),
+              currency_code: paypalCurrency,
+              value: paypalAmount.toString(),
             },
           },
         ],
