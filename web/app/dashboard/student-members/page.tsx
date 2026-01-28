@@ -406,7 +406,14 @@ export default function StudentMembersPage() {
       toast.success(isRtl ? "تم تحميل الشهادة بنجاح" : "Certificate downloaded successfully");
     } catch (err: any) {
       console.error("Certificate generation failed:", err);
-      const errorMessage = err?.message || err;
+      const errorMessage = err?.message || String(err);
+      
+      console.log('Error details:', {
+        message: errorMessage,
+        isConflict: errorMessage.includes("Conflict") || errorMessage.includes("409"),
+        studentId,
+        packageId
+      });
       
       // If conflict error, refresh certificates and try to find it
       if (errorMessage.includes("Conflict") || errorMessage.includes("409")) {

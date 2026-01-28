@@ -96,12 +96,17 @@ export const issueCertificate = createAsyncThunk(
   "certificates/issue",
   async (data: { userId?: string; studentMemberId?: string; courseId?: string; packageId?: string; templateId?: string }, { rejectWithValue }) => {
     try {
+      console.log('Issuing certificate with data:', data);
       const response = await axios.post("/certificates/issue", data);
+      console.log('Certificate issued successfully:', response.data);
       return response.data.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to issue certificate"
-      );
+      console.error('Issue certificate error:', error.response?.data || error.message);
+      const errorMessage = error.response?.data?.error?.message || 
+                          error.response?.data?.message || 
+                          error.message ||
+                          "Failed to issue certificate";
+      return rejectWithValue(errorMessage);
     }
   }
 );
