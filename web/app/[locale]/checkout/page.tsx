@@ -249,7 +249,7 @@ export default function CheckoutPage() {
         const response = await dispatch(createPaypalPaymentThunk({
           amount: total,
           productId,
-          currency: items[0]?.product?.currency || "USD", // PayPal usually USD
+          currency: items[0]?.product?.currency || "EGP", // Use product currency
           locale,
           billingInfo: {
             name: formData.name,

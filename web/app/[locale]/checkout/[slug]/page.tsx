@@ -241,7 +241,7 @@ export default function CourseCheckoutPage() {
             if (selectedMethodId === "paypal") {
                 const response = await dispatch(createPaypalPaymentThunk({
                     amount: currentCourse?.price || 0,
-                    currency: "USD",
+                    currency: currentCourse?.currency || "EGP", // Use course currency instead of hardcoded USD
                     courseId,
                     locale,
                     billingInfo: {
