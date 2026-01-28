@@ -336,11 +336,49 @@ export default function StudentMembersPage() {
 
     setCertificateLoading(studentId);
     try {
-      // Issue certificate (will return existing if already issued and generate PDF)
+      // First, try to find existing certificate
+      console.log("Checking for existing certificate for student:", studentId);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.med-side.net'}/certificates`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const existingCert = data.data?.find(
+          (cert: any) => {
+            const certStudentId = cert.studentMemberId?._id || cert.studentMemberId?.id || cert.studentMemberId;
+            return String(certStudentId) === String(studentId);
+          }
+        );
+        
+        if (existingCert) {
+          console.log("Found existing certificate, downloading:", existingCert.certificateNumber);
+          const certId = existingCert.id || existingCert._id;
+          
+          // Download it directly
+          const blob = await dispatch(downloadCertificate(certId)).unwrap();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          const studentName = getTextValue(student.studentName || student.name) || "student";
+          link.download = `certificate-${studentName.replace(/\s+/g, "_")}.pdf`;
+          link.click();
+          window.URL.revokeObjectURL(url);
+          
+          toast.success(isRtl ? "تم تحميل الشهادة بنجاح" : "Certificate downloaded successfully");
+          setCertificateLoading(null);
+          return;
+        }
+      }
+      
+      // If no existing certificate, try to issue a new one
+      console.log("No existing certificate found, issuing new one");
       const certificate = await dispatch(
         issueCertificate({
           studentMemberId: studentId,
-          packageId: packageId, // Pass packageId for package certificates
+          packageId: packageId,
           templateId: packageTemplate.id || packageTemplate._id,
         })
       ).unwrap();
@@ -350,8 +388,8 @@ export default function StudentMembersPage() {
         throw new Error("Certificate ID not found");
       }
 
-      // Wait a moment for PDF generation if needed
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait a moment for PDF generation
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Download the PDF
       const blob = await dispatch(downloadCertificate(certId)).unwrap();
@@ -368,11 +406,10 @@ export default function StudentMembersPage() {
       console.error("Certificate generation failed:", err);
       const errorMessage = err?.message || err;
       
-      // Handle 409 Conflict - certificate already exists
+      // If conflict error, try one more time to find the certificate
       if (errorMessage.includes("Conflict") || errorMessage.includes("409")) {
-        console.log("Certificate exists, trying to find and download it");
+        console.log("Got conflict, trying to find certificate again");
         try {
-          // Try to fetch all certificates and find this student's certificate
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.med-side.net'}/certificates`, {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -382,18 +419,14 @@ export default function StudentMembersPage() {
           if (response.ok) {
             const data = await response.json();
             const existingCert = data.data?.find(
-              (cert: any) => 
-                cert.studentMemberId === studentId || 
-                String(cert.studentMemberId) === String(studentId) ||
-                (cert.studentMemberId?._id === studentId) ||
-                (cert.studentMemberId?.id === studentId)
+              (cert: any) => {
+                const certStudentId = cert.studentMemberId?._id || cert.studentMemberId?.id || cert.studentMemberId;
+                return String(certStudentId) === String(studentId);
+              }
             );
             
             if (existingCert) {
               const certId = existingCert.id || existingCert._id;
-              console.log("Found existing certificate:", certId);
-              
-              // Download it
               const blob = await dispatch(downloadCertificate(certId)).unwrap();
               const url = window.URL.createObjectURL(blob);
               const link = document.createElement("a");
@@ -404,17 +437,18 @@ export default function StudentMembersPage() {
               window.URL.revokeObjectURL(url);
               
               toast.success(isRtl ? "تم تحميل الشهادة الموجودة بنجاح" : "Existing certificate downloaded successfully");
+              setCertificateLoading(null);
               return;
             }
           }
         } catch (retryErr) {
-          console.error("Failed to find existing certificate:", retryErr);
+          console.error("Failed to find certificate on retry:", retryErr);
         }
         
         toast.error(
           isRtl
-            ? "الشهادة موجودة مسبقاً ولكن فشل تحميلها. يرجى المحاولة من صفحة الشهادات."
-            : "Certificate exists but failed to download. Please try from certificates page."
+            ? "الشهادة موجودة ولكن فشل تحميلها. يرجى التواصل مع الدعم الفني."
+            : "Certificate exists but download failed. Please contact support."
         );
       } else {
         toast.error(
