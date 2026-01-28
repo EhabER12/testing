@@ -17,6 +17,7 @@ import {
   issueCertificate,
   downloadCertificate,
   getAllTemplates,
+  getCertificates,
 } from "@/store/services/certificateService";
 
 import { isAuthenticated, isAdmin } from "@/store/services/authService";
@@ -123,7 +124,7 @@ export default function StudentMembersPage() {
 
   const { studentMembers, isLoading } = useAppSelector((state) => state.studentMembers);
   const { packages } = useAppSelector((state) => state.packages);
-  const { templates } = useAppSelector((state) => state.certificates);
+  const { templates, certificates } = useAppSelector((state) => state.certificates);
   const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
@@ -139,6 +140,7 @@ export default function StudentMembersPage() {
 
     dispatch(getStudentMembers());
     dispatch(getPackages());
+    dispatch(getCertificates());
     // Try to get templates, but don't fail if it errors
     dispatch(getAllTemplates()).catch((err) => {
       console.warn("Failed to load templates:", err);
@@ -336,44 +338,41 @@ export default function StudentMembersPage() {
 
     setCertificateLoading(studentId);
     try {
-      // First, try to find existing certificate
+      // First, try to find existing certificate from Redux store
       console.log("Checking for existing certificate for student:", studentId);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.med-side.net'}/certificates`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const existingCert = certificates.find(
+        (cert: any) => {
+          const certStudentId = cert.studentMemberId?._id || cert.studentMemberId?.id || cert.studentMemberId;
+          return String(certStudentId) === String(studentId);
+        }
+      );
       
-      if (response.ok) {
-        const data = await response.json();
-        const existingCert = data.data?.find(
-          (cert: any) => {
-            const certStudentId = cert.studentMemberId?._id || cert.studentMemberId?.id || cert.studentMemberId;
-            return String(certStudentId) === String(studentId);
-          }
-        );
+      if (existingCert) {
+        console.log("Found existing certificate in store, downloading:", existingCert.certificateNumber);
+        const certId = existingCert.id || existingCert._id;
         
-        if (existingCert) {
-          console.log("Found existing certificate, downloading:", existingCert.certificateNumber);
-          const certId = existingCert.id || existingCert._id;
-          
-          // Download it directly
-          const blob = await dispatch(downloadCertificate(certId)).unwrap();
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          const studentName = getTextValue(student.studentName || student.name) || "student";
-          link.download = `certificate-${studentName.replace(/\s+/g, "_")}.pdf`;
-          link.click();
-          window.URL.revokeObjectURL(url);
-          
-          toast.success(isRtl ? "تم تحميل الشهادة بنجاح" : "Certificate downloaded successfully");
+        if (!certId) {
+          toast.error(isRtl ? "معرف الشهادة غير صالح" : "Invalid certificate ID");
           setCertificateLoading(null);
           return;
         }
+        
+        // Download it directly
+        const blob = await dispatch(downloadCertificate(certId)).unwrap();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        const studentName = getTextValue(student.studentName || student.name) || "student";
+        link.download = `certificate-${studentName.replace(/\s+/g, "_")}.pdf`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+        
+        toast.success(isRtl ? "تم تحميل الشهادة بنجاح" : "Certificate downloaded successfully");
+        setCertificateLoading(null);
+        return;
       }
       
-      // If no existing certificate, try to issue a new one
+      // If no existing certificate in store, try to issue a new one
       console.log("No existing certificate found, issuing new one");
       const certificate = await dispatch(
         issueCertificate({
@@ -387,6 +386,9 @@ export default function StudentMembersPage() {
       if (!certId) {
         throw new Error("Certificate ID not found");
       }
+
+      // Refresh certificates list to get the new one
+      await dispatch(getCertificates());
 
       // Wait a moment for PDF generation
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -406,50 +408,57 @@ export default function StudentMembersPage() {
       console.error("Certificate generation failed:", err);
       const errorMessage = err?.message || err;
       
-      // If conflict error, try one more time to find the certificate
+      // If conflict error, refresh certificates and try to find it
       if (errorMessage.includes("Conflict") || errorMessage.includes("409")) {
-        console.log("Got conflict, trying to find certificate again");
+        console.log("Got conflict, refreshing certificates and trying again");
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.med-side.net'}/certificates`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            },
-          });
+          // Refresh certificates list
+          await dispatch(getCertificates()).unwrap();
           
-          if (response.ok) {
-            const data = await response.json();
-            const existingCert = data.data?.find(
-              (cert: any) => {
-                const certStudentId = cert.studentMemberId?._id || cert.studentMemberId?.id || cert.studentMemberId;
-                return String(certStudentId) === String(studentId);
-              }
-            );
+          // Try to find the certificate again
+          const existingCert = certificates.find(
+            (cert: any) => {
+              const certStudentId = cert.studentMemberId?._id || cert.studentMemberId?.id || cert.studentMemberId;
+              return String(certStudentId) === String(studentId);
+            }
+          );
+          
+          if (existingCert) {
+            const certId = existingCert.id || existingCert._id;
             
-            if (existingCert) {
-              const certId = existingCert.id || existingCert._id;
-              const blob = await dispatch(downloadCertificate(certId)).unwrap();
-              const url = window.URL.createObjectURL(blob);
-              const link = document.createElement("a");
-              link.href = url;
-              const studentName = getTextValue(student.studentName || student.name) || "student";
-              link.download = `certificate-${studentName.replace(/\s+/g, "_")}.pdf`;
-              link.click();
-              window.URL.revokeObjectURL(url);
-              
-              toast.success(isRtl ? "تم تحميل الشهادة الموجودة بنجاح" : "Existing certificate downloaded successfully");
+            if (!certId) {
+              toast.error(isRtl ? "معرف الشهادة غير صالح" : "Invalid certificate ID");
               setCertificateLoading(null);
               return;
             }
+            
+            const blob = await dispatch(downloadCertificate(certId)).unwrap();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            const studentName = getTextValue(student.studentName || student.name) || "student";
+            link.download = `certificate-${studentName.replace(/\s+/g, "_")}.pdf`;
+            link.click();
+            window.URL.revokeObjectURL(url);
+            
+            toast.success(isRtl ? "تم تحميل الشهادة الموجودة بنجاح" : "Existing certificate downloaded successfully");
+            setCertificateLoading(null);
+            return;
           }
+          
+          toast.error(
+            isRtl
+              ? "الشهادة موجودة ولكن فشل تحميلها. يرجى تحديث الصفحة والمحاولة مرة أخرى."
+              : "Certificate exists but download failed. Please refresh the page and try again."
+          );
         } catch (retryErr) {
           console.error("Failed to find certificate on retry:", retryErr);
+          toast.error(
+            isRtl
+              ? "الشهادة موجودة ولكن فشل تحميلها. يرجى تحديث الصفحة والمحاولة مرة أخرى."
+              : "Certificate exists but download failed. Please refresh the page and try again."
+          );
         }
-        
-        toast.error(
-          isRtl
-            ? "الشهادة موجودة ولكن فشل تحميلها. يرجى التواصل مع الدعم الفني."
-            : "Certificate exists but download failed. Please contact support."
-        );
       } else {
         toast.error(
           isRtl
