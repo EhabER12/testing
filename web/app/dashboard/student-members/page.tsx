@@ -7,9 +7,11 @@ import {
   getStudentMembers,
   deleteStudentMember,
   importStudentMembers,
+  exportStudentMembers,
   StudentMember,
 } from "@/store/services/studentMemberService";
 import { getPackages } from "@/store/services/packageService";
+import { getAllUsers } from "@/store/services/userService";
 import { bulkIssuePackageCertificates } from "@/store/services/certificateService";
 
 import { isAuthenticated, isAdmin } from "@/store/services/authService";
@@ -95,11 +97,14 @@ export default function StudentMembersPage() {
   const [importResult, setImportResult] = useState<any>(null);
   const [selectedPackageId, setSelectedPackageId] = useState<string>("all");
   const [selectedGovernorate, setSelectedGovernorate] = useState<string>("all");
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>("all");
   const [showOverdueOnly, setShowOverdueOnly] = useState<boolean>(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const { studentMembers, isLoading } = useAppSelector((state) => state.studentMembers);
   const { packages } = useAppSelector((state) => state.packages);
   const { user } = useAppSelector((state) => state.auth);
+  const { users } = useAppSelector((state) => state.userManagement);
 
   useEffect(() => {
     if (!isAuthenticated() || !user) {
@@ -115,6 +120,9 @@ export default function StudentMembersPage() {
     dispatch(getStudentMembers());
 
     dispatch(getPackages());
+    
+    // Fetch teachers for the filter dropdown
+    dispatch(getAllUsers());
   }, [dispatch, user, router]);
 
   const handleDelete = async (id: string) => {
@@ -201,6 +209,34 @@ export default function StudentMembersPage() {
     document.body.removeChild(link);
   };
 
+  const handleExportCSV = async () => {
+    setExportLoading(true);
+    try {
+      const filters: any = {};
+      if (selectedPackageId !== "all") filters.packageId = selectedPackageId;
+      if (selectedGovernorate !== "all") filters.governorate = selectedGovernorate;
+      if (selectedTeacherId !== "all") filters.assignedTeacherId = selectedTeacherId;
+      if (showOverdueOnly) filters.status = "overdue";
+
+      const blob = await exportStudentMembers(filters);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `student_members_export_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(isRtl ? "تم تصدير البيانات بنجاح" : "Data exported successfully");
+    } catch (err: any) {
+      console.error("Export failed:", err);
+      toast.error(isRtl ? "فشل التصدير" : "Export failed");
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   const getTextValue = (value: any): string => {
     if (!value) return "";
     if (typeof value === "string") return value;
@@ -257,6 +293,14 @@ export default function StudentMembersPage() {
               {generateLoading ? (isRtl ? "جاري الإصدار..." : "Generating...") : (isRtl ? "استخراج الشهادات" : "Generate Certificates")}
             </Button>
           )}
+          <Button
+            onClick={handleExportCSV}
+            disabled={exportLoading}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Download className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+            {exportLoading ? (isRtl ? "جاري التصدير..." : "Exporting...") : (isRtl ? "تصدير CSV" : "Export CSV")}
+          </Button>
           <Button onClick={() => {
             setImportDialogOpen(true);
             setImportResult(null);
@@ -329,6 +373,21 @@ export default function StudentMembersPage() {
             <div className="flex items-center justify-between">
               <CardTitle>{isRtl ? "قائمة الطلاب" : "Students List"}</CardTitle>
               <div className="flex gap-2">
+                <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder={isRtl ? "تصفية حسب المعلم" : "Filter by Teacher"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{isRtl ? "جميع المعلمين" : "All Teachers"}</SelectItem>
+                    {users
+                      ?.filter((u: any) => u.role === "teacher")
+                      .map((teacher: any) => (
+                        <SelectItem key={teacher.id || teacher._id} value={teacher.id || teacher._id}>
+                          {getTextValue(teacher.fullName)}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
                 <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder={isRtl ? "تصفية حسب المحافظة" : "Filter by Governorate"} />
@@ -389,6 +448,7 @@ export default function StudentMembersPage() {
                     {studentMembers
                       .filter(s => selectedPackageId === "all" || (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId))
                       .filter(s => selectedGovernorate === "all" || s.governorate === selectedGovernorate)
+                      .filter(s => selectedTeacherId === "all" || (s.assignedTeacherId?.id === selectedTeacherId || s.assignedTeacherId?._id === selectedTeacherId))
                       .filter(s => !showOverdueOnly || s.status === "overdue")
                       .map((student, index) => (
                         <TableRow key={student.id || student._id || index}>
@@ -450,7 +510,7 @@ export default function StudentMembersPage() {
                           </TableCell>
                         </TableRow>
                       ))}
-                    {studentMembers.filter(s => selectedPackageId === "all" || (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).filter(s => selectedGovernorate === "all" || s.governorate === selectedGovernorate).filter(s => !showOverdueOnly || s.status === "overdue").length === 0 && (
+                    {studentMembers.filter(s => selectedPackageId === "all" || (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).filter(s => selectedGovernorate === "all" || s.governorate === selectedGovernorate).filter(s => selectedTeacherId === "all" || (s.assignedTeacherId?.id === selectedTeacherId || s.assignedTeacherId?._id === selectedTeacherId)).filter(s => !showOverdueOnly || s.status === "overdue").length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} className="h-24 text-center">
                           {isRtl ? "لا يوجد طلاب يطابقون الفلاتر المحددة" : "No students match the selected filters"}

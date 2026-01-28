@@ -13,6 +13,7 @@ export const getMembers = async (req, res, next) => {
       status: req.query.status,
       assignedTeacherId: req.query.assignedTeacherId,
       governorate: req.query.governorate,
+      packageId: req.query.packageId,
       search: req.query.search,
     };
 
@@ -286,6 +287,32 @@ export const importMembers = async (req, res, next) => {
       message: `Import processed: ${result.success} succeeded, ${result.failed} failed`,
       data: result
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Export members to CSV
+// @route   GET /api/student-members/export
+// @access  Private (Admin, Moderator)
+export const exportMembers = async (req, res, next) => {
+  try {
+    const filters = {
+      status: req.query.status,
+      assignedTeacherId: req.query.assignedTeacherId,
+      governorate: req.query.governorate,
+      packageId: req.query.packageId,
+      search: req.query.search,
+    };
+
+    const csvData = await studentMemberService.exportMembersToCSV(filters);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=student_members_export_${Date.now()}.csv`
+    );
+    res.status(200).send(csvData);
   } catch (error) {
     next(error);
   }

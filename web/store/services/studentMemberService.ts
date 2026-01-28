@@ -24,6 +24,13 @@ export interface StudentMember {
     name: BilingualText;
   };
   packagePrice?: number;
+  assignedTeacherId?: {
+    id: string;
+    _id?: string;
+    fullName: BilingualText;
+    email: string;
+  };
+  assignedTeacherName?: string;
   renewalHistory: any[];
   lastReminderSent?: string;
   reminderCount: number;
@@ -181,3 +188,25 @@ export const importStudentMembers = createAsyncThunk(
     }
   }
 );
+
+// Export student members to CSV
+export const exportStudentMembers = async (filters: {
+  status?: string;
+  assignedTeacherId?: string;
+  governorate?: string;
+  packageId?: string;
+  search?: string;
+}) => {
+  const params = new URLSearchParams();
+  if (filters.status) params.append("status", filters.status);
+  if (filters.assignedTeacherId) params.append("assignedTeacherId", filters.assignedTeacherId);
+  if (filters.governorate) params.append("governorate", filters.governorate);
+  if (filters.packageId) params.append("packageId", filters.packageId);
+  if (filters.search) params.append("search", filters.search);
+
+  const response = await axios.get(`/student-members/export?${params.toString()}`, {
+    responseType: "blob",
+  });
+  
+  return response.data;
+};

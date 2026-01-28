@@ -131,13 +131,14 @@ export class StudentMemberService {
 
   // Get all student members with filters
   async getAllMembers(filters = {}, options = {}) {
-    const { status, assignedTeacherId, governorate, search } = filters;
+    const { status, assignedTeacherId, governorate, packageId, search } = filters;
 
     const query = {};
 
     if (status) query.status = status;
     if (assignedTeacherId) query.assignedTeacherId = assignedTeacherId;
     if (governorate) query.governorate = governorate;
+    if (packageId) query.packageId = packageId;
 
     if (search) {
       query.$or = [
@@ -450,5 +451,85 @@ export class StudentMemberService {
       },
       byTeacher: membersByTeacher,
     };
+  }
+
+  // Export members to CSV
+  async exportMembersToCSV(filters = {}) {
+    const { status, assignedTeacherId, governorate, packageId, search } = filters;
+
+    const query = {};
+
+    if (status) query.status = status;
+    if (assignedTeacherId) query.assignedTeacherId = assignedTeacherId;
+    if (governorate) query.governorate = governorate;
+    if (packageId) query.packageId = packageId;
+
+    if (search) {
+      query.$or = [
+        { "name.ar": { $regex: search, $options: "i" } },
+        { "name.en": { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const members = await StudentMember.find(query)
+      .populate("assignedTeacherId", "fullName email")
+      .populate("userId", "fullName email")
+      .populate("packageId", "name")
+      .sort("-createdAt");
+
+    // Build CSV content
+    const headers = [
+      "Name (AR)",
+      "Name (EN)",
+      "Phone",
+      "Governorate",
+      "Package",
+      "Teacher",
+      "Start Date",
+      "Next Due Date",
+      "Status",
+      "Notes"
+    ];
+
+    const rows = members.map(member => {
+      const teacherName = member.assignedTeacherId 
+        ? (member.assignedTeacherId.fullName?.ar || member.assignedTeacherId.fullName?.en || member.assignedTeacherId.email || "")
+        : (member.assignedTeacherName || "");
+
+      const packageName = member.packageId 
+        ? (member.packageId.name?.ar || member.packageId.name?.en || "")
+        : "";
+
+      return [
+        member.name?.ar || "",
+        member.name?.en || "",
+        member.phone || "",
+        member.governorate || "",
+        packageName,
+        teacherName,
+        member.startDate ? new Date(member.startDate).toISOString().split('T')[0] : "",
+        member.nextDueDate ? new Date(member.nextDueDate).toISOString().split('T')[0] : "",
+        member.status || "",
+        (member.notes || "").replace(/[\r\n]+/g, " ").replace(/"/g, '""')
+      ];
+    });
+
+    // Escape CSV values
+    const escapeCSV = (value) => {
+      if (typeof value !== 'string') return value;
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+
+    // Build CSV string
+    const csvLines = [
+      headers.map(escapeCSV).join(','),
+      ...rows.map(row => row.map(escapeCSV).join(','))
+    ];
+
+    return csvLines.join('\n');
   }
 }

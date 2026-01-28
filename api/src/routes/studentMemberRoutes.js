@@ -13,6 +13,7 @@ import {
   getStatistics,
   getMySubscriptions,
   importMembers,
+  exportMembers,
 } from "../controllers/studentMemberController.js";
 import multer from "multer";
 
@@ -32,6 +33,9 @@ router.use(authorize("admin", "moderator"));
 
 // Statistics
 router.get("/stats", getStatistics);
+
+// Export to CSV
+router.get("/export", exportMembers);
 
 // Due soon members
 router.get("/due-soon", getMembersDueSoon);
