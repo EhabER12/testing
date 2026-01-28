@@ -322,22 +322,23 @@ export default function TeachersManagementPage() {
 
   const openEditDialog = (group: TeacherGroup) => {
     setSelectedGroup(group);
+    const teacherId = group.teacherId?.id || group.teacherId?._id || '';
     setFormData({
-      teacherId: (group.teacherId.id || group.teacherId._id)!,
+      teacherId: teacherId,
       groupName: {
         ar: group.groupName?.ar || "",
         en: group.groupName?.en || "",
       },
       groupType: group.groupType,
       pricing: {
-        individualRate: group.pricing.individualRate,
-        groupRate: group.pricing.groupRate,
-        studentsPerIndividual: group.pricing.studentsPerIndividual,
-        currency: group.pricing.currency,
+        individualRate: group.pricing?.individualRate || 0,
+        groupRate: group.pricing?.groupRate || 0,
+        studentsPerIndividual: group.pricing?.studentsPerIndividual || 12,
+        currency: group.pricing?.currency || "EGP",
       },
       permissions: {
-        canUploadCourses: group.permissions.canUploadCourses,
-        canPublishDirectly: group.permissions.canPublishDirectly,
+        canUploadCourses: group.permissions?.canUploadCourses || false,
+        canPublishDirectly: group.permissions?.canPublishDirectly || false,
       },
       notes: group.notes || "",
     });
@@ -441,10 +442,12 @@ export default function TeachersManagementPage() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                {group.teacherId.fullName && getTextValue(group.teacherId.fullName)}
-                                <Badge variant="outline" className="text-[10px]">
-                                  {group.teacherId.email}
-                                </Badge>
+                                {group.teacherId?.fullName && getTextValue(group.teacherId.fullName)}
+                                {group.teacherId?.email && (
+                                  <Badge variant="outline" className="text-[10px]">
+                                    {group.teacherId.email}
+                                  </Badge>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -507,9 +510,9 @@ export default function TeachersManagementPage() {
                                 <div className="p-4 space-y-4">
                                   <div className="flex items-center justify-between">
                                     <h4 className="text-sm font-bold">{t("admin.teachers.students")}</h4>
-                                    <Badge variant="outline">{group.students.length} {t("admin.teachers.totalStudents")}</Badge>
+                                    <Badge variant="outline">{(group.students || []).length} {t("admin.teachers.totalStudents")}</Badge>
                                   </div>
-                                  {group.students.length === 0 ? (
+                                  {group.students && group.students.length === 0 ? (
                                     <p className="text-xs text-muted-foreground text-center py-4">{t("admin.teachers.noStudents")}</p>
                                   ) : (
                                     <Table>
@@ -522,18 +525,20 @@ export default function TeachersManagementPage() {
                                         </TableRow>
                                       </TableHeader>
                                       <TableBody>
-                                        {group.students.map((student) => {
-                                          const studentId = (student.studentId.id || student.studentId._id)!;
-                                          const mappingId = (student.id || student._id)!;
+                                        {(group.students || []).map((student) => {
+                                          if (!student || !student.studentId) return null;
+                                          const studentId = student.studentId?.id || student.studentId?._id;
+                                          if (!studentId) return null;
+                                          const mappingId = student.id || student._id || studentId;
                                           return (
                                             <TableRow key={mappingId}>
                                               <TableCell className="py-2">
                                                 <div className="flex flex-col">
                                                   <span className="font-medium text-sm">
-                                                    {getTextValue(student.studentId.studentName)}
+                                                    {getTextValue(student.studentId?.studentName)}
                                                   </span>
                                                   <span className="text-[10px] text-muted-foreground italic">
-                                                    {student.studentId.whatsappNumber}
+                                                    {student.studentId?.whatsappNumber || '-'}
                                                   </span>
                                                 </div>
                                               </TableCell>
@@ -553,7 +558,7 @@ export default function TeachersManagementPage() {
                                                 </Select>
                                               </TableCell>
                                               <TableCell className="py-2 text-xs text-muted-foreground">
-                                                {new Date(student.assignedDate).toLocaleDateString()}
+                                                {student.assignedDate ? new Date(student.assignedDate).toLocaleDateString() : '-'}
                                               </TableCell>
                                               <TableCell className="py-2 text-right">
                                                 <Button
@@ -943,7 +948,10 @@ export default function TeachersManagementPage() {
                   (() => {
                     const availableStudents = studentMembers.filter((student) => {
                       const studentId = (student.id || student._id)!;
-                      const isAlreadyInGroup = selectedGroup?.students.some(s => (s.studentId.id || s.studentId._id) === studentId);
+                      const isAlreadyInGroup = selectedGroup?.students?.some(s => {
+                                                            const sId = s?.studentId?.id || s?.studentId?._id;
+                                                            return sId === studentId;
+                                                          });
                       return !isAlreadyInGroup;
                     });
 

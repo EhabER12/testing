@@ -10,9 +10,9 @@ dotenv.config();
  */
 async function updateFinanceSettings() {
   try {
-    console.log("🔄 Connecting to database...");
+    console.log(" Connecting to database...");
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log("✅ Connected to database");
+    console.log(" Connected to database");
 
     // Get or create settings
     let settings = await Settings.findOne();
