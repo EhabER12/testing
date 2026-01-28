@@ -20,7 +20,7 @@ import {
   getCertificates,
 } from "@/store/services/certificateService";
 
-import { isAuthenticated, isAdmin } from "@/store/services/authService";
+import { isAuthenticated, isAdmin, isModerator } from "@/store/services/authService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
 import { Button } from "@/components/ui/button";
 import {
@@ -133,7 +133,7 @@ export default function StudentMembersPage() {
       return;
     }
 
-    if (!isAdmin()) {
+    if (!isAdmin() && !isModerator()) {
       router.push("/");
       return;
     }

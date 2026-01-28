@@ -9,7 +9,7 @@ import {
     StudentMember,
 } from "@/store/services/studentMemberService";
 import { getPackages } from "@/store/services/packageService";
-import { isAuthenticated, isAdmin } from "@/store/services/authService";
+import { isAuthenticated, isAdmin, isModerator } from "@/store/services/authService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +64,7 @@ export default function EditStudentMemberPage() {
             return;
         }
 
-        if (!isAdmin()) {
+        if (!isAdmin() && !isModerator()) {
             router.push("/");
             return;
         }

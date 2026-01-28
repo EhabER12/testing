@@ -18,18 +18,20 @@ import { uploadSingle } from "../middlewares/uploadMiddleware.js";
 
 const router = express.Router();
 
-// All finance routes require admin authentication
+// All finance routes require authentication
 router.use(protect);
+
+// Settings - allow read for moderators
+router.get("/settings", authorize("admin", "moderator"), getFinanceSettings);
+router.put("/settings", authorize("admin"), updateFinanceSettings);
+
+// Admin only routes below
 router.use(authorize("admin"));
 
 // Summary and analytics endpoints
 router.get("/summary", getFinancialSummary);
 router.get("/monthly", getMonthlyBreakdown);
 router.get("/categories", getCategoryBreakdown);
-
-// Settings
-router.get("/settings", getFinanceSettings);
-router.put("/settings", updateFinanceSettings);
 
 // Balance adjustment
 router.post("/adjust", adjustBalance);

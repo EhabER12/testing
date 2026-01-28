@@ -42,8 +42,8 @@ router.get("/due-soon", getMembersDueSoon);
 
 // Bulk operations
 router.post("/bulk-reminders", sendBulkReminders);
-router.post("/update-statuses", authorize("admin"), updateStatuses);
-router.post("/import", authorize("admin"), upload.single("file"), importMembers);
+router.post("/update-statuses", updateStatuses);
+router.post("/import", upload.single("file"), importMembers);
 
 // CRUD operations
 router.route("/")
@@ -53,7 +53,7 @@ router.route("/")
 router.route("/:id")
   .get(getMember)
   .put(updateMember)
-  .delete(authorize("admin"), deleteMember);
+  .delete(deleteMember);
 
 // Member-specific operations
 router.post("/:id/renew", renewSubscription);
