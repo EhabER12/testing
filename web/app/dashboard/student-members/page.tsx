@@ -11,7 +11,6 @@ import {
   StudentMember,
 } from "@/store/services/studentMemberService";
 import { getPackages } from "@/store/services/packageService";
-import { getAllUsers } from "@/store/services/userService";
 import { bulkIssuePackageCertificates } from "@/store/services/certificateService";
 
 import { isAuthenticated, isAdmin } from "@/store/services/authService";
@@ -104,7 +103,6 @@ export default function StudentMembersPage() {
   const { studentMembers, isLoading } = useAppSelector((state) => state.studentMembers);
   const { packages } = useAppSelector((state) => state.packages);
   const { user } = useAppSelector((state) => state.auth);
-  const { users } = useAppSelector((state) => state.userManagement);
 
   useEffect(() => {
     if (!isAuthenticated() || !user) {
@@ -118,11 +116,7 @@ export default function StudentMembersPage() {
     }
 
     dispatch(getStudentMembers());
-
     dispatch(getPackages());
-    
-    // Fetch teachers for the filter dropdown
-    dispatch(getAllUsers());
   }, [dispatch, user, router]);
 
   const handleDelete = async (id: string) => {
@@ -379,11 +373,19 @@ export default function StudentMembersPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{isRtl ? "جميع المعلمين" : "All Teachers"}</SelectItem>
-                    {users
-                      ?.filter((u: any) => u.role === "teacher")
+                    {Array.from(new Set(
+                      studentMembers
+                        .filter(s => s.assignedTeacherId)
+                        .map(s => JSON.stringify({
+                          id: s.assignedTeacherId?.id || s.assignedTeacherId?._id,
+                          name: getTextValue(s.assignedTeacherId?.fullName)
+                        }))
+                    ))
+                      .map(teacherStr => JSON.parse(teacherStr))
+                      .sort((a, b) => a.name.localeCompare(b.name))
                       .map((teacher: any) => (
-                        <SelectItem key={teacher.id || teacher._id} value={teacher.id || teacher._id}>
-                          {getTextValue(teacher.fullName)}
+                        <SelectItem key={teacher.id} value={teacher.id}>
+                          {teacher.name}
                         </SelectItem>
                       ))}
                   </SelectContent>
