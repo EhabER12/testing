@@ -464,6 +464,23 @@ const themeSchema = new mongoose.Schema({
   },
 });
 
+const financeSettingsSchema = new mongoose.Schema({
+  baseCurrency: {
+    type: String,
+    enum: ["SAR", "EGP", "USD"],
+    default: "SAR",
+  },
+  exchangeRates: {
+    USD: { type: Number, default: 1 },
+    SAR: { type: Number, default: 3.75 },
+    EGP: { type: Number, default: 50.0 },
+  },
+  lastRatesUpdate: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const settingsSchema = new mongoose.Schema(
   {
     siteName: {
@@ -599,20 +616,16 @@ const settingsSchema = new mongoose.Schema(
       default: () => ({}),
     },
     financeSettings: {
-      baseCurrency: {
-        type: String,
-        enum: ["SAR", "EGP", "USD"],
-        default: "SAR",
-      },
-      exchangeRates: {
-        USD: { type: Number, default: 1 },
-        SAR: { type: Number, default: 3.75 },
-        EGP: { type: Number, default: 50.0 },
-      },
-      lastRatesUpdate: {
-        type: Date,
-        default: Date.now,
-      },
+      type: financeSettingsSchema,
+      default: () => ({
+        baseCurrency: "SAR",
+        exchangeRates: {
+          USD: 1,
+          SAR: 3.75,
+          EGP: 50.0,
+        },
+        lastRatesUpdate: new Date(),
+      }),
     },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,

@@ -519,6 +519,14 @@ export class PaymentService {
     const settings = await this.settingsRepository.getSettings();
     const exchangeRates = settings.financeSettings?.exchangeRates || {};
 
+    // Debug logging
+    console.log("💱 PayPal Payment Request:", {
+      amount,
+      currency,
+      financeSettingsExists: !!settings.financeSettings,
+      exchangeRates,
+    });
+
     // Map courseId to productId if present (for compatibility)
     const finalProductId = productId || courseId;
 
