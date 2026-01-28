@@ -56,15 +56,35 @@ class CertificateService {
     console.log('Query:', JSON.stringify(query));
     
     const existing = await Certificate.findOne(query);
+    console.log('Existing certificate found:', existing ? existing.certificateNumber : 'None');
+    
     if (existing) {
       console.log('Certificate already exists:', existing.certificateNumber);
+      console.log('Existing cert details:', {
+        id: existing._id,
+        userId: existing.userId,
+        studentMemberId: existing.studentMemberId,
+        courseId: existing.courseId,
+        packageId: existing.packageId,
+        pdfGenerated: existing.pdfGenerated,
+        pdfUrl: existing.pdfUrl
+      });
+      
       // Generate PDF if not already generated
       if (!existing.pdfGenerated || !existing.pdfUrl) {
         console.log('Generating PDF for existing certificate');
         try {
-          await this.generateCertificatePDF(existing._id);
+          const updated = await this.generateCertificatePDF(existing._id);
+          console.log('PDF generated successfully');
+          // Reload certificate to get updated pdfUrl
+          return await Certificate.findById(existing._id)
+            .populate('userId', 'fullName email')
+            .populate('studentMemberId', 'name')
+            .populate('courseId', 'title')
+            .populate('packageId', 'name');
         } catch (pdfErr) {
           console.error('Failed to generate PDF for existing certificate:', pdfErr.message);
+          // Return existing certificate even if PDF generation fails
         }
       }
       return existing;
@@ -174,25 +194,58 @@ class CertificateService {
     console.log('courseNameEn:', courseNameEn);
     console.log('=======================================');
 
-    const certificate = await Certificate.create({
-      userId: userId || undefined, // Optional now
-      studentMemberId: studentMemberId || undefined,
-      courseId,
-      packageId,
-      certificateNumber,
-      studentName: {
-        ar: studentNameAr,
-        en: studentNameEn,
-      },
-      courseName: {
-        ar: courseNameAr || 'الدورة',
-        en: courseNameEn || 'Course',
-      },
-      issuedAt: new Date(),
-      issuedBy: issuerUserId,
-      status: "issued",
-      templateId,
-    });
+    let certificate;
+    try {
+      certificate = await Certificate.create({
+        userId: userId || undefined, // Optional now
+        studentMemberId: studentMemberId || undefined,
+        courseId,
+        packageId,
+        certificateNumber,
+        studentName: {
+          ar: studentNameAr,
+          en: studentNameEn,
+        },
+        courseName: {
+          ar: courseNameAr || 'الدورة',
+          en: courseNameEn || 'Course',
+        },
+        issuedAt: new Date(),
+        issuedBy: issuerUserId,
+        status: "issued",
+        templateId,
+      });
+    } catch (createErr) {
+      // Handle duplicate key error (E11000)
+      if (createErr.code === 11000) {
+        console.log('Duplicate key error caught, trying to find existing certificate');
+        console.log('Error details:', createErr.message);
+        
+        // Try one more time to find the certificate with a broader query
+        const retryQuery = {};
+        if (studentMemberId) retryQuery.studentMemberId = studentMemberId;
+        if (userId) retryQuery.userId = userId;
+        
+        certificate = await Certificate.findOne(retryQuery)
+          .sort({ createdAt: -1 }); // Get the most recent one
+        
+        if (certificate) {
+          console.log('Found certificate on retry:', certificate.certificateNumber);
+          // Generate PDF if needed
+          if (!certificate.pdfGenerated || !certificate.pdfUrl) {
+            try {
+              await this.generateCertificatePDF(certificate._id);
+              certificate = await Certificate.findById(certificate._id);
+            } catch (pdfErr) {
+              console.error('PDF generation failed:', pdfErr.message);
+            }
+          }
+          return certificate;
+        }
+      }
+      // If not a duplicate error or couldn't find certificate, rethrow
+      throw createErr;
+    }
 
     // Update progress (only if user exists and it's a course)
     if (user && courseId) {
