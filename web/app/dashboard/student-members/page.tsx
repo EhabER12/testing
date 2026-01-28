@@ -374,11 +374,15 @@ export default function StudentMembersPage() {
       
       // If no existing certificate in store, try to issue a new one
       console.log("No existing certificate found, issuing new one");
+      
+      // IMPORTANT: Only send studentMemberId and packageId for package students
+      // Do NOT send userId to avoid unique constraint conflicts
       const certificate = await dispatch(
         issueCertificate({
           studentMemberId: studentId,
           packageId: packageId,
           templateId: packageTemplate.id || packageTemplate._id,
+          // Explicitly do not send userId for package students
         })
       ).unwrap();
 
@@ -410,13 +414,13 @@ export default function StudentMembersPage() {
       
       console.log('Error details:', {
         message: errorMessage,
-        isConflict: errorMessage.includes("Conflict") || errorMessage.includes("409"),
+        isConflict: errorMessage.includes("Conflict") || errorMessage.includes("409") || errorMessage.includes("already exists"),
         studentId,
         packageId
       });
       
-      // If conflict error, refresh certificates and try to find it
-      if (errorMessage.includes("Conflict") || errorMessage.includes("409")) {
+      // If conflict error OR "already exists" error, refresh certificates and try to find it
+      if (errorMessage.includes("Conflict") || errorMessage.includes("409") || errorMessage.includes("already exists")) {
         console.log("Got conflict, refreshing certificates and trying again");
         try {
           // Refresh certificates list

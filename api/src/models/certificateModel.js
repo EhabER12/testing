@@ -136,9 +136,41 @@ const certificateSchema = new mongoose.Schema(
 );
 
 // Compound unique index (one certificate per user per course OR per package)
-certificateSchema.index({ userId: 1, courseId: 1 }, { unique: true, partialFilterExpression: { courseId: { $exists: true }, userId: { $exists: true } } });
-certificateSchema.index({ userId: 1, packageId: 1 }, { unique: true, partialFilterExpression: { packageId: { $exists: true }, userId: { $exists: true } } });
-certificateSchema.index({ studentMemberId: 1, packageId: 1 }, { unique: true, partialFilterExpression: { packageId: { $exists: true }, studentMemberId: { $exists: true } } });
+// For course certificates with userId
+certificateSchema.index(
+  { userId: 1, courseId: 1 }, 
+  { 
+    unique: true, 
+    partialFilterExpression: { 
+      courseId: { $exists: true, $ne: null }, 
+      userId: { $exists: true, $ne: null } 
+    } 
+  }
+);
+
+// For package certificates with userId
+certificateSchema.index(
+  { userId: 1, packageId: 1 }, 
+  { 
+    unique: true, 
+    partialFilterExpression: { 
+      packageId: { $exists: true, $ne: null }, 
+      userId: { $exists: true, $ne: null } 
+    } 
+  }
+);
+
+// For package certificates with studentMemberId (package students without user accounts)
+certificateSchema.index(
+  { studentMemberId: 1, packageId: 1 }, 
+  { 
+    unique: true, 
+    partialFilterExpression: { 
+      packageId: { $exists: true, $ne: null }, 
+      studentMemberId: { $exists: true, $ne: null } 
+    } 
+  }
+);
 
 // Pre-save: Generate certificate number if not provided
 certificateSchema.pre("save", function (next) {
