@@ -45,6 +45,7 @@ import { FormService } from "./services/formService.js";
 import { AiArticleSchedulerService } from "./services/aiArticleSchedulerService.js";
 import { StudentMemberSchedulerService } from "./services/studentMemberSchedulerService.js";
 import User from "./models/userModel.js";
+import Certificate from "./models/certificateModel.js";
 import mongoose from "mongoose";
 
 dotenv.config();
@@ -148,9 +149,51 @@ const initializeStudentMemberScheduler = async () => {
   }
 };
 
+// Rebuild certificate indexes to fix unique constraint issues
+const rebuildCertificateIndexes = async () => {
+  try {
+    logger.info("Checking certificate indexes...");
+    
+    // Get current indexes
+    const indexes = await Certificate.collection.getIndexes();
+    const indexNames = Object.keys(indexes);
+    
+    // Check if we need to rebuild (look for old indexes without $ne: null)
+    const needsRebuild = indexNames.some(name => 
+      name.includes('userId_1') && !indexes[name].partialFilterExpression?.userId?.$ne
+    );
+    
+    if (needsRebuild) {
+      logger.info("Rebuilding certificate indexes to fix unique constraints...");
+      
+      // Drop old indexes (keep _id)
+      for (const indexName of indexNames) {
+        if (indexName !== '_id_') {
+          try {
+            await Certificate.collection.dropIndex(indexName);
+            logger.info(`Dropped index: ${indexName}`);
+          } catch (err) {
+            logger.warn(`Could not drop index ${indexName}:`, err.message);
+          }
+        }
+      }
+      
+      // Rebuild with new definitions
+      await Certificate.syncIndexes();
+      logger.success("Certificate indexes rebuilt successfully");
+    } else {
+      logger.success("Certificate indexes are up to date");
+    }
+  } catch (error) {
+    logger.warn("Could not rebuild certificate indexes:", error.message);
+    // Don't exit, this is not critical
+  }
+};
+
 const initializeApp = async () => {
   try {
     await connectDB();
+    await rebuildCertificateIndexes(); // Fix certificate indexes
     await initializeSystemForms();
     await initializeAiScheduler();
     await initializeStudentMemberScheduler();

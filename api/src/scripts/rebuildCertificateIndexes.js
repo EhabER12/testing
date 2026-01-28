@@ -12,16 +12,19 @@ dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 const rebuildIndexes = async () => {
   try {
-    // Verify MONGO_URI is loaded
-    if (!process.env.MONGO_URI) {
-      console.error('ERROR: MONGO_URI not found in environment variables');
-      console.log('Make sure .env file exists in api/ directory with MONGO_URI');
+    // Verify MONGODB_URI is loaded
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    
+    if (!mongoUri) {
+      console.error('ERROR: MONGODB_URI not found in environment variables');
+      console.log('Available env vars:', Object.keys(process.env).filter(k => k.includes('MONGO')));
+      console.log('\nPlease check your .env file in api/ directory');
       process.exit(1);
     }
 
     console.log('Connecting to MongoDB...');
-    console.log('URI:', process.env.MONGO_URI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@')); // Hide password
-    await mongoose.connect(process.env.MONGO_URI);
+    console.log('URI:', mongoUri.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@')); // Hide password
+    await mongoose.connect(mongoUri);
     console.log('✓ Connected to MongoDB');
 
     console.log('Dropping old certificate indexes...');
