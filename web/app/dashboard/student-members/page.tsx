@@ -8,6 +8,7 @@ import {
   deleteStudentMember,
   importStudentMembers,
   exportStudentMembers,
+  createStudentMember,
   StudentMember,
 } from "@/store/services/studentMemberService";
 import { getPackages } from "@/store/services/packageService";
@@ -77,6 +78,7 @@ import {
   AlertCircle,
   Download,
   Award,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -99,6 +101,19 @@ export default function StudentMembersPage() {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("all");
   const [showOverdueOnly, setShowOverdueOnly] = useState<boolean>(false);
   const [exportLoading, setExportLoading] = useState(false);
+  
+  // Add Student Dialog State
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [newStudent, setNewStudent] = useState({
+    name: "",
+    phone: "",
+    governorate: "",
+    packageId: "",
+    teacherName: "",
+    startDate: format(new Date(), "yyyy-MM-dd"),
+    billingDay: new Date().getDate().toString(),
+  });
 
   const { studentMembers, isLoading } = useAppSelector((state) => state.studentMembers);
   const { packages } = useAppSelector((state) => state.packages);
@@ -188,6 +203,48 @@ export default function StudentMembersPage() {
       toast.error(typeof err === 'string' ? err : "Import failed");
     } finally {
       setImportLoading(false);
+    }
+  };
+
+  const handleAddStudent = async () => {
+    if (!newStudent.name || !newStudent.phone || !newStudent.packageId) {
+      toast.error(isRtl ? "يرجى ملء جميع الحقول المطلوبة" : "Please fill all required fields");
+      return;
+    }
+
+    setAddLoading(true);
+    try {
+      const studentData: any = {
+        name: { ar: newStudent.name, en: newStudent.name },
+        phone: newStudent.phone,
+        governorate: newStudent.governorate,
+        packageId: newStudent.packageId,
+        startDate: newStudent.startDate,
+        billingDay: parseInt(newStudent.billingDay) || 1,
+      };
+
+      if (newStudent.teacherName) {
+        studentData.assignedTeacherName = newStudent.teacherName;
+      }
+
+      await dispatch(createStudentMember(studentData)).unwrap();
+      toast.success(isRtl ? "تم إضافة الطالب بنجاح" : "Student added successfully");
+      setAddDialogOpen(false);
+      setNewStudent({
+        name: "",
+        phone: "",
+        governorate: "",
+        packageId: "",
+        teacherName: "",
+        startDate: format(new Date(), "yyyy-MM-dd"),
+        billingDay: new Date().getDate().toString(),
+      });
+      dispatch(getStudentMembers());
+    } catch (err: any) {
+      console.error("Failed to add student:", err);
+      toast.error(typeof err === 'string' ? err : (isRtl ? "فشل إضافة الطالب" : "Failed to add student"));
+    } finally {
+      setAddLoading(false);
     }
   };
 
@@ -294,6 +351,13 @@ export default function StudentMembersPage() {
               {generateLoading ? (isRtl ? "جاري الإصدار..." : "Generating...") : (isRtl ? "استخراج الشهادات" : "Generate Certificates")}
             </Button>
           )}
+          <Button
+            onClick={() => setAddDialogOpen(true)}
+            className="bg-genoun-green hover:bg-genoun-green/90"
+          >
+            <Plus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+            {isRtl ? "إضافة طالب" : "Add Student"}
+          </Button>
           <Button
             onClick={handleExportCSV}
             disabled={exportLoading}
@@ -617,6 +681,117 @@ export default function StudentMembersPage() {
               className="bg-genoun-green hover:bg-genoun-green/90"
             >
               {importLoading ? (isRtl ? "جاري الرفع..." : "Uploading...") : (isRtl ? "استيراد" : "Import")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Student Dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]" dir={isRtl ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle>{isRtl ? "إضافة طالب جديد" : "Add New Student"}</DialogTitle>
+            <DialogDescription>
+              {isRtl ? "أدخل بيانات الطالب الجديد" : "Enter the new student's information"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="student-name">{isRtl ? "الاسم" : "Name"} *</Label>
+              <Input
+                id="student-name"
+                value={newStudent.name}
+                onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
+                placeholder={isRtl ? "اسم الطالب" : "Student name"}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="student-phone">{isRtl ? "رقم الهاتف" : "Phone"} *</Label>
+              <Input
+                id="student-phone"
+                value={newStudent.phone}
+                onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
+                placeholder={isRtl ? "رقم الهاتف" : "Phone number"}
+                dir="ltr"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="student-governorate">{isRtl ? "المحافظة" : "Governorate"}</Label>
+              <Input
+                id="student-governorate"
+                value={newStudent.governorate}
+                onChange={(e) => setNewStudent({ ...newStudent, governorate: e.target.value })}
+                placeholder={isRtl ? "المحافظة" : "Governorate"}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>{isRtl ? "الباقة" : "Package"} *</Label>
+              <Select
+                value={newStudent.packageId}
+                onValueChange={(value) => setNewStudent({ ...newStudent, packageId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={isRtl ? "اختر الباقة" : "Select package"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {packages.map((pkg) => (
+                    <SelectItem key={pkg.id || pkg._id} value={pkg.id || pkg._id || ""}>
+                      {isRtl ? pkg.name.ar : pkg.name.en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="student-teacher">{isRtl ? "المعلم" : "Teacher"}</Label>
+              <Input
+                id="student-teacher"
+                value={newStudent.teacherName}
+                onChange={(e) => setNewStudent({ ...newStudent, teacherName: e.target.value })}
+                placeholder={isRtl ? "اسم المعلم" : "Teacher name"}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="student-start-date">{isRtl ? "تاريخ البداية" : "Start Date"}</Label>
+                <Input
+                  id="student-start-date"
+                  type="date"
+                  value={newStudent.startDate}
+                  onChange={(e) => setNewStudent({ ...newStudent, startDate: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="student-billing-day">{isRtl ? "يوم التجديد" : "Billing Day"}</Label>
+                <Input
+                  id="student-billing-day"
+                  type="number"
+                  min="1"
+                  max="28"
+                  value={newStudent.billingDay}
+                  onChange={(e) => setNewStudent({ ...newStudent, billingDay: e.target.value })}
+                  placeholder="1-28"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
+              {isRtl ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button
+              onClick={handleAddStudent}
+              disabled={addLoading}
+              className="bg-genoun-green hover:bg-genoun-green/90"
+            >
+              {addLoading ? (isRtl ? "جاري الإضافة..." : "Adding...") : (isRtl ? "إضافة" : "Add")}
             </Button>
           </DialogFooter>
         </DialogContent>
