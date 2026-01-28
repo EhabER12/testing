@@ -390,6 +390,7 @@ class CertificateService {
         results.success.push({
           studentId: student._id,
           name: student.name,
+          certificateId: cert._id,
           certificateNumber: cert.certificateNumber
         });
 

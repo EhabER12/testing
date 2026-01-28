@@ -179,22 +179,75 @@ export default function StudentMembersPage() {
     if (confirm(isRtl ? "هل أنت متأكد من استخراج شهادات لجميع الطلاب النشطين في هذه الباقة؟" : "Are you sure you want to generate certificates for all active students in this package?")) {
       setGenerateLoading(true);
       try {
+        // Step 1: Issue certificates
         const result = await dispatch(bulkIssuePackageCertificates(selectedPackageId)).unwrap();
-        toast.success(
-          isRtl
-            ? `تم إصدار ${result.data.success.length} شهادة بنجاح`
-            : `Successfully issued ${result.data.success.length} certificates`
-        );
-        if (result.data.failed.length > 0) {
-          const failedNames = result.data.failed.map((f: any) => f.name).join("، ");
+        
+        const successCount = result.data?.success?.length || 0;
+        const failedCount = result.data?.failed?.length || 0;
+        
+        if (successCount > 0) {
+          toast.success(
+            isRtl
+              ? `تم إصدار ${successCount} شهادة بنجاح. جاري التحميل...`
+              : `Successfully issued ${successCount} certificates. Downloading...`
+          );
+          
+          // Step 2: Refresh certificates list
+          await dispatch(getCertificates()).unwrap();
+          
+          // Step 3: Download each certificate
+          const issuedCertificates = result.data?.success || [];
+          let downloadedCount = 0;
+          
+          for (const cert of issuedCertificates) {
+            const certId = cert.certificateId || cert.certificate?.id || cert.certificate?._id;
+            if (certId) {
+              try {
+                // Wait a bit between downloads to avoid overwhelming the server
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const blob = await dispatch(downloadCertificate(certId)).unwrap();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                // Handle name as object or string
+                const nameValue = cert.name;
+                const studentName = typeof nameValue === 'object' 
+                  ? (nameValue?.ar || nameValue?.en || `student_${downloadedCount + 1}`)
+                  : (nameValue || cert.studentName || `student_${downloadedCount + 1}`);
+                link.download = `certificate-${String(studentName).replace(/\s+/g, "_")}.pdf`;
+                link.click();
+                window.URL.revokeObjectURL(url);
+                downloadedCount++;
+              } catch (downloadErr) {
+                console.error(`Failed to download certificate ${certId}:`, downloadErr);
+              }
+            }
+          }
+          
+          if (downloadedCount > 0) {
+            toast.success(
+              isRtl
+                ? `تم تحميل ${downloadedCount} شهادة بنجاح`
+                : `Successfully downloaded ${downloadedCount} certificates`
+            );
+          }
+        }
+        
+        if (failedCount > 0) {
+          const failedNames = result.data.failed.map((f: any) => {
+            const name = f.name;
+            return typeof name === 'object' ? (name?.ar || name?.en || 'Unknown') : (name || 'Unknown');
+          }).join("، ");
           const msg = isRtl
-            ? `فشل إصدار ${result.data.failed.length} شهادة. الطلاب: ${failedNames}. (السبب غالباً: عدم وجود حساب مستخدم مرتبط)`
-            : `Failed to issue ${result.data.failed.length} certificates. Students: ${failedNames}. (Effect: No linked user account)`;
+            ? `فشل إصدار ${failedCount} شهادة. الطلاب: ${failedNames}.`
+            : `Failed to issue ${failedCount} certificates. Students: ${failedNames}.`;
 
           toast.error(msg, { duration: 6000 });
           console.error("Failed certificates:", result.data.failed);
         }
       } catch (err: any) {
+        console.error("Bulk certificate generation failed:", err);
         toast.error(err || "Failed to generate certificates");
       } finally {
         setGenerateLoading(false);
