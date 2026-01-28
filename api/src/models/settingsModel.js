@@ -474,6 +474,7 @@ const financeSettingsSchema = new mongoose.Schema({
     USD: { type: Number, default: 1 },
     SAR: { type: Number, default: 3.75 },
     EGP: { type: Number, default: 50.0 },
+    EGPtoSAR: { type: Number, default: 13.33 },
   },
   lastRatesUpdate: {
     type: Date,
@@ -623,6 +624,7 @@ const settingsSchema = new mongoose.Schema(
           USD: 1,
           SAR: 3.75,
           EGP: 50.0,
+          EGPtoSAR: 13.33,
         },
         lastRatesUpdate: new Date(),
       }),

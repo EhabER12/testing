@@ -39,17 +39,18 @@ async function updateFinanceSettings() {
       USD: 1,
       SAR: 3.75,  // 3.75 SAR = 1 USD
       EGP: 50.0,  // 50 EGP = 1 USD
+      EGPtoSAR: 13.33, // 13.33 EGP = 1 SAR (for PayPal conversion)
     };
     settings.financeSettings.lastRatesUpdate = new Date();
 
     await settings.save();
 
     console.log("✅ Finance settings updated successfully:");
-    console.log({
+    console.log(JSON.stringify({
       baseCurrency: settings.financeSettings.baseCurrency,
       exchangeRates: settings.financeSettings.exchangeRates,
       lastRatesUpdate: settings.financeSettings.lastRatesUpdate,
-    });
+    }, null, 2));
 
     process.exit(0);
   } catch (error) {

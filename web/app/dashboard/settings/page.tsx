@@ -209,6 +209,7 @@ export default function SettingsDashboardPage() {
       USD: 1,
       SAR: 3.75,
       EGP: 50.0,
+      EGPtoSAR: 13.33,
     },
     lastRatesUpdate: new Date(),
   });
@@ -355,6 +356,7 @@ export default function SettingsDashboardPage() {
             USD: 1,
             SAR: 3.75,
             EGP: 50.0,
+            EGPtoSAR: 13.33,
           },
           lastRatesUpdate: settings.financeSettings.lastRatesUpdate
             ? new Date(settings.financeSettings.lastRatesUpdate)
@@ -1769,8 +1771,8 @@ export default function SettingsDashboardPage() {
                 </CardTitle>
                 <CardDescription>
                   {isRtl
-                    ? "قم بتكوين العملة الأساسية وأسعار الصرف للبوابات الدولية مثل PayPal"
-                    : "Configure base currency and exchange rates for international gateways like PayPal"}
+                    ? "قم بتكوين العملة الأساسية وأسعار الصرف. للعملات كـ EGP، سيتم تحويلها إلى SAR أولاً ثم PayPal يحولها للدولار تلقائياً بسعر أفضل"
+                    : "Configure base currency and exchange rates. For currencies like EGP, they will be converted to SAR first, then PayPal converts to USD automatically with better rates"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -1923,21 +1925,65 @@ export default function SettingsDashboardPage() {
                     </div>
                   </div>
 
+                  {/* EGP to SAR Rate (for PayPal) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-green-50 dark:bg-green-950">
+                    <div className="space-y-2">
+                      <Label htmlFor="rate-egp-sar">
+                        {isRtl ? "جنيه مصري → ريال سعودي" : "EGP → SAR (PayPal)"}
+                      </Label>
+                      <Input
+                        id="rate-egp-sar"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={financeSettings.exchangeRates.EGPtoSAR || 13.33}
+                        onChange={(e) =>
+                          setFinanceSettings((prev) => ({
+                            ...prev,
+                            exchangeRates: {
+                              ...prev.exchangeRates,
+                              EGPtoSAR: parseFloat(e.target.value) || 13.33,
+                            },
+                          }))
+                        }
+                        disabled={isLoading}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {isRtl
+                          ? "كم جنيه مصري = 1 ريال سعودي (للتحويل في PayPal)"
+                          : "How many EGP = 1 SAR (for PayPal conversion)"}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center text-sm text-green-800 dark:text-green-200">
+                      {isRtl
+                        ? `${financeSettings.exchangeRates.EGPtoSAR || 13.33} جنيه = 1 ريال`
+                        : `${financeSettings.exchangeRates.EGPtoSAR || 13.33} EGP = 1 SAR`}
+                    </div>
+                  </div>
+
                   {/* Example Calculation */}
                   <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-950">
                     <h4 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">
-                      {isRtl ? "مثال على التحويل:" : "Conversion Example:"}
+                      {isRtl ? "مثال على التحويل (PayPal):" : "Conversion Example (PayPal):"}
                     </h4>
-                    <div className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
-                      <p>
-                        {isRtl
-                          ? `• كورس سعره 500 جنيه مصري ÷ ${financeSettings.exchangeRates.EGP} = $${(500 / financeSettings.exchangeRates.EGP).toFixed(2)}`
-                          : `• Course price 500 EGP ÷ ${financeSettings.exchangeRates.EGP} = $${(500 / financeSettings.exchangeRates.EGP).toFixed(2)}`}
+                    <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+                      <p className="font-semibold">
+                        {isRtl ? "طريقة التحويل الذكية:" : "Smart Conversion Method:"}
                       </p>
                       <p>
                         {isRtl
-                          ? `• كورس سعره 375 ريال سعودي ÷ ${financeSettings.exchangeRates.SAR} = $${(375 / financeSettings.exchangeRates.SAR).toFixed(2)}`
-                          : `• Course price 375 SAR ÷ ${financeSettings.exchangeRates.SAR} = $${(375 / financeSettings.exchangeRates.SAR).toFixed(2)}`}
+                          ? `• كورس سعره 500 جنيه مصري → ${(500 / (financeSettings.exchangeRates.EGPtoSAR || 13.33)).toFixed(2)} ريال سعودي`
+                          : `• Course 500 EGP → ${(500 / (financeSettings.exchangeRates.EGPtoSAR || 13.33)).toFixed(2)} SAR`}
+                      </p>
+                      <p>
+                        {isRtl
+                          ? `• PayPal يحول ${(500 / (financeSettings.exchangeRates.EGPtoSAR || 13.33)).toFixed(2)} ريال إلى دولار تلقائياً بسعر مضبوط`
+                          : `• PayPal converts ${(500 / (financeSettings.exchangeRates.EGPtoSAR || 13.33)).toFixed(2)} SAR to USD automatically`}
+                      </p>
+                      <p className="pt-2 text-xs text-blue-600 dark:text-blue-300">
+                        {isRtl
+                          ? "ℹ️ هذا أفضل من التحويل المباشر للدولار لأن PayPal يعطي سعر صرف جيد للريال"
+                          : "ℹ️ Better than direct USD conversion because PayPal has good SAR exchange rates"}
                       </p>
                     </div>
                   </div>

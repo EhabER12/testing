@@ -203,6 +203,7 @@ export interface FinanceSettings {
     USD: number;
     SAR: number;
     EGP: number;
+    EGPtoSAR?: number;
   };
   lastRatesUpdate?: Date | string;
 }

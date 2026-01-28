@@ -47,42 +47,49 @@ export async function getAccessToken(config) {
 
 
 /**
- * Convert currency to USD for PayPal
+ * Convert EGP to SAR for PayPal compatibility
+ * PayPal handles SAR → USD conversion automatically with better rates
  * @param {number} amount - Amount in original currency
  * @param {string} currency - Original currency (EGP, SAR, USD)
  * @param {object} exchangeRates - Exchange rates from settings
- * @returns {object} - { amount: number, currency: 'USD', originalAmount: number, originalCurrency: string }
+ * @returns {object} - { amount: number, currency: string, originalAmount: number, originalCurrency: string }
  */
-function convertToUSD(amount, currency, exchangeRates = {}) {
-  // If already USD, no conversion needed
-  if (currency === "USD") {
+function convertToPayPalCurrency(amount, currency, exchangeRates = {}) {
+  // If already SAR or USD, no conversion needed
+  if (currency === "SAR" || currency === "USD") {
     return { 
       amount, 
-      currency: "USD", 
+      currency, 
       originalAmount: amount, 
       originalCurrency: currency 
     };
   }
 
-  // Get exchange rate for the currency (how many units = 1 USD)
-  // Default rates if not provided
-  const defaultRates = {
-    USD: 1,
-    EGP: 50.0,  // 50 EGP = 1 USD
-    SAR: 3.75,  // 3.75 SAR = 1 USD
-  };
+  // If EGP, convert to SAR
+  // PayPal will handle SAR → USD conversion automatically
+  if (currency === "EGP") {
+    // Default rate: 1 SAR = ~13.33 EGP (or EGP/SAR ratio)
+    // So: amount in EGP ÷ 13.33 = amount in SAR
+    const defaultEGPtoSAR = 13.33; // How many EGP = 1 SAR
+    const egpToSarRate = exchangeRates.EGPtoSAR || defaultEGPtoSAR;
+    
+    const convertedAmount = (amount / egpToSarRate).toFixed(2);
+    
+    console.log(`💱 Currency Conversion: ${amount} ${currency} → ${convertedAmount} SAR (rate: ${egpToSarRate} EGP = 1 SAR)`);
+    
+    return {
+      amount: parseFloat(convertedAmount),
+      currency: "SAR",
+      originalAmount: amount,
+      originalCurrency: currency
+    };
+  }
 
-  const rates = { ...defaultRates, ...exchangeRates };
-  const rate = rates[currency] || 1;
-
-  // Convert to USD: amount / rate
-  const convertedAmount = (amount / rate).toFixed(2);
-
-  console.log(`💱 Currency Conversion: ${amount} ${currency} = ${convertedAmount} USD (rate: ${rate})`);
-
+  // Fallback: return as-is
+  console.warn(`⚠️ Unknown currency ${currency}, returning as-is`);
   return {
-    amount: parseFloat(convertedAmount),
-    currency: "USD",
+    amount,
+    currency,
     originalAmount: amount,
     originalCurrency: currency
   };
@@ -107,8 +114,8 @@ export async function createOrder({ amount, currency = "USD", config, exchangeRa
 
   const accessToken = await getAccessToken(config);
 
-  // Convert currency to USD for PayPal
-  const converted = convertToUSD(amount, currency, exchangeRates);
+  // Convert currency if needed (EGP → SAR)
+  const converted = convertToPayPalCurrency(amount, currency, exchangeRates);
   const paypalAmount = converted.amount;
   const paypalCurrency = converted.currency;
 
