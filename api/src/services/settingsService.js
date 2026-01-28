@@ -86,6 +86,7 @@ export class SettingsService {
       "authorityBar",
       "reviewsSettings",
       "whyGenounSettings",
+      "financeSettings",
     ];
     for (const field of jsonFields) {
       if (typeof settingsData[field] === "string") {

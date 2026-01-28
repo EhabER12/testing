@@ -18,6 +18,7 @@ import {
   Send,
   Smartphone,
   RefreshCcw,
+  DollarSign,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import toast from "react-hot-toast";
@@ -35,6 +36,7 @@ import {
   WhyGenounSettings,
   AuthorityBarItem,
   WhyGenounFeature,
+  FinanceSettings,
 } from "@/store/services/settingsService";
 import { resetSettingsStatus } from "@/store/slices/settingsSlice";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -201,6 +203,16 @@ export default function SettingsDashboardPage() {
     features: [],
   });
 
+  const [financeSettings, setFinanceSettings] = useState({
+    baseCurrency: "SAR" as "SAR" | "EGP" | "USD",
+    exchangeRates: {
+      USD: 1,
+      SAR: 3.75,
+      EGP: 50.0,
+    },
+    lastRatesUpdate: new Date(),
+  });
+
   // All available platforms
   const allPlatforms = [
     "facebook",
@@ -335,6 +347,20 @@ export default function SettingsDashboardPage() {
       if (settings.whyGenounSettings) {
         setWhyGenounSettings(settings.whyGenounSettings);
       }
+
+      if (settings.financeSettings) {
+        setFinanceSettings({
+          baseCurrency: settings.financeSettings.baseCurrency || "SAR",
+          exchangeRates: settings.financeSettings.exchangeRates || {
+            USD: 1,
+            SAR: 3.75,
+            EGP: 50.0,
+          },
+          lastRatesUpdate: settings.financeSettings.lastRatesUpdate
+            ? new Date(settings.financeSettings.lastRatesUpdate)
+            : new Date(),
+        });
+      }
     }
   }, [settings]);
 
@@ -465,6 +491,7 @@ export default function SettingsDashboardPage() {
       reviewsSettings,
       whyGenounSettings,
       emailSettings,
+      financeSettings,
     };
 
     delete updateData.logoFile;
@@ -611,6 +638,9 @@ export default function SettingsDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="email">
               {isRtl ? "البريد الإلكتروني" : "Email"}
+            </TabsTrigger>
+            <TabsTrigger value="currency">
+              {isRtl ? "العملة وأسعار الصرف" : "Currency & Exchange"}
             </TabsTrigger>
           </TabsList>
 
@@ -1729,6 +1759,201 @@ export default function SettingsDashboardPage() {
               }}
               formLang={formLang}
             />
+          </TabsContent>
+
+          <TabsContent value="currency" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {isRtl ? "إعدادات العملة وأسعار الصرف" : "Currency & Exchange Rate Settings"}
+                </CardTitle>
+                <CardDescription>
+                  {isRtl
+                    ? "قم بتكوين العملة الأساسية وأسعار الصرف للبوابات الدولية مثل PayPal"
+                    : "Configure base currency and exchange rates for international gateways like PayPal"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Base Currency Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="baseCurrency">
+                    {isRtl ? "العملة الأساسية" : "Base Currency"}
+                  </Label>
+                  <Select
+                    value={financeSettings.baseCurrency}
+                    onValueChange={(value: "SAR" | "EGP" | "USD") =>
+                      setFinanceSettings((prev) => ({
+                        ...prev,
+                        baseCurrency: value,
+                      }))
+                    }
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger id="baseCurrency" dir={isRtl ? "rtl" : "ltr"}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SAR">
+                        {isRtl ? "ريال سعودي (SAR)" : "Saudi Riyal (SAR)"}
+                      </SelectItem>
+                      <SelectItem value="EGP">
+                        {isRtl ? "جنيه مصري (EGP)" : "Egyptian Pound (EGP)"}
+                      </SelectItem>
+                      <SelectItem value="USD">
+                        {isRtl ? "دولار أمريكي (USD)" : "US Dollar (USD)"}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {isRtl
+                      ? "العملة الأساسية المستخدمة في المنصة"
+                      : "The base currency used on the platform"}
+                  </p>
+                </div>
+
+                {/* Exchange Rates */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">
+                      {isRtl ? "أسعار الصرف" : "Exchange Rates"}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {isRtl
+                        ? "كم من الوحدات = 1 دولار أمريكي"
+                        : "How many units = 1 USD"}
+                    </p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {isRtl
+                      ? "يتم استخدام أسعار الصرف هذه لتحويل الأسعار عند الدفع عبر PayPal. على سبيل المثال: إذا كان السعر 500 جنيه مصري و سعر الصرف 50، سيتم تحويله إلى 10 دولار."
+                      : "These exchange rates are used to convert prices for PayPal payments. For example: If price is 500 EGP and rate is 50, it will be converted to $10."}
+                  </p>
+
+                  {/* USD Rate (Always 1) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/30">
+                    <div className="space-y-2">
+                      <Label htmlFor="rate-usd">
+                        {isRtl ? "دولار أمريكي (USD)" : "US Dollar (USD)"}
+                      </Label>
+                      <Input
+                        id="rate-usd"
+                        type="number"
+                        value="1"
+                        disabled
+                        className="bg-muted"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {isRtl ? "العملة الأساسية (ثابت = 1)" : "Base currency (fixed = 1)"}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center text-sm text-muted-foreground">
+                      {isRtl ? "1 دولار = 1 دولار" : "1 USD = 1 USD"}
+                    </div>
+                  </div>
+
+                  {/* SAR Rate */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
+                    <div className="space-y-2">
+                      <Label htmlFor="rate-sar">
+                        {isRtl ? "ريال سعودي (SAR)" : "Saudi Riyal (SAR)"}
+                      </Label>
+                      <Input
+                        id="rate-sar"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={financeSettings.exchangeRates.SAR}
+                        onChange={(e) =>
+                          setFinanceSettings((prev) => ({
+                            ...prev,
+                            exchangeRates: {
+                              ...prev.exchangeRates,
+                              SAR: parseFloat(e.target.value) || 3.75,
+                            },
+                          }))
+                        }
+                        disabled={isLoading}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {isRtl
+                          ? "كم ريال سعودي = 1 دولار أمريكي"
+                          : "How many SAR = 1 USD"}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center text-sm text-muted-foreground">
+                      {isRtl
+                        ? `${financeSettings.exchangeRates.SAR} ريال = 1 دولار`
+                        : `${financeSettings.exchangeRates.SAR} SAR = 1 USD`}
+                    </div>
+                  </div>
+
+                  {/* EGP Rate */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
+                    <div className="space-y-2">
+                      <Label htmlFor="rate-egp">
+                        {isRtl ? "جنيه مصري (EGP)" : "Egyptian Pound (EGP)"}
+                      </Label>
+                      <Input
+                        id="rate-egp"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={financeSettings.exchangeRates.EGP}
+                        onChange={(e) =>
+                          setFinanceSettings((prev) => ({
+                            ...prev,
+                            exchangeRates: {
+                              ...prev.exchangeRates,
+                              EGP: parseFloat(e.target.value) || 50.0,
+                            },
+                          }))
+                        }
+                        disabled={isLoading}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {isRtl
+                          ? "كم جنيه مصري = 1 دولار أمريكي"
+                          : "How many EGP = 1 USD"}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center text-sm text-muted-foreground">
+                      {isRtl
+                        ? `${financeSettings.exchangeRates.EGP} جنيه = 1 دولار`
+                        : `${financeSettings.exchangeRates.EGP} EGP = 1 USD`}
+                    </div>
+                  </div>
+
+                  {/* Example Calculation */}
+                  <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-950">
+                    <h4 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">
+                      {isRtl ? "مثال على التحويل:" : "Conversion Example:"}
+                    </h4>
+                    <div className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+                      <p>
+                        {isRtl
+                          ? `• كورس سعره 500 جنيه مصري ÷ ${financeSettings.exchangeRates.EGP} = $${(500 / financeSettings.exchangeRates.EGP).toFixed(2)}`
+                          : `• Course price 500 EGP ÷ ${financeSettings.exchangeRates.EGP} = $${(500 / financeSettings.exchangeRates.EGP).toFixed(2)}`}
+                      </p>
+                      <p>
+                        {isRtl
+                          ? `• كورس سعره 375 ريال سعودي ÷ ${financeSettings.exchangeRates.SAR} = $${(375 / financeSettings.exchangeRates.SAR).toFixed(2)}`
+                          : `• Course price 375 SAR ÷ ${financeSettings.exchangeRates.SAR} = $${(375 / financeSettings.exchangeRates.SAR).toFixed(2)}`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Last Updated */}
+                  {financeSettings.lastRatesUpdate && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      {isRtl ? "آخر تحديث: " : "Last updated: "}
+                      {new Date(financeSettings.lastRatesUpdate).toLocaleString(
+                        isRtl ? "ar-EG" : "en-US"
+                      )}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 

@@ -197,6 +197,16 @@ export interface WhyGenounSettings {
   features: WhyGenounFeature[];
 }
 
+export interface FinanceSettings {
+  baseCurrency: "SAR" | "EGP" | "USD";
+  exchangeRates: {
+    USD: number;
+    SAR: number;
+    EGP: number;
+  };
+  lastRatesUpdate?: Date | string;
+}
+
 export interface PromoModalSettings {
   isEnabled: boolean;
   title: { ar: string; en: string };
@@ -238,6 +248,7 @@ export interface WebsiteSettingsData {
   reviewsSettings?: ReviewsSectionSettings;
   whyGenounSettings?: WhyGenounSettings;
   emailSettings?: EmailSettings;
+  financeSettings?: FinanceSettings;
   updatedBy?: string;
   createdAt: string;
   updatedAt: string;
@@ -271,6 +282,7 @@ export interface PublicWebsiteSettingsData {
   authorityBar?: AuthorityBarSettings;
   reviewsSettings?: ReviewsSectionSettings;
   whyGenounSettings?: WhyGenounSettings;
+  financeSettings?: FinanceSettings;
   // Excluded: _id, whatsappConnected, updatedBy, createdAt, updatedAt, __v, notifications, paymentGateways
 }
 
