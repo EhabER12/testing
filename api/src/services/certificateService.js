@@ -61,8 +61,33 @@ class CertificateService {
     let user = null;
     let studentMember = null;
 
-    if (userId) user = await User.findById(userId);
-    if (studentMemberId) studentMember = await StudentMember.findById(studentMemberId);
+    if (userId) {
+      try {
+        user = await User.findById(userId);
+        if (!user) {
+          console.log(`User with ID ${userId} not found`);
+        }
+      } catch (err) {
+        console.error('Error fetching user:', err.message);
+      }
+    }
+    
+    if (studentMemberId) {
+      try {
+        studentMember = await StudentMember.findById(studentMemberId).populate('packageId');
+        if (!studentMember) {
+          throw new Error(`StudentMember with ID ${studentMemberId} not found`);
+        }
+        console.log('StudentMember found:', {
+          id: studentMember._id,
+          name: studentMember.name || studentMember.studentName,
+          packageId: studentMember.packageId?._id
+        });
+      } catch (err) {
+        console.error('Error fetching studentMember:', err.message);
+        throw new Error(`Failed to fetch student: ${err.message}`);
+      }
+    }
 
     const course = courseId ? await Course.findById(courseId) : null;
     const pkg = packageId ? await Package.findById(packageId) : null;
@@ -86,8 +111,12 @@ class CertificateService {
     let studentNameEn = "Student";
 
     if (studentMember) {
-      studentNameAr = studentMember.name.ar;
-      studentNameEn = studentMember.name.en;
+      // Handle both name and studentName properties
+      const nameObj = studentMember.name || studentMember.studentName;
+      if (nameObj) {
+        studentNameAr = nameObj.ar || nameObj.en || "الطالب";
+        studentNameEn = nameObj.en || nameObj.ar || "Student";
+      }
     } else if (user) {
       studentNameAr = user.fullName?.ar || user.fullName?.en || "الطالب";
       studentNameEn = user.fullName?.en || user.fullName?.ar || "Student";

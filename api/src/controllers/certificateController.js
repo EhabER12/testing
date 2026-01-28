@@ -43,16 +43,20 @@ export const getAllCertificates = async (req, res, next) => {
 // Issue certificate to a user
 export const issueCertificate = async (req, res, next) => {
   try {
-    const { userId, studentMemberId, courseId, templateId } = req.body;
+    const { userId, studentMemberId, courseId, packageId, templateId } = req.body;
     const issuerUserId = req.user._id;
+
+    // Determine if this is for a course or package
+    const targetCourseId = courseId || null;
+    const targetPackageId = packageId || null;
 
     const certificate = await certificateService.issueCertificate(
       userId || null,
-      courseId,
+      targetCourseId, // courseId (can be null for package certificates)
       issuerUserId,
       true, // Manual override allowed for Admin/Teacher
       templateId, // Pass manual template ID
-      null, // packageId
+      targetPackageId, // packageId (can be null for course certificates)
       studentMemberId || null // Pass studentMemberId if provided
     );
 

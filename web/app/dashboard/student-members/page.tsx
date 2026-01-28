@@ -337,7 +337,7 @@ export default function StudentMembersPage() {
       const certificate = await dispatch(
         issueCertificate({
           studentMemberId: studentId,
-          courseId: packageId, // Using packageId as courseId for package certificates
+          packageId: packageId, // Pass packageId for package certificates
           templateId: packageTemplate.id || packageTemplate._id,
         })
       ).unwrap();
