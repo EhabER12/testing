@@ -28,6 +28,8 @@ export class StudentMemberService {
     };
 
     const packages = await Package.find({});
+    // Fetch all teachers for matching
+    const teachers = await User.find({ role: 'teacher' });
 
     for (const [index, record] of records.entries()) {
       try {
@@ -47,6 +49,27 @@ export class StudentMemberService {
 
         if (!pkg) {
           throw new Error(`Package not found: ${record.plan}`);
+        }
+
+        // Find teacher if provided
+        let assignedTeacherId = null;
+        let assignedTeacherName = null;
+        
+        if (record.teacher) {
+          const teacherQuery = normalize(record.teacher);
+          const teacher = teachers.find(t => {
+            const nameAr = normalize(t.fullName?.ar);
+            const nameEn = normalize(t.fullName?.en);
+            const email = normalize(t.email);
+            return nameAr === teacherQuery || nameEn === teacherQuery || email === teacherQuery;
+          });
+          
+          if (teacher) {
+            assignedTeacherId = teacher._id;
+          } else {
+            // Store as text if teacher not found in system
+            assignedTeacherName = record.teacher;
+          }
         }
 
         // Helper to parse date
@@ -111,6 +134,14 @@ export class StudentMemberService {
           billingDay: billingDay,
           packagePrice: pkg.price
         };
+        
+        // Add teacher information if available
+        if (assignedTeacherId) {
+          memberData.assignedTeacherId = assignedTeacherId;
+        }
+        if (assignedTeacherName) {
+          memberData.assignedTeacherName = assignedTeacherName;
+        }
 
         // Create member
         await this.createMember(memberData, createdBy);

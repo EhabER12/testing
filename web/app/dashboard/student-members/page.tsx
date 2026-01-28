@@ -192,7 +192,7 @@ export default function StudentMembersPage() {
   };
 
   const downloadTemplate = () => {
-    const headers = ["name", "phone", "governorate", "plan", "start time (YYYY-MM-DD)", "billingDay"];
+    const headers = ["name", "phone", "governorate", "plan", "teacher", "start time (YYYY-MM-DD)", "billingDay"];
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -438,6 +438,7 @@ export default function StudentMembersPage() {
                       <TableHead>{isRtl ? "رقم الهاتف" : "Phone"}</TableHead>
                       <TableHead>{isRtl ? "المحافظة" : "Governorate"}</TableHead>
                       <TableHead>{isRtl ? "الباقة" : "Plan"}</TableHead>
+                      <TableHead>{isRtl ? "المعلم" : "Teacher"}</TableHead>
                       <TableHead>{isRtl ? "تاريخ البداية" : "Start Date"}</TableHead>
                       <TableHead>{isRtl ? "التجديد القادم" : "Next Due"}</TableHead>
                       <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
@@ -470,6 +471,16 @@ export default function StudentMembersPage() {
                             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                               {student.packageId ? getTextValue(student.packageId.name) : (isRtl ? "غير محدد" : "N/A")}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <UserCircle className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">
+                                {student.assignedTeacherId 
+                                  ? getTextValue(student.assignedTeacherId.fullName)
+                                  : (student.assignedTeacherName || (isRtl ? "غير محدد" : "-"))}
+                              </span>
+                            </div>
                           </TableCell>
                           <TableCell>
                             {student.startDate ? format(new Date(student.startDate), "yyyy-MM-dd") : "-"}
@@ -514,7 +525,7 @@ export default function StudentMembersPage() {
                       ))}
                     {studentMembers.filter(s => selectedPackageId === "all" || (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).filter(s => selectedGovernorate === "all" || s.governorate === selectedGovernorate).filter(s => selectedTeacherId === "all" || (s.assignedTeacherId?.id === selectedTeacherId || s.assignedTeacherId?._id === selectedTeacherId)).filter(s => !showOverdueOnly || s.status === "overdue").length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="h-24 text-center">
+                        <TableCell colSpan={9} className="h-24 text-center">
                           {isRtl ? "لا يوجد طلاب يطابقون الفلاتر المحددة" : "No students match the selected filters"}
                         </TableCell>
                       </TableRow>
