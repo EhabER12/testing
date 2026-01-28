@@ -209,7 +209,14 @@ export default function StudentMembersPage() {
       const filters: any = {};
       if (selectedPackageId !== "all") filters.packageId = selectedPackageId;
       if (selectedGovernorate !== "all") filters.governorate = selectedGovernorate;
-      if (selectedTeacherId !== "all") filters.assignedTeacherId = selectedTeacherId;
+      if (selectedTeacherId !== "all") {
+        // Check if filtering by text name
+        if (selectedTeacherId.startsWith('name:')) {
+          filters.assignedTeacherName = selectedTeacherId.replace('name:', '');
+        } else {
+          filters.assignedTeacherId = selectedTeacherId;
+        }
+      }
       if (showOverdueOnly) filters.status = "overdue";
 
       const blob = await exportStudentMembers(filters);
@@ -375,17 +382,13 @@ export default function StudentMembersPage() {
                     <SelectItem value="all">{isRtl ? "جميع المعلمين" : "All Teachers"}</SelectItem>
                     {Array.from(new Set(
                       studentMembers
-                        .filter(s => s.assignedTeacherId)
-                        .map(s => JSON.stringify({
-                          id: s.assignedTeacherId?.id || s.assignedTeacherId?._id,
-                          name: getTextValue(s.assignedTeacherId?.fullName)
-                        }))
+                        .filter(s => s.assignedTeacherName)
+                        .map(s => s.assignedTeacherName)
                     ))
-                      .map(teacherStr => JSON.parse(teacherStr))
-                      .sort((a, b) => a.name.localeCompare(b.name))
-                      .map((teacher: any) => (
-                        <SelectItem key={teacher.id} value={teacher.id}>
-                          {teacher.name}
+                      .sort((a, b) => (a || '').localeCompare(b || ''))
+                      .map((teacherName) => (
+                        <SelectItem key={teacherName} value={`name:${teacherName}`}>
+                          {teacherName}
                         </SelectItem>
                       ))}
                   </SelectContent>
@@ -451,7 +454,16 @@ export default function StudentMembersPage() {
                     {studentMembers
                       .filter(s => selectedPackageId === "all" || (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId))
                       .filter(s => selectedGovernorate === "all" || s.governorate === selectedGovernorate)
-                      .filter(s => selectedTeacherId === "all" || (s.assignedTeacherId?.id === selectedTeacherId || s.assignedTeacherId?._id === selectedTeacherId))
+                      .filter(s => {
+                        if (selectedTeacherId === "all") return true;
+                        // Check if filtering by text name
+                        if (selectedTeacherId.startsWith('name:')) {
+                          const teacherName = selectedTeacherId.replace('name:', '');
+                          return s.assignedTeacherName === teacherName;
+                        }
+                        // Filter by linked teacher ID
+                        return s.assignedTeacherId?.id === selectedTeacherId || s.assignedTeacherId?._id === selectedTeacherId;
+                      })
                       .filter(s => !showOverdueOnly || s.status === "overdue")
                       .map((student, index) => (
                         <TableRow key={student.id || student._id || index}>
@@ -523,7 +535,18 @@ export default function StudentMembersPage() {
                           </TableCell>
                         </TableRow>
                       ))}
-                    {studentMembers.filter(s => selectedPackageId === "all" || (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).filter(s => selectedGovernorate === "all" || s.governorate === selectedGovernorate).filter(s => selectedTeacherId === "all" || (s.assignedTeacherId?.id === selectedTeacherId || s.assignedTeacherId?._id === selectedTeacherId)).filter(s => !showOverdueOnly || s.status === "overdue").length === 0 && (
+                    {studentMembers
+                      .filter(s => selectedPackageId === "all" || (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId))
+                      .filter(s => selectedGovernorate === "all" || s.governorate === selectedGovernorate)
+                      .filter(s => {
+                        if (selectedTeacherId === "all") return true;
+                        if (selectedTeacherId.startsWith('name:')) {
+                          const teacherName = selectedTeacherId.replace('name:', '');
+                          return s.assignedTeacherName === teacherName;
+                        }
+                        return s.assignedTeacherId?.id === selectedTeacherId || s.assignedTeacherId?._id === selectedTeacherId;
+                      })
+                      .filter(s => !showOverdueOnly || s.status === "overdue").length === 0 && (
                       <TableRow>
                         <TableCell colSpan={9} className="h-24 text-center">
                           {isRtl ? "لا يوجد طلاب يطابقون الفلاتر المحددة" : "No students match the selected filters"}

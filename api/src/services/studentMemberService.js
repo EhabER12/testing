@@ -486,12 +486,13 @@ export class StudentMemberService {
 
   // Export members to CSV
   async exportMembersToCSV(filters = {}) {
-    const { status, assignedTeacherId, governorate, packageId, search } = filters;
+    const { status, assignedTeacherId, assignedTeacherName, governorate, packageId, search } = filters;
 
     const query = {};
 
     if (status) query.status = status;
     if (assignedTeacherId) query.assignedTeacherId = assignedTeacherId;
+    if (assignedTeacherName) query.assignedTeacherName = assignedTeacherName;
     if (governorate) query.governorate = governorate;
     if (packageId) query.packageId = packageId;
 

@@ -193,6 +193,7 @@ export const importStudentMembers = createAsyncThunk(
 export const exportStudentMembers = async (filters: {
   status?: string;
   assignedTeacherId?: string;
+  assignedTeacherName?: string;
   governorate?: string;
   packageId?: string;
   search?: string;
@@ -200,6 +201,7 @@ export const exportStudentMembers = async (filters: {
   const params = new URLSearchParams();
   if (filters.status) params.append("status", filters.status);
   if (filters.assignedTeacherId) params.append("assignedTeacherId", filters.assignedTeacherId);
+  if (filters.assignedTeacherName) params.append("assignedTeacherName", filters.assignedTeacherName);
   if (filters.governorate) params.append("governorate", filters.governorate);
   if (filters.packageId) params.append("packageId", filters.packageId);
   if (filters.search) params.append("search", filters.search);

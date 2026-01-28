@@ -300,6 +300,7 @@ export const exportMembers = async (req, res, next) => {
     const filters = {
       status: req.query.status,
       assignedTeacherId: req.query.assignedTeacherId,
+      assignedTeacherName: req.query.assignedTeacherName,
       governorate: req.query.governorate,
       packageId: req.query.packageId,
       search: req.query.search,
