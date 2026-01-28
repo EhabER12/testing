@@ -535,10 +535,10 @@ export default function TeachersManagementPage() {
                                               <TableCell className="py-2">
                                                 <div className="flex flex-col">
                                                   <span className="font-medium text-sm">
-                                                    {getTextValue(student.studentId?.studentName)}
+                                                    {getTextValue((student.studentId as any)?.name || student.studentId?.studentName)}
                                                   </span>
                                                   <span className="text-[10px] text-muted-foreground italic">
-                                                    {student.studentId?.whatsappNumber || '-'}
+                                                    {student.studentId?.whatsappNumber || (student.studentId as any)?.phone || '-'}
                                                   </span>
                                                 </div>
                                               </TableCell>

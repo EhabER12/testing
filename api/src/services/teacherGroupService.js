@@ -71,7 +71,7 @@ class TeacherGroupService {
 
     const teacherGroups = await TeacherGroup.find(query)
       .populate("teacherId", "fullName email profilePic teacherInfo")
-      .populate("students.studentId", "studentName whatsappNumber packageId status")
+      .populate("students.studentId", "name phone whatsappNumber packageId status")
       .populate("createdBy", "fullName email")
       .sort({ createdAt: -1 });
 
@@ -84,7 +84,7 @@ class TeacherGroupService {
       .populate("teacherId", "fullName email profilePic teacherInfo")
       .populate({
         path: "students.studentId",
-        select: "studentName whatsappNumber packageId status subscriptionStartDate subscriptionEndDate",
+        select: "name phone whatsappNumber packageId status subscriptionStartDate subscriptionEndDate",
         populate: {
           path: "packageId",
           select: "name price",
