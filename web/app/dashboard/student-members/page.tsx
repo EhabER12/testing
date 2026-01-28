@@ -368,15 +368,54 @@ export default function StudentMembersPage() {
       console.error("Certificate generation failed:", err);
       const errorMessage = err?.message || err;
       
-      // Better error messages
-      if (errorMessage.includes("already exists") || errorMessage.includes("Conflict")) {
+      // Handle 409 Conflict - certificate already exists
+      if (errorMessage.includes("Conflict") || errorMessage.includes("409")) {
+        console.log("Certificate exists, trying to find and download it");
+        try {
+          // Try to fetch all certificates and find this student's certificate
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.med-side.net'}/certificates`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            const existingCert = data.data?.find(
+              (cert: any) => 
+                cert.studentMemberId === studentId || 
+                String(cert.studentMemberId) === String(studentId) ||
+                (cert.studentMemberId?._id === studentId) ||
+                (cert.studentMemberId?.id === studentId)
+            );
+            
+            if (existingCert) {
+              const certId = existingCert.id || existingCert._id;
+              console.log("Found existing certificate:", certId);
+              
+              // Download it
+              const blob = await dispatch(downloadCertificate(certId)).unwrap();
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              const studentName = getTextValue(student.studentName || student.name) || "student";
+              link.download = `certificate-${studentName.replace(/\s+/g, "_")}.pdf`;
+              link.click();
+              window.URL.revokeObjectURL(url);
+              
+              toast.success(isRtl ? "تم تحميل الشهادة الموجودة بنجاح" : "Existing certificate downloaded successfully");
+              return;
+            }
+          }
+        } catch (retryErr) {
+          console.error("Failed to find existing certificate:", retryErr);
+        }
+        
         toast.error(
           isRtl
-            ? "الشهادة موجودة مسبقاً. جاري تحميلها..."
-            : "Certificate already exists. Downloading..."
+            ? "الشهادة موجودة مسبقاً ولكن فشل تحميلها. يرجى المحاولة من صفحة الشهادات."
+            : "Certificate exists but failed to download. Please try from certificates page."
         );
-        // Try to download anyway if we have the certificate
-        // This shouldn't happen anymore with the fix, but just in case
       } else {
         toast.error(
           isRtl
