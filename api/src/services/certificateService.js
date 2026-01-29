@@ -12,6 +12,7 @@ import path from "path";
 import fs from "fs/promises";
 import Package from "../models/packageModel.js";
 import StudentMember from "../models/studentMemberModel.js";
+import { ApiError } from "../utils/apiError.js";
 
 
 class CertificateService {
@@ -892,24 +893,41 @@ class CertificateService {
 
   // Delete template
   async deleteTemplate(templateId) {
-    const template = await CertificateTemplate.findById(templateId);
-    if (!template) {
-      throw new Error("Template not found");
+    try {
+      const template = await CertificateTemplate.findById(templateId);
+      if (!template) {
+        throw new ApiError(404, "Template not found");
+      }
+
+      // Check if it's the default template
+      if (template.isDefault) {
+        throw new ApiError(400, "Cannot delete the default template. Please set another template as default first.");
+      }
+
+      // Check if used by courses
+      const coursesUsing = await Course.countDocuments({
+        "certificateSettings.templateId": templateId,
+      });
+
+      if (coursesUsing > 0) {
+        throw new ApiError(400, `Cannot delete template. It is used by ${coursesUsing} course(s)`);
+      }
+
+      // Check if used by any certificates
+      const certificatesUsing = await Certificate.countDocuments({
+        templateId: templateId,
+      });
+
+      if (certificatesUsing > 0) {
+        throw new ApiError(400, `Cannot delete template. It is used by ${certificatesUsing} certificate(s)`);
+      }
+
+      await CertificateTemplate.findByIdAndDelete(templateId);
+      return { message: "Template deleted successfully" };
+    } catch (error) {
+      console.error("Error deleting template:", error.message);
+      throw error;
     }
-
-    // Check if used by courses
-    const coursesUsing = await Course.countDocuments({
-      "certificateSettings.templateId": templateId,
-    });
-
-    if (coursesUsing > 0) {
-      throw new Error(
-        `Cannot delete template. It is used by ${coursesUsing} course(s)`
-      );
-    }
-
-    await template.deleteOne();
-    return { message: "Template deleted successfully" };
   }
 }
 
