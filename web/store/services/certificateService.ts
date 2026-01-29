@@ -372,7 +372,7 @@ export const deleteTemplate = createAsyncThunk(
       return id;
     } catch (error: any) {
       return rejectWithValue(
-        error.response?.data?.message || "Failed to delete template"
+        error.response?.data?.error?.message || error.response?.data?.message || "Failed to delete template"
       );
     }
   }
