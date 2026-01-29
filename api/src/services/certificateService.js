@@ -904,23 +904,23 @@ class CertificateService {
         throw new ApiError(400, "Cannot delete the default template. Please set another template as default first.");
       }
 
-      // Check if used by courses
-      const coursesUsing = await Course.countDocuments({
-        "certificateSettings.templateId": templateId,
-      });
-
-      if (coursesUsing > 0) {
-        throw new ApiError(400, `Cannot delete template. It is used by ${coursesUsing} course(s)`);
-      }
-
-      // Check if used by any certificates
+      // Check if used by any certificates (this is critical - can't orphan certificates)
       const certificatesUsing = await Certificate.countDocuments({
         templateId: templateId,
       });
 
       if (certificatesUsing > 0) {
-        throw new ApiError(400, `Cannot delete template. It is used by ${certificatesUsing} certificate(s)`);
+        throw new ApiError(400, `Cannot delete template. It is used by ${certificatesUsing} certificate(s). Please delete or reassign those certificates first.`);
       }
+
+      // Remove template link from any courses that use it
+      await Course.updateMany(
+        { "certificateSettings.templateId": templateId },
+        { 
+          $unset: { "certificateSettings.templateId": "" },
+          $set: { "certificateSettings.enabled": false }
+        }
+      );
 
       await CertificateTemplate.findByIdAndDelete(templateId);
       return { message: "Template deleted successfully" };
