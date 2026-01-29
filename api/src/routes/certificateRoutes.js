@@ -71,7 +71,7 @@ router.post(
 router.post(
   "/bulk-package-issue",
   protect,
-  authorize("admin"),
+  authorize("admin", "moderator"),
   bulkIssuePackageCertificates
 );
 
