@@ -392,3 +392,18 @@ export const bulkIssuePackageCertificates = createAsyncThunk(
     }
   }
 );
+
+// Delete certificate
+export const deleteCertificate = createAsyncThunk(
+  "certificates/deleteCertificate",
+  async (id: string, { rejectWithValue }) => {
+    try {
+      await axios.delete(`/certificates/${id}`);
+      return id;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.error?.message || error.response?.data?.message || "Failed to delete certificate"
+      );
+    }
+  }
+);

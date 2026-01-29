@@ -587,3 +587,18 @@ export const deleteTemplate = async (req, res, next) => {
     next(error);
   }
 };
+
+// Delete certificate
+export const deleteCertificate = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await certificateService.deleteCertificate(id);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

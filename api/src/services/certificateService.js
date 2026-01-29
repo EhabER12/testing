@@ -929,6 +929,32 @@ class CertificateService {
       throw error;
     }
   }
+
+  // Delete certificate
+  async deleteCertificate(certificateId) {
+    try {
+      const certificate = await Certificate.findById(certificateId);
+      if (!certificate) {
+        throw new ApiError(404, "Certificate not found");
+      }
+
+      // Delete the PDF file if exists
+      if (certificate.pdfPath) {
+        try {
+          const fullPath = path.join(process.cwd(), 'public', certificate.pdfPath);
+          await fs.unlink(fullPath);
+        } catch (err) {
+          console.warn("Could not delete PDF file:", err.message);
+        }
+      }
+
+      await Certificate.findByIdAndDelete(certificateId);
+      return { message: "Certificate deleted successfully" };
+    } catch (error) {
+      console.error("Error deleting certificate:", error.message);
+      throw error;
+    }
+  }
 }
 
 export default new CertificateService();

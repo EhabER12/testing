@@ -23,6 +23,7 @@ import {
   getMyCertificatesEligibility,
   claimCertificate,
   bulkIssuePackageCertificates,
+  deleteCertificate,
 } from "../controllers/certificateController.js";
 import { protect, authorize } from "../middlewares/authMiddleware.js";
 
@@ -144,6 +145,12 @@ router.post(
   protect,
   authorize("admin", "moderator"),
   generateCertificatePDF
+);
+router.delete(
+  "/:id",
+  protect,
+  authorize("admin", "moderator"),
+  deleteCertificate
 );
 
 export default router;

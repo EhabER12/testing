@@ -13,6 +13,7 @@ import {
   downloadCertificate,
   issueCertificate,
   getAllTemplates,
+  deleteCertificate,
 } from "@/store/services/certificateService";
 import { getCourses, Course } from "@/store/services/courseService";
 import { getAllUsers } from "@/store/services/userService";
@@ -74,6 +75,7 @@ import {
   Plus,
   RefreshCw,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
@@ -85,6 +87,7 @@ export default function CertificatesPage() {
   const [revokeLoading, setRevokeLoading] = useState<string | null>(null);
   const [reissueLoading, setReissueLoading] = useState<string | null>(null);
   const [regenerateLoading, setRegenerateLoading] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [issueLoading, setIssueLoading] = useState(false);
   const [issueDialog, setIssueDialog] = useState({
     open: false,
@@ -153,6 +156,27 @@ export default function CertificatesPage() {
         toast.error(typeof err === 'string' ? err : "Failed to revoke certificate");
       } finally {
         setRevokeLoading(null);
+      }
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (
+      confirm(
+        isRtl
+          ? "هل أنت متأكد من حذف هذه الشهادة نهائياً؟ هذا الإجراء لا يمكن التراجع عنه."
+          : "Are you sure you want to permanently delete this certificate? This action cannot be undone."
+      )
+    ) {
+      setDeleteLoading(id);
+      try {
+        await dispatch(deleteCertificate(id)).unwrap();
+        toast.success(isRtl ? "تم حذف الشهادة" : "Certificate deleted");
+      } catch (err) {
+        console.warn("Failed to delete certificate:", err);
+        toast.error(typeof err === 'string' ? err : "Failed to delete certificate");
+      } finally {
+        setDeleteLoading(null);
       }
     }
   };
@@ -525,6 +549,21 @@ export default function CertificatesPage() {
                               </DropdownMenuItem>
                             </>
                           )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDelete((certificate.id || certificate._id)!)}
+                            disabled={deleteLoading === (certificate.id || certificate._id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {deleteLoading === (certificate.id || certificate._id)
+                              ? isRtl
+                                ? "جاري الحذف..."
+                                : "Deleting..."
+                              : isRtl
+                                ? "حذف نهائي"
+                                : "Delete Permanently"}
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

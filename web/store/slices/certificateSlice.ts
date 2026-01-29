@@ -11,6 +11,7 @@ import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  deleteCertificate,
   getMyCertificates,
   getMyCertificatesEligibility,
   claimCertificate,
@@ -302,6 +303,19 @@ const certificateSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
         state.isSuccess = false;
+      })
+      // Delete certificate
+      .addCase(deleteCertificate.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(deleteCertificate.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.certificates = state.certificates.filter((c) => (c.id || c._id) !== action.payload);
+      })
+      .addCase(deleteCertificate.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
       });
   },
 });
