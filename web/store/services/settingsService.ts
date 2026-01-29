@@ -208,6 +208,12 @@ export interface FinanceSettings {
   lastRatesUpdate?: Date | string;
 }
 
+export interface ApiKeysSettings {
+  geminiApiKey?: string;
+  googleCloudCredentials?: string;
+  lastUpdated?: Date | string;
+}
+
 export interface PromoModalSettings {
   isEnabled: boolean;
   title: { ar: string; en: string };
@@ -250,6 +256,7 @@ export interface WebsiteSettingsData {
   whyGenounSettings?: WhyGenounSettings;
   emailSettings?: EmailSettings;
   financeSettings?: FinanceSettings;
+  apiKeys?: ApiKeysSettings;
   updatedBy?: string;
   createdAt: string;
   updatedAt: string;

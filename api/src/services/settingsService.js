@@ -3,6 +3,7 @@ import { EmailService } from "./emailService.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import crypto from "crypto";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +13,49 @@ export class SettingsService {
     this.settingsRepository = new SettingsRepository();
     this.emailService = new EmailService();
     this.uploadsDir = path.resolve(__dirname, "../../uploads");
+    // Encryption settings for API keys
+    this.algorithm = "aes-256-cbc";
+    this.encryptionKey = this.getEncryptionKey();
+  }
+
+  getEncryptionKey() {
+    // Use JWT_SECRET as base for encryption key, or generate a default one
+    const secret = process.env.JWT_SECRET || "default-encryption-key-change-in-production";
+    // Create a 32-byte key from the secret
+    return crypto.createHash("sha256").update(secret).digest();
+  }
+
+  encryptApiKey(text) {
+    if (!text) return "";
+    try {
+      const iv = crypto.randomBytes(16);
+      const cipher = crypto.createCipheriv(this.algorithm, this.encryptionKey, iv);
+      let encrypted = cipher.update(text, "utf8", "hex");
+      encrypted += cipher.final("hex");
+      // Return IV + encrypted data
+      return iv.toString("hex") + ":" + encrypted;
+    } catch (error) {
+      console.error("Error encrypting API key:", error);
+      return "";
+    }
+  }
+
+  decryptApiKey(encryptedText) {
+    if (!encryptedText) return "";
+    try {
+      const parts = encryptedText.split(":");
+      if (parts.length !== 2) return "";
+      
+      const iv = Buffer.from(parts[0], "hex");
+      const encryptedData = parts[1];
+      const decipher = crypto.createDecipheriv(this.algorithm, this.encryptionKey, iv);
+      let decrypted = decipher.update(encryptedData, "hex", "utf8");
+      decrypted += decipher.final("utf8");
+      return decrypted;
+    } catch (error) {
+      console.error("Error decrypting API key:", error);
+      return "";
+    }
   }
 
   async getSettings() {
@@ -87,6 +131,7 @@ export class SettingsService {
       "reviewsSettings",
       "whyGenounSettings",
       "financeSettings",
+      "apiKeys",
     ];
     for (const field of jsonFields) {
       if (typeof settingsData[field] === "string") {
@@ -183,6 +228,39 @@ export class SettingsService {
       settingsData.homepageSections.hero.backgroundImage = this.getPublicUrl(heroBackgroundFile.path);
     }
 
+    // Handle API keys encryption
+    if (settingsData.apiKeys) {
+      const apiKeys = { ...settingsData.apiKeys };
+      
+      // Encrypt Gemini API key if provided
+      if (apiKeys.geminiApiKey && apiKeys.geminiApiKey.trim()) {
+        apiKeys.geminiApiKey = this.encryptApiKey(apiKeys.geminiApiKey.trim());
+      }
+      
+      // Encrypt Google Cloud credentials if provided
+      if (apiKeys.googleCloudCredentials && apiKeys.googleCloudCredentials.trim()) {
+        apiKeys.googleCloudCredentials = this.encryptApiKey(apiKeys.googleCloudCredentials.trim());
+      }
+      
+      apiKeys.lastUpdated = new Date();
+      settingsData.apiKeys = apiKeys;
+    }
+
     return this.settingsRepository.updateSettings(settingsData, userId);
+  }
+
+  async getDecryptedApiKeys() {
+    const settings = await this.settingsRepository.getSettings();
+    if (!settings || !settings.apiKeys) {
+      return {
+        geminiApiKey: "",
+        googleCloudCredentials: "",
+      };
+    }
+
+    return {
+      geminiApiKey: this.decryptApiKey(settings.apiKeys.geminiApiKey || ""),
+      googleCloudCredentials: this.decryptApiKey(settings.apiKeys.googleCloudCredentials || ""),
+    };
   }
 }

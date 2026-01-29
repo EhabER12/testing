@@ -2,6 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import Article from "../models/articleModel.js";
 import AiArticleSettings from "../models/aiArticleSettingsModel.js";
 import { SettingsRepository } from "../repositories/settingsRepository.js";
+import { SettingsService } from "./settingsService.js";
 import slugify from "slugify";
 import internalLinkingService from "./internalLinkingService.js";
 
@@ -9,6 +10,7 @@ export class AiArticleService {
   constructor() {
     this.ai = null;
     this.settingsRepository = new SettingsRepository();
+    this.settingsService = new SettingsService();
     this.initialized = false;
     // Fallback models in order of preference
     this.models = [
@@ -25,10 +27,24 @@ export class AiArticleService {
   async initialize() {
     if (this.initialized) return;
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Try to get API key from database first, fallback to environment variable
+    let apiKey = process.env.GEMINI_API_KEY;
+    
+    try {
+      const apiKeys = await this.settingsService.getDecryptedApiKeys();
+      if (apiKeys.geminiApiKey) {
+        apiKey = apiKeys.geminiApiKey;
+        console.log("✅ Using Gemini API key from database settings");
+      } else {
+        console.log("ℹ️ Using Gemini API key from environment variables");
+      }
+    } catch (error) {
+      console.warn("⚠️ Could not fetch API keys from database, using environment variable:", error.message);
+    }
+
     if (!apiKey) {
       throw new Error(
-        "GEMINI_API_KEY is not configured in environment variables"
+        "GEMINI_API_KEY is not configured in database settings or environment variables"
       );
     }
 

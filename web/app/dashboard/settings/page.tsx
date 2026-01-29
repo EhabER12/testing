@@ -37,6 +37,7 @@ import {
   AuthorityBarItem,
   WhyGenounFeature,
   FinanceSettings,
+  ApiKeysSettings,
 } from "@/store/services/settingsService";
 import { resetSettingsStatus } from "@/store/slices/settingsSlice";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -68,6 +69,7 @@ import { EmailSettings } from "@/components/dashboard/settings/EmailSettings";
 import { AuthorityBarSettings as AuthorityBarSettingsComponent } from "@/components/dashboard/settings/AuthorityBarSettings";
 import { ReviewsSectionSettings as ReviewsSectionSettingsComponent } from "@/components/dashboard/settings/ReviewsSectionSettings";
 import { WhyGenounSettings as WhyGenounSettingsComponent } from "@/components/dashboard/settings/WhyGenounSettings";
+import { ApiKeysSettings as ApiKeysSettingsComponent } from "@/components/dashboard/settings/ApiKeysSettings";
 
 interface SettingsFormData extends Partial<WebsiteSettingsData> {
   logoFile?: File;
@@ -212,6 +214,11 @@ export default function SettingsDashboardPage() {
       EGPtoSAR: 13.33,
     },
     lastRatesUpdate: new Date(),
+  });
+
+  const [apiKeys, setApiKeys] = useState<ApiKeysSettings>({
+    geminiApiKey: "",
+    googleCloudCredentials: "",
   });
 
   // All available platforms
@@ -363,6 +370,13 @@ export default function SettingsDashboardPage() {
             : new Date(),
         });
       }
+
+      if (settings.apiKeys) {
+        setApiKeys({
+          geminiApiKey: settings.apiKeys.geminiApiKey || "",
+          googleCloudCredentials: settings.apiKeys.googleCloudCredentials || "",
+        });
+      }
     }
   }, [settings]);
 
@@ -494,6 +508,7 @@ export default function SettingsDashboardPage() {
       whyGenounSettings,
       emailSettings,
       financeSettings,
+      apiKeys,
     };
 
     delete updateData.logoFile;
@@ -643,6 +658,9 @@ export default function SettingsDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="currency">
               {isRtl ? "العملة وأسعار الصرف" : "Currency & Exchange"}
+            </TabsTrigger>
+            <TabsTrigger value="api-keys">
+              {isRtl ? "مفاتيح API" : "API Keys"}
             </TabsTrigger>
           </TabsList>
 
@@ -2000,6 +2018,19 @@ export default function SettingsDashboardPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="api-keys" className="space-y-6">
+            <ApiKeysSettingsComponent
+              settings={apiKeys}
+              updateSettings={(key, value) => {
+                setApiKeys((prev) => ({
+                  ...prev,
+                  [key]: value,
+                }));
+              }}
+              formLang={formLang}
+            />
           </TabsContent>
         </Tabs>
 

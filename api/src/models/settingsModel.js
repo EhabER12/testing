@@ -482,6 +482,21 @@ const financeSettingsSchema = new mongoose.Schema({
   },
 });
 
+const apiKeysSchema = new mongoose.Schema({
+  geminiApiKey: {
+    type: String,
+    default: "",
+  },
+  googleCloudCredentials: {
+    type: String,
+    default: "",
+  },
+  lastUpdated: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const settingsSchema = new mongoose.Schema(
   {
     siteName: {
@@ -628,6 +643,10 @@ const settingsSchema = new mongoose.Schema(
         },
         lastRatesUpdate: new Date(),
       }),
+    },
+    apiKeys: {
+      type: apiKeysSchema,
+      default: () => ({}),
     },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
