@@ -12,6 +12,7 @@ import {
   StudentMember,
 } from "@/store/services/studentMemberService";
 import { getPackages } from "@/store/services/packageService";
+import { getAllTeachersWithStats } from "@/store/services/teacherGroupService";
 import {
   bulkIssuePackageCertificates,
   issueCertificate,
@@ -54,6 +55,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -85,6 +87,7 @@ import {
   Download,
   Award,
   Plus,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -126,6 +129,7 @@ export default function StudentMembersPage() {
   const { packages } = useAppSelector((state) => state.packages);
   const { templates, certificates } = useAppSelector((state) => state.certificates);
   const { user } = useAppSelector((state) => state.auth);
+  const { teachersWithStats } = useAppSelector((state) => state.teacherGroups);
 
   useEffect(() => {
     if (!isAuthenticated() || !user) {
@@ -141,6 +145,7 @@ export default function StudentMembersPage() {
     dispatch(getStudentMembers());
     dispatch(getPackages());
     dispatch(getCertificates());
+    dispatch(getAllTeachersWithStats());
     // Try to get templates, but don't fail if it errors
     dispatch(getAllTemplates()).catch((err) => {
       console.warn("Failed to load templates:", err);
@@ -710,17 +715,31 @@ export default function StudentMembersPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{isRtl ? "جميع المعلمين" : "All Teachers"}</SelectItem>
-                    {Array.from(new Set(
-                      studentMembers
-                        .filter(s => s.assignedTeacherName)
-                        .map(s => s.assignedTeacherName)
-                    ))
-                      .sort((a, b) => (a || '').localeCompare(b || ''))
-                      .map((teacherName) => (
-                        <SelectItem key={teacherName} value={`name:${teacherName}`}>
-                          {teacherName}
-                        </SelectItem>
-                      ))}
+                    {teachersWithStats && teachersWithStats.length > 0 ? (
+                      teachersWithStats
+                        .sort((a, b) => {
+                          const nameA = isRtl ? (a.fullName?.ar || a.fullName?.en || '') : (a.fullName?.en || a.fullName?.ar || '');
+                          const nameB = isRtl ? (b.fullName?.ar || b.fullName?.en || '') : (b.fullName?.en || b.fullName?.ar || '');
+                          return nameA.localeCompare(nameB);
+                        })
+                        .map((teacher) => (
+                          <SelectItem key={teacher.id || teacher._id} value={teacher.id || teacher._id || ''}>
+                            {isRtl ? (teacher.fullName?.ar || teacher.fullName?.en) : (teacher.fullName?.en || teacher.fullName?.ar)}
+                          </SelectItem>
+                        ))
+                    ) : (
+                      Array.from(new Set(
+                        studentMembers
+                          .filter(s => s.assignedTeacherName)
+                          .map(s => s.assignedTeacherName)
+                      ))
+                        .sort((a, b) => (a || '').localeCompare(b || ''))
+                        .map((teacherName) => (
+                          <SelectItem key={teacherName} value={`name:${teacherName}`}>
+                            {teacherName}
+                          </SelectItem>
+                        ))
+                    )}
                   </SelectContent>
                 </Select>
                 <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate}>
@@ -914,6 +933,22 @@ export default function StudentMembersPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* Important Notice for Teachers */}
+            <Alert className="bg-blue-50 border-blue-200">
+              <Info className={`h-4 w-4 text-blue-600 ${isRtl ? "ml-2" : "mr-2"}`} />
+              <AlertDescription className="text-blue-800 text-sm">
+                {isRtl ? (
+                  <>
+                    <strong>ملاحظة هامة للمعلمين:</strong> عند رفع ملف CSV، يجب إدخال اسم المعلم بالضبط كما هو مسجل في النظام (بالعربي أو الإنجليزي). هذا يضمن ربط كل معلم بطلاب الباقة الخاصة به بشكل صحيح.
+                  </>
+                ) : (
+                  <>
+                    <strong>Important Notice for Teachers:</strong> When uploading a CSV file, you must enter the teacher's name exactly as it is registered in the system (in Arabic or English). This ensures proper linking between each teacher and their package students.
+                  </>
+                )}
+              </AlertDescription>
+            </Alert>
+
             <div className="flex flex-col gap-2">
               <Button variant="outline" size="sm" onClick={downloadTemplate} className="w-fit">
                 <Download className="h-4 w-4 mr-2" />
