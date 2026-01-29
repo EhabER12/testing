@@ -299,13 +299,22 @@ export default function CertificateDesignerPage() {
       return;
     }
 
+    // Clean up empty values before sending
+    const cleanedData = { ...design };
+    if (!cleanedData.packageId || cleanedData.packageId === "none") {
+      delete cleanedData.packageId;
+    }
+    if (!cleanedData.courseId || cleanedData.courseId === "none") {
+      delete cleanedData.courseId;
+    }
+
     try {
       if (selectedTemplate) {
         const templateId = selectedTemplate.id || (selectedTemplate as any)._id;
-        await dispatch(updateTemplate({ id: templateId, data: design })).unwrap();
+        await dispatch(updateTemplate({ id: templateId, data: cleanedData })).unwrap();
         toast.success(isRtl ? "تم تحديث القالب" : "Template updated");
       } else {
-        await dispatch(createTemplate(design)).unwrap();
+        await dispatch(createTemplate(cleanedData)).unwrap();
         toast.success(isRtl ? "تم إنشاء القالب بنجاح" : "Template created successfully");
       }
       setIsEditing(false);

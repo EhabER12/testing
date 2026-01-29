@@ -847,8 +847,18 @@ class CertificateService {
   // ============ CERTIFICATE TEMPLATES ============
 
   // Create template
+  // Create new template
   async createTemplate(data) {
-    const template = await CertificateTemplate.create(data);
+    // Clean up empty packageId and courseId
+    const cleanedData = { ...data };
+    if (!cleanedData.packageId || cleanedData.packageId === '' || cleanedData.packageId === 'none') {
+      delete cleanedData.packageId;
+    }
+    if (!cleanedData.courseId || cleanedData.courseId === '' || cleanedData.courseId === 'none') {
+      delete cleanedData.courseId;
+    }
+    
+    const template = await CertificateTemplate.create(cleanedData);
     return template;
   }
 
@@ -881,6 +891,16 @@ class CertificateService {
     const template = await CertificateTemplate.findById(templateId);
     if (!template) {
       throw new Error("Template not found");
+    }
+
+    // Handle packageId and courseId - if empty/null, unset them
+    if (updates.packageId === '' || updates.packageId === null || updates.packageId === 'none') {
+      template.packageId = undefined;
+      delete updates.packageId;
+    }
+    if (updates.courseId === '' || updates.courseId === null || updates.courseId === 'none') {
+      template.courseId = undefined;
+      delete updates.courseId;
     }
 
     Object.keys(updates).forEach((key) => {
