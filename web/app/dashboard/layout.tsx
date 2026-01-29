@@ -37,6 +37,7 @@ import {
   UserCheck,
   Mail,
   Home,
+  UserSquare2,
 } from "lucide-react";
 import { User } from "@/store/slices/authSlice";
 import {
@@ -232,6 +233,13 @@ const menuItems: MenuItem[] = [
         icon: <Users className="h-4 w-4" />,
         href: "/dashboard/teachers",
         roles: ["admin", "teacher"],
+      },
+      {
+        titleKey: "admin.sidebar.teacherDetails",
+        title: "Teacher Details",
+        icon: <UserSquare2 className="h-4 w-4" />,
+        href: "/dashboard/teacher-details",
+        roles: ["admin", "moderator"],
       },
     ],
   },

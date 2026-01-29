@@ -319,7 +319,8 @@
       "subscriptions": "Subscriptions",
       "studentMembers": "Student Members",
       "packages": "Packages",
-      "teachers": "Teachers"
+      "teachers": "Teachers",
+      "teacherDetails": "Teacher Details"
     },
     "analytics": {
       "title": "Analytics",

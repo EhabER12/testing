@@ -319,7 +319,8 @@
       "subscriptions": "الاشتراكات",
       "studentMembers": "الطلاب المسجلين",
       "packages": "الباقات",
-      "teachers": "المدرسين"
+      "teachers": "المدرسين",
+      "teacherDetails": "تفاصيل المدرسين"
     },
     "analytics": {
       "title": "التحليلات",
