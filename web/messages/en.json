@@ -312,10 +312,11 @@
       "analytics": "Analytics",
       "content": "Content",
       "finance": "Finance",
-      "lms": "LMS",
+      "lms": "Learning System",
       "courses": "Courses",
       "quizzes": "Quizzes",
       "certificates": "Certificates",
+      "subscriptions": "Subscriptions",
       "studentMembers": "Student Members",
       "packages": "Packages",
       "teachers": "Teachers"

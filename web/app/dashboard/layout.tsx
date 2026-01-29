@@ -179,7 +179,7 @@ const menuItems: MenuItem[] = [
   },
   {
     titleKey: "admin.sidebar.lms",
-    title: "LMS",
+    title: "Learning System",
     icon: <GraduationCap className="h-4 w-4" />,
     roles: ["admin", "moderator", "teacher"],
     children: [
@@ -204,6 +204,14 @@ const menuItems: MenuItem[] = [
         href: "/dashboard/certificates",
         roles: ["admin", "moderator"],
       },
+    ],
+  },
+  {
+    titleKey: "admin.sidebar.subscriptions",
+    title: "Subscriptions",
+    icon: <UserCheck className="h-4 w-4" />,
+    roles: ["admin", "moderator", "teacher"],
+    children: [
       {
         titleKey: "admin.sidebar.studentMembers",
         title: "Student Members",
