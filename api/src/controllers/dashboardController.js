@@ -19,6 +19,8 @@ import AnalyticsService from "../services/analyticsService.js";
  * @route   GET /api/dashboard/stats
  * @access  Private/Admin
  */
+import StudentMember from "../models/studentMemberModel.js";
+
 export const getDashboardStats = async (req, res, next) => {
   try {
     const now = new Date();
@@ -428,6 +430,7 @@ export const getTeacherStats = async (req, res, next) => {
       pendingCoursesCount,
       teacherGroups,
       directStudents,
+      subscriptionStudents,
     ] = await Promise.all([
       Course.find({ instructorId: teacherId }),
       Course.countDocuments({ instructorId: teacherId, isPublished: true }),
@@ -436,7 +439,9 @@ export const getTeacherStats = async (req, res, next) => {
         .select("students groupType pricing groupName")
         .populate("students.studentId", "studentName name fullName email"), // Populate student details
       User.find({ "studentInfo.assignedTeacher": teacherId })
-        .select("fullName email studentInfo createdAt")
+        .select("fullName email studentInfo createdAt"),
+      StudentMember.find({ assignedTeacherId: teacherId })
+        .select("name email phone status createdAt")
     ]);
 
     const totalCourses = courses.length;
@@ -456,17 +461,19 @@ export const getTeacherStats = async (req, res, next) => {
     // Calculate direct students count
     const directStudentsCount = directStudents.length;
 
-    // Combined active students (assuming no duplicates between direct and group, or we just sum them)
-    // Direct students are usually distinct from group students in this logic
-    const totalActiveStudents = activeStudentsInGroups + directStudentsCount;
+    // Combined active students
+    const subscriptionStudentsCount = subscriptionStudents.length;
+    const totalActiveStudents = activeStudentsInGroups + directStudentsCount + subscriptionStudents.filter(s => s.status === 'active').length;
 
     // Get recent students from groups
     let recentStudentsList = [];
 
     // 1. Add students from groups
+    const studentIdsInGroups = new Set();
     teacherGroups.forEach(group => {
       group.students.forEach(student => {
         if (student.studentId) {
+          studentIdsInGroups.add(student.studentId._id ? student.studentId._id.toString() : student.studentId.toString());
           // Handle different name fields
           // StudentMember uses 'name' as { ar: string, en: string }
           // Other models might use 'fullName' or 'studentName'
@@ -510,6 +517,21 @@ export const getTeacherStats = async (req, res, next) => {
         addedAt: student.createdAt,
         type: 'direct'
       });
+    });
+
+    // 3. Add subscription students not in groups
+    subscriptionStudents.forEach(student => {
+      const sid = student._id ? student._id.toString() : student.id;
+      if (!studentIdsInGroups.has(sid)) {
+        recentStudentsList.push({
+          name: student.name,
+          email: student.email || student.phone, // StudentMember might not have email
+          status: student.status,
+          groupName: { en: "Subscription", ar: "اشتراك" },
+          addedAt: student.createdAt,
+          type: 'subscription'
+        });
+      }
     });
 
     // Sort and take top 5

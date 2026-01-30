@@ -1,4 +1,5 @@
 import { UserRepository } from "../repositories/userRepository.js";
+import StudentMember from "../models/studentMemberModel.js";
 import { ApiError } from "../utils/apiError.js";
 import crypto from "crypto";
 import { EmailService } from "./emailService.js"; // Keep this just in case other methods use it directly, though we prefer template service
@@ -410,22 +411,94 @@ export class UserService {
     const teacher = await this.userRepository.findById(teacherId);
     if (!teacher) throw new ApiError(404, "Teacher not found");
 
-    const { page, limit, search } = queryParams;
-    const filter = {
+    const { page = 1, limit = 10, search } = queryParams;
+    const skip = (page - 1) * limit;
+
+    // 1. Get direct students from User model
+    const directStudentsFilter = {
       "studentInfo.assignedTeacher": teacherId
     };
-
-    const options = {
-      page,
-      limit,
-      filter,
-      select: "-password"
+    
+    // 2. Get subscription students from StudentMember model
+    const subscriptionStudentsFilter = {
+      assignedTeacherId: teacherId
     };
 
     if (search) {
-      return this.userRepository.search(search, options);
+      const searchRegex = new RegExp(search, 'i');
+      directStudentsFilter.$or = [
+        { name: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex }
+      ];
+      subscriptionStudentsFilter.$or = [
+        { "name.ar": searchRegex },
+        { "name.en": searchRegex },
+        { phone: searchRegex }
+      ];
     }
 
-    return this.userRepository.findAll(options);
+    // Fetch both in parallel
+    const [directStudentsRes, subscriptionStudents] = await Promise.all([
+      this.userRepository.findAll({ 
+        filter: directStudentsFilter,
+        select: "-password",
+        limit: 1000 // Large limit to handle merging
+      }),
+      StudentMember.find(subscriptionStudentsFilter).limit(1000)
+    ]);
+
+    // Normalize and merge
+    const normalizedDirect = directStudentsRes.results.map(s => ({
+      id: s._id || s.id,
+      _id: s._id || s.id,
+      fullName: s.fullName || s.name,
+      name: s.fullName || s.name,
+      email: s.email,
+      phone: s.phone || (s.studentInfo && s.studentInfo.whatsappNumber),
+      whatsappNumber: s.studentInfo && s.studentInfo.whatsappNumber,
+      status: s.status,
+      type: 'direct',
+      createdAt: s.createdAt
+    }));
+
+    const normalizedSubscription = subscriptionStudents.map(s => ({
+      id: s._id || s.id,
+      _id: s._id || s.id,
+      fullName: s.name,
+      name: s.name,
+      email: s.email,
+      phone: s.phone,
+      whatsappNumber: s.phone,
+      status: s.status,
+      type: 'subscription',
+      createdAt: s.createdAt
+    }));
+
+    // Combine and handle duplicates (a user might be in both collections if they have a full account)
+    // We'll use a Set to track IDs, prioritizing User records if they exist
+    const mergedStudents = [...normalizedDirect];
+    const existingIds = new Set(mergedStudents.map(s => s.id.toString()));
+
+    normalizedSubscription.forEach(s => {
+      if (!existingIds.has(s.id.toString())) {
+        mergedStudents.push(s);
+        existingIds.add(s.id.toString());
+      }
+    });
+
+    // Sort by createdAt desc
+    mergedStudents.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Paginate merged results
+    const paginatedResults = mergedStudents.slice(skip, skip + parseInt(limit));
+
+    return {
+      results: paginatedResults,
+      totalResults: mergedStudents.length,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(mergedStudents.length / limit)
+    };
   }
 }

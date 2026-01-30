@@ -235,6 +235,13 @@ const menuItems: MenuItem[] = [
         roles: ["admin", "teacher"],
       },
       {
+        titleKey: "admin.sidebar.profits",
+        title: "Profits",
+        icon: <Wallet className="h-4 w-4" />,
+        href: "/dashboard/profits",
+        roles: ["teacher"],
+      },
+      {
         titleKey: "admin.sidebar.teacherDetails",
         title: "Teacher Details",
         icon: <UserSquare2 className="h-4 w-4" />,

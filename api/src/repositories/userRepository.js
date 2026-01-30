@@ -22,7 +22,8 @@ export class UserRepository extends BaseRepository {
   async search(query, options = {}) {
     const filter = {
       $or: [
-        { name: { $regex: query, $options: "i" } },
+        { "fullName.ar": { $regex: query, $options: "i" } },
+        { "fullName.en": { $regex: query, $options: "i" } },
         { email: { $regex: query, $options: "i" } },
       ],
     };
