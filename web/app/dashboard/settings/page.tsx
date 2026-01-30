@@ -19,6 +19,8 @@ import {
   Smartphone,
   RefreshCcw,
   DollarSign,
+  BookOpen,
+  Users,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import toast from "react-hot-toast";
@@ -221,6 +223,13 @@ export default function SettingsDashboardPage() {
     googleCloudCredentials: "",
   });
 
+  const [teacherProfitSettings, setTeacherProfitSettings] = useState({
+    enabled: true,
+    courseSalesPercentage: 40,
+    subscriptionPercentage: 35,
+    lastUpdated: new Date(),
+  });
+
   // All available platforms
   const allPlatforms = [
     "facebook",
@@ -359,11 +368,11 @@ export default function SettingsDashboardPage() {
       if (settings.financeSettings) {
         setFinanceSettings({
           baseCurrency: settings.financeSettings.baseCurrency || "SAR",
-          exchangeRates: settings.financeSettings.exchangeRates || {
-            USD: 1,
-            SAR: 3.75,
-            EGP: 50.0,
-            EGPtoSAR: 13.33,
+          exchangeRates: {
+            USD: settings.financeSettings.exchangeRates?.USD || 1,
+            SAR: settings.financeSettings.exchangeRates?.SAR || 3.75,
+            EGP: settings.financeSettings.exchangeRates?.EGP || 50.0,
+            EGPtoSAR: settings.financeSettings.exchangeRates?.EGPtoSAR || 13.33,
           },
           lastRatesUpdate: settings.financeSettings.lastRatesUpdate
             ? new Date(settings.financeSettings.lastRatesUpdate)
@@ -375,6 +384,17 @@ export default function SettingsDashboardPage() {
         setApiKeys({
           geminiApiKey: settings.apiKeys.geminiApiKey || "",
           googleCloudCredentials: settings.apiKeys.googleCloudCredentials || "",
+        });
+      }
+
+      if (settings.teacherProfitSettings) {
+        setTeacherProfitSettings({
+          enabled: settings.teacherProfitSettings.enabled ?? true,
+          courseSalesPercentage: settings.teacherProfitSettings.courseSalesPercentage ?? 40,
+          subscriptionPercentage: settings.teacherProfitSettings.subscriptionPercentage ?? 35,
+          lastUpdated: settings.teacherProfitSettings.lastUpdated
+            ? new Date(settings.teacherProfitSettings.lastUpdated)
+            : new Date(),
         });
       }
     }
@@ -509,6 +529,7 @@ export default function SettingsDashboardPage() {
       emailSettings,
       financeSettings,
       apiKeys,
+      teacherProfitSettings,
     };
 
     delete updateData.logoFile;
@@ -661,6 +682,9 @@ export default function SettingsDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="api-keys">
               {isRtl ? "مفاتيح API" : "API Keys"}
+            </TabsTrigger>
+            <TabsTrigger value="teacher-profit">
+              {isRtl ? "أرباح المعلمين" : "Teacher Profit"}
             </TabsTrigger>
           </TabsList>
 
@@ -2031,6 +2055,134 @@ export default function SettingsDashboardPage() {
               }}
               formLang={formLang}
             />
+          </TabsContent>
+
+          {/* Teacher Profit Settings Tab */}
+          <TabsContent value="teacher-profit" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {isRtl ? "إعدادات أرباح المعلمين" : "Teacher Profit Settings"}
+                </CardTitle>
+                <CardDescription>
+                  {isRtl
+                    ? "اضبط نسب الأرباح الافتراضية للمعلمين من مبيعات الدورات والاشتراكات"
+                    : "Configure default profit percentages for teachers from course sales and subscriptions"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Enable/Disable Teacher Profit System */}
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">
+                      {isRtl ? "تفعيل نظام الأرباح" : "Enable Profit System"}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {isRtl
+                        ? "تفعيل أو تعطيل نظام حساب أرباح المعلمين"
+                        : "Enable or disable the teacher profit calculation system"}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={teacherProfitSettings.enabled}
+                    onCheckedChange={(checked) =>
+                      setTeacherProfitSettings((prev) => ({ ...prev, enabled: checked }))
+                    }
+                  />
+                </div>
+
+                {/* Course Sales Percentage */}
+                <div className="space-y-3">
+                  <Label htmlFor="courseSalesPercentage" className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-blue-600" />
+                    {isRtl ? "نسبة مبيعات الدورات (%)" : "Course Sales Profit Percentage (%)"}
+                  </Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="courseSalesPercentage"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={teacherProfitSettings.courseSalesPercentage}
+                      onChange={(e) =>
+                        setTeacherProfitSettings((prev) => ({
+                          ...prev,
+                          courseSalesPercentage: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      disabled={!teacherProfitSettings.enabled}
+                      className="max-w-[200px]"
+                    />
+                    <span className="text-lg font-semibold text-blue-600">
+                      {teacherProfitSettings.courseSalesPercentage}%
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {isRtl
+                      ? `عند بيع دورة بـ 100 ريال، يحصل المعلم على ${teacherProfitSettings.courseSalesPercentage} ريال`
+                      : `For a course sold at 100 SAR, teacher receives ${teacherProfitSettings.courseSalesPercentage} SAR`}
+                  </p>
+                </div>
+
+                {/* Subscription Percentage */}
+                <div className="space-y-3">
+                  <Label htmlFor="subscriptionPercentage" className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-purple-600" />
+                    {isRtl ? "نسبة الاشتراكات (%)" : "Subscription Profit Percentage (%)"}
+                  </Label>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      id="subscriptionPercentage"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={teacherProfitSettings.subscriptionPercentage}
+                      onChange={(e) =>
+                        setTeacherProfitSettings((prev) => ({
+                          ...prev,
+                          subscriptionPercentage: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      disabled={!teacherProfitSettings.enabled}
+                      className="max-w-[200px]"
+                    />
+                    <span className="text-lg font-semibold text-purple-600">
+                      {teacherProfitSettings.subscriptionPercentage}%
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {isRtl
+                      ? `عند اشتراك طالب بـ 100 ريال، يحصل المعلم على ${teacherProfitSettings.subscriptionPercentage} ريال`
+                      : `For a subscription of 100 SAR, teacher receives ${teacherProfitSettings.subscriptionPercentage} SAR`}
+                  </p>
+                </div>
+
+                {/* Configuration Priority Info */}
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>
+                    {isRtl ? "أولوية الإعدادات" : "Configuration Priority"}
+                  </AlertTitle>
+                  <AlertDescription className="text-sm">
+                    {isRtl
+                      ? "هذه النسب هي الافتراضية. يمكن تخصيص نسب مختلفة لكل معلم أو دورة. الأولوية: دورة محددة > معلم محدد > إعدادات عامة"
+                      : "These are the default percentages. You can customize different percentages per teacher or per course. Priority: Specific Course > Specific Teacher > Global Settings"}
+                  </AlertDescription>
+                </Alert>
+
+                {/* Last Updated */}
+                {teacherProfitSettings.lastUpdated && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    {isRtl ? "آخر تحديث: " : "Last updated: "}
+                    {new Date(teacherProfitSettings.lastUpdated).toLocaleString(
+                      isRtl ? "ar-SA" : "en-US"
+                    )}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 

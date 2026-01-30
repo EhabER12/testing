@@ -64,6 +64,7 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  DollarSign,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -81,6 +82,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { updateTeacherProfitPercentagesThunk } from "@/store/services/teacherProfitService";
 import Link from "next/link";
 
 export default function TeachersManagementPage() {
@@ -97,6 +99,12 @@ export default function TeachersManagementPage() {
   const [isManageStudentsOpen, setIsManageStudentsOpen] = useState(false);
   const [selectedTeacherForStudents, setSelectedTeacherForStudents] = useState<any>(null);
   const [teacherStudents, setTeacherStudents] = useState<any[]>([]);
+  const [isProfitConfigOpen, setIsProfitConfigOpen] = useState(false);
+  const [selectedTeacherForProfit, setSelectedTeacherForProfit] = useState<any>(null);
+  const [profitPercentages, setProfitPercentages] = useState({
+    courseSales: 0,
+    subscriptions: 0,
+  });
 
   const [formData, setFormData] = useState({
     teacherId: "",
@@ -291,6 +299,35 @@ export default function TeachersManagementPage() {
     setSelectedTeacherForStudents(teacher);
     fetchTeacherStudents((teacher.id || teacher._id)!);
     setIsManageStudentsOpen(true);
+  };
+
+  const handleOpenProfitConfig = (teacher: any) => {
+    setSelectedTeacherForProfit(teacher);
+    setProfitPercentages({
+      courseSales: teacher.teacherInfo?.customProfitPercentages?.courseSales || 0,
+      subscriptions: teacher.teacherInfo?.customProfitPercentages?.subscriptions || 0,
+    });
+    setIsProfitConfigOpen(true);
+  };
+
+  const handleSaveProfitConfig = async () => {
+    if (!selectedTeacherForProfit) return;
+    
+    try {
+      await dispatch(
+        updateTeacherProfitPercentagesThunk({
+          teacherId: (selectedTeacherForProfit.id || selectedTeacherForProfit._id)!,
+          courseSales: profitPercentages.courseSales || undefined,
+          subscriptions: profitPercentages.subscriptions || undefined,
+        })
+      ).unwrap();
+      
+      // Refresh teachers list
+      await dispatch(getAllTeachersWithStats());
+      setIsProfitConfigOpen(false);
+    } catch (error: any) {
+      console.error("Failed to update profit percentages:", error);
+    }
   };
 
   useEffect(() => {
@@ -712,6 +749,10 @@ export default function TeachersManagementPage() {
                             )}
                           </div>
                           <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => handleOpenProfitConfig(teacher)}>
+                              <DollarSign className="h-3 w-3 mr-1" />
+                              <span className="hidden sm:inline">{isRtl ? "الأرباح" : "Profit"}</span>
+                            </Button>
                             <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => handleOpenManageStudents(teacher)}>
                               <Users className="h-3 w-3 mr-1" />
                               <span className="hidden sm:inline">{t("admin.teachers.students")}</span>
@@ -1092,6 +1133,87 @@ export default function TeachersManagementPage() {
             </Table>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Profit Configuration Dialog */}
+      <Dialog open={isProfitConfigOpen} onOpenChange={setIsProfitConfigOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {isRtl ? "إعدادات أرباح المعلم" : "Teacher Profit Configuration"}
+            </DialogTitle>
+            <DialogDescription>
+              {isRtl
+                ? `ضبط نسب الأرباح الخاصة بـ ${selectedTeacherForProfit ? getTextValue(selectedTeacherForProfit.fullName) : ""}`
+                : `Configure custom profit percentages for ${selectedTeacherForProfit ? getTextValue(selectedTeacherForProfit.fullName) : ""}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Course Sales Percentage */}
+            <div className="space-y-2">
+              <Label htmlFor="courseSalesProfit" className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-blue-600" />
+                {isRtl ? "نسبة مبيعات الدورات (%)" : "Course Sales Percentage (%)"}
+              </Label>
+              <Input
+                id="courseSalesProfit"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={profitPercentages.courseSales}
+                onChange={(e) =>
+                  setProfitPercentages((prev) => ({
+                    ...prev,
+                    courseSales: parseFloat(e.target.value) || 0,
+                  }))
+                }
+                placeholder={isRtl ? "اترك فارغاً للافتراضي" : "Leave empty for default"}
+              />
+              <p className="text-sm text-muted-foreground">
+                {isRtl
+                  ? "إذا تركت 0 أو فارغاً، سيتم استخدام النسبة العامة من الإعدادات"
+                  : "If left at 0 or empty, the global percentage from settings will be used"}
+              </p>
+            </div>
+
+            {/* Subscription Percentage */}
+            <div className="space-y-2">
+              <Label htmlFor="subscriptionProfit" className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-purple-600" />
+                {isRtl ? "نسبة الاشتراكات (%)" : "Subscription Percentage (%)"}
+              </Label>
+              <Input
+                id="subscriptionProfit"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={profitPercentages.subscriptions}
+                onChange={(e) =>
+                  setProfitPercentages((prev) => ({
+                    ...prev,
+                    subscriptions: parseFloat(e.target.value) || 0,
+                  }))
+                }
+                placeholder={isRtl ? "اترك فارغاً للافتراضي" : "Leave empty for default"}
+              />
+              <p className="text-sm text-muted-foreground">
+                {isRtl
+                  ? "إذا تركت 0 أو فارغاً، سيتم استخدام النسبة العامة من الإعدادات"
+                  : "If left at 0 or empty, the global percentage from settings will be used"}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsProfitConfigOpen(false)}>
+              {isRtl ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button onClick={handleSaveProfitConfig} className="bg-genoun-green hover:bg-genoun-green/90">
+              {isRtl ? "حفظ" : "Save"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

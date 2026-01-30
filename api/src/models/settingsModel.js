@@ -497,6 +497,32 @@ const apiKeysSchema = new mongoose.Schema({
   },
 });
 
+const teacherProfitSettingsSchema = new mongoose.Schema({
+  // Global default percentages
+  courseSalesPercentage: {
+    type: Number,
+    default: 40,
+    min: 0,
+    max: 100,
+  },
+  subscriptionPercentage: {
+    type: Number,
+    default: 35,
+    min: 0,
+    max: 100,
+  },
+  // Enable/disable profit tracking
+  enabled: {
+    type: Boolean,
+    default: true,
+  },
+  // Last update tracking
+  lastUpdated: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const settingsSchema = new mongoose.Schema(
   {
     siteName: {
@@ -647,6 +673,15 @@ const settingsSchema = new mongoose.Schema(
     apiKeys: {
       type: apiKeysSchema,
       default: () => ({}),
+    },
+    teacherProfitSettings: {
+      type: teacherProfitSettingsSchema,
+      default: () => ({
+        courseSalesPercentage: 40,
+        subscriptionPercentage: 35,
+        enabled: true,
+        lastUpdated: new Date(),
+      }),
     },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,

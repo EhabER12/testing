@@ -529,6 +529,25 @@ export const getTeacherStats = async (req, res, next) => {
       }
     });
 
+    // Get teacher profit statistics
+    const { TeacherProfitService } = await import("../services/teacherProfitService.js");
+    const profitService = new TeacherProfitService();
+    let profitStats = null;
+    try {
+      profitStats = await profitService.getTeacherProfitStats(teacherId);
+    } catch (profitError) {
+      console.error("Failed to load teacher profit stats:", profitError);
+      // Set default empty stats if fetch fails
+      profitStats = {
+        courseSales: { totalProfit: 0, transactionCount: 0, avgPercentage: 0 },
+        subscriptions: { totalProfit: 0, transactionCount: 0, avgPercentage: 0 },
+        totalProfit: 0,
+        totalTransactions: 0,
+        recentTransactions: [],
+        currency: "SAR",
+      };
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -545,11 +564,26 @@ export const getTeacherStats = async (req, res, next) => {
         },
         groups: {
           total: totalGroups,
-          activeStudents: totalActiveStudents, // Updated to include direct students
+          activeStudents: totalActiveStudents,
         },
         revenue: {
           expected: expectedRevenue,
           currency: "EGP",
+        },
+        profit: {
+          courseSales: {
+            total: profitStats.courseSales.totalProfit,
+            count: profitStats.courseSales.transactionCount,
+            percentage: profitStats.courseSales.avgPercentage,
+          },
+          subscriptions: {
+            total: profitStats.subscriptions.totalProfit,
+            count: profitStats.subscriptions.transactionCount,
+            percentage: profitStats.subscriptions.avgPercentage,
+          },
+          total: profitStats.totalProfit,
+          currency: profitStats.currency,
+          recentTransactions: profitStats.recentTransactions,
         },
         recentCourses: courses.sort((a, b) => b.createdAt - a.createdAt).slice(0, 5),
         recentStudents: latestStudents,

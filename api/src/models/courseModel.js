@@ -62,6 +62,13 @@ const courseSchema = new mongoose.Schema(
       default: "SAR",
     },
 
+    // Teacher profit configuration (overrides teacher and global defaults)
+    teacherProfitPercentage: {
+      type: Number,
+      min: 0,
+      max: 100,
+    },
+
     // Instructor
     instructorId: {
       type: mongoose.Schema.Types.ObjectId,

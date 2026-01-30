@@ -178,6 +178,17 @@ export class PaymentService {
         // Don't fail the payment update due to finance entry failure
       }
 
+      // Record teacher profit
+      try {
+        const { TeacherProfitService } = await import("./teacherProfitService.js");
+        const profitService = new TeacherProfitService();
+        await profitService.recordProfit(payment._id);
+        logger.info("Teacher profit recorded for payment", { paymentId: payment._id });
+      } catch (profitError) {
+        logger.error("Failed to record teacher profit", { error: profitError.message });
+        // Don't fail the payment if profit recording fails
+      }
+
       // Auto-enroll student in course if this is a course payment
       if (payment.metadata && payment.metadata.type === "course" && payment.metadata.courseId) {
         // ... (existing course enrollment logic could be added here or handled by another service) ...

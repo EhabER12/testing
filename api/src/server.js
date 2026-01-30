@@ -41,6 +41,7 @@ import packageRoutes from "./routes/packageRoutes.js";
 import teacherGroupRoutes from "./routes/teacherGroupRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import paymentMethodRoutes from "./routes/paymentMethodRoutes.js";
+import teacherProfitRoutes from "./routes/teacherProfitRoutes.js";
 import { FormService } from "./services/formService.js";
 import { AiArticleSchedulerService } from "./services/aiArticleSchedulerService.js";
 import { StudentMemberSchedulerService } from "./services/studentMemberSchedulerService.js";
@@ -350,6 +351,7 @@ app.use("/api/packages", packageRoutes);
 app.use("/api/teacher-groups", teacherGroupRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/payment-methods", paymentMethodRoutes);
+app.use("/api/teacher-profit", teacherProfitRoutes);
 
 // Health check route (enhanced)
 app.get("/health", async (req, res) => {

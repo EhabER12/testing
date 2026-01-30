@@ -33,6 +33,8 @@ import {
   GraduationCap,
   FileQuestion,
   User2,
+  DollarSign,
+  BookOpen,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -63,6 +65,7 @@ import {
   TeacherStats,
 } from "@/store/services/dashboardService";
 import { useCurrency } from "@/hooks/dashboard/useCurrency";
+import { getMyProfitStatsThunk } from "@/store/services/teacherProfitService";
 
 export default function DashboardPage() {
   const dispatch = useAppDispatch();
@@ -122,6 +125,9 @@ export default function DashboardPage() {
           .then((data) => setTeacherStats(data))
           .catch((err) => console.error("Failed to load teacher stats:", err))
           .finally(() => setStatsLoading(false));
+        
+        // Load profit statistics
+        dispatch(getMyProfitStatsThunk({}));
       }
     }
   }, [dispatch, user]);
@@ -1204,8 +1210,10 @@ export default function DashboardPage() {
 }
 
 function TeacherDashboard({ stats }: { stats: TeacherStats }) {
+  const dispatch = useAppDispatch();
   const { t, isRtl } = useAdminLocale();
   const { formatMoney } = useCurrency();
+  const { myStats: profitStats } = useAppSelector((state) => state.teacherProfit);
 
   const getTextValue = (value: string | BilingualText | undefined): string => {
     if (!value) return "";
@@ -1304,6 +1312,134 @@ function TeacherDashboard({ stats }: { stats: TeacherStats }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Profit Statistics Section */}
+      {profitStats && (
+        <>
+          <div className="mt-4">
+            <h3 className="text-lg font-semibold mb-2">
+              {isRtl ? "إحصائيات الأرباح" : "Profit Statistics"}
+            </h3>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* Total Profit Card */}
+            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {isRtl ? "إجمالي الأرباح" : "Total Profit"}
+                </CardTitle>
+                <DollarSign className="h-4 w-4 text-emerald-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-emerald-700">
+                  {formatMoney(profitStats.totalProfit || 0, profitStats.currency)}
+                </div>
+                <p className="text-xs text-emerald-600 mt-1">
+                  {profitStats.totalTransactions || 0} {isRtl ? "معاملة" : "transactions"}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Course Sales Profit */}
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {isRtl ? "أرباح مبيعات الدورات" : "Course Sales Profit"}
+                </CardTitle>
+                <BookOpen className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-700">
+                  {formatMoney(profitStats.courseSales?.totalProfit || 0, profitStats.currency)}
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  {profitStats.courseSales?.avgPercentage?.toFixed(1) || 0}% {isRtl ? "متوسط النسبة" : "avg rate"}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Subscription Profit */}
+            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {isRtl ? "أرباح الاشتراكات" : "Subscription Profit"}
+                </CardTitle>
+                <Users className="h-4 w-4 text-purple-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-700">
+                  {formatMoney(profitStats.subscriptions?.totalProfit || 0, profitStats.currency)}
+                </div>
+                <p className="text-xs text-purple-600 mt-1">
+                  {profitStats.subscriptions?.avgPercentage?.toFixed(1) || 0}% {isRtl ? "متوسط النسبة" : "avg rate"}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Profit Transactions Table */}
+          {profitStats.recentTransactions && profitStats.recentTransactions.length > 0 && (
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle>{isRtl ? "المعاملات الأخيرة" : "Recent Transactions"}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className={`p-2 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "التاريخ" : "Date"}</th>
+                        <th className={`p-2 ${isRtl ? "text-right" : "text-left"}`}>{isRtl ? "النوع" : "Type"}</th>
+                        <th className="p-2 text-right">{isRtl ? "المبلغ الكلي" : "Total Amount"}</th>
+                        <th className="p-2 text-right">{isRtl ? "النسبة" : "Rate"}</th>
+                        <th className="p-2 text-right">{isRtl ? "الربح" : "Profit"}</th>
+                        <th className="p-2 text-center">{isRtl ? "الحالة" : "Status"}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {profitStats.recentTransactions.map((transaction) => (
+                        <tr key={transaction.id} className="border-b hover:bg-muted/50">
+                          <td className="p-2">
+                            {new Date(transaction.transactionDate).toLocaleDateString(isRtl ? "ar-SA" : "en-US")}
+                          </td>
+                          <td className="p-2">
+                            {transaction.revenueType === "course_sale"
+                              ? (isRtl ? "مبيعات الدورات" : "Course Sale")
+                              : (isRtl ? "اشتراك" : "Subscription")}
+                          </td>
+                          <td className="p-2 text-right">{formatMoney(transaction.totalAmount, transaction.currency)}</td>
+                          <td className="p-2 text-right">{transaction.profitPercentage}%</td>
+                          <td className="p-2 text-right font-semibold text-genoun-green">
+                            {formatMoney(transaction.profitAmount, transaction.currency)}
+                          </td>
+                          <td className="p-2 text-center">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                transaction.status === "paid"
+                                  ? "bg-green-100 text-green-800"
+                                  : transaction.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {transaction.status === "paid"
+                                ? (isRtl ? "مدفوع" : "Paid")
+                                : transaction.status === "pending"
+                                ? (isRtl ? "قيد الانتظار" : "Pending")
+                                : (isRtl ? "ملغي" : "Cancelled")}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-4">
         <Card className="col-span-4">

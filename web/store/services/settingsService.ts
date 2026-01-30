@@ -214,6 +214,13 @@ export interface ApiKeysSettings {
   lastUpdated?: Date | string;
 }
 
+export interface TeacherProfitSettings {
+  enabled?: boolean;
+  courseSalesPercentage?: number;
+  subscriptionPercentage?: number;
+  lastUpdated?: Date | string;
+}
+
 export interface PromoModalSettings {
   isEnabled: boolean;
   title: { ar: string; en: string };
@@ -257,6 +264,7 @@ export interface WebsiteSettingsData {
   emailSettings?: EmailSettings;
   financeSettings?: FinanceSettings;
   apiKeys?: ApiKeysSettings;
+  teacherProfitSettings?: TeacherProfitSettings;
   updatedBy?: string;
   createdAt: string;
   updatedAt: string;

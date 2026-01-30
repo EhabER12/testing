@@ -52,6 +52,19 @@ const userSchema = new mongoose.Schema(
       canPublishDirectly: { type: Boolean, default: false },
       coursesCount: { type: Number, default: 0 },
       studentsCount: { type: Number, default: 0 },
+      // Custom profit percentages (overrides global defaults)
+      customProfitPercentages: {
+        courseSales: {
+          type: Number,
+          min: 0,
+          max: 100,
+        },
+        subscriptions: {
+          type: Number,
+          min: 0,
+          max: 100,
+        },
+      },
     },
     // Student-specific info (for Tahfeez subscription)
     studentInfo: {

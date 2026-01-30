@@ -24,6 +24,7 @@ import packageReducer from "./slices/packageSlice";
 import teacherGroupReducer from "./slices/teacherGroupSlice";
 import emailTemplateReducer from "./slices/emailTemplateSlice";
 import notificationReducer from "./slices/notificationSlice";
+import teacherProfitReducer from "./slices/teacherProfitSlice";
 
 export const store = configureStore({
   reducer: {
@@ -51,6 +52,7 @@ export const store = configureStore({
     teacherGroups: teacherGroupReducer,
     emailTemplates: emailTemplateReducer,
     notifications: notificationReducer,
+    teacherProfit: teacherProfitReducer,
   },
   devTools: process.env.NODE_ENV !== "production",
   middleware: (getDefaultMiddleware) =>
