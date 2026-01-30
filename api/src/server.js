@@ -219,20 +219,20 @@ const extraOrigins = process.env.CORS_ALLOWED_ORIGINS
   ? process.env.CORS_ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
   : [];
 
-const defaultAllowedOrigins = [
-  process.env.CLIENT_URL,
-  process.env.ADMIN_URL,
-  process.env.WEBSITE_URL,
-  "https://med-side.net",
-  "https://www.med-side.net",
-  ...extraOrigins,
-].filter(Boolean);
-
 const normalizeOrigin = (origin = "") => origin.replace(/\/$/, "");
 
 const allowedOrigins = Array.from(
-  new Set([...defaultAllowedOrigins, ...extraOrigins])
-).map(normalizeOrigin);
+  new Set([
+    process.env.CLIENT_URL,
+    process.env.ADMIN_URL,
+    process.env.WEBSITE_URL,
+    "https://med-side.net",
+    "https://www.med-side.net",
+    ...extraOrigins,
+  ])
+)
+  .filter(Boolean)
+  .map(normalizeOrigin);
 
 const allowFallbackForDev = process.env.NODE_ENV !== "production";
 
@@ -246,12 +246,13 @@ app.use(
 // CORS Configuration
 const corsOptions = {
   origin: (origin, callback) => {
-    const normalizedInboundOrigin = origin ? normalizeOrigin(origin) : null;
-    if (
-      !origin ||
-      allowedOrigins.includes(normalizedInboundOrigin) ||
-      allowFallbackForDev
-    ) {
+    // If no origin (like mobile apps or curl requests) or in development, allow it
+    if (!origin || allowFallbackForDev) {
+      return callback(null, true);
+    }
+
+    const normalizedInbound = normalizeOrigin(origin);
+    if (allowedOrigins.includes(normalizedInbound)) {
       callback(null, true);
     } else {
       logger.warn("CORS: blocked origin", { origin });
@@ -266,8 +267,8 @@ const corsOptions = {
     "X-Requested-With",
     "Accept",
   ],
-  maxAge: 86400, // Cache preflight for 24 hours (helps iOS Safari)
-  optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+  maxAge: 86400,
+  optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
