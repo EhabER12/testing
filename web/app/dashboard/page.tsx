@@ -89,6 +89,9 @@ export default function DashboardPage() {
   const { revenueStatistics, isLoading: paymentsLoading } = useAppSelector(
     (state) => state.payments
   );
+  const { myStats: profitStats, isLoading: profitLoading } = useAppSelector(
+    (state) => state.teacherProfit
+  );
 
   const loading = reviewsLoading || formsLoading || paymentsLoading;
 
@@ -1213,7 +1216,7 @@ function TeacherDashboard({ stats }: { stats: TeacherStats }) {
   const dispatch = useAppDispatch();
   const { t, isRtl } = useAdminLocale();
   const { formatMoney } = useCurrency();
-  const { myStats: profitStats } = useAppSelector((state) => state.teacherProfit);
+  const { myStats: profitStats, error: profitError } = useAppSelector((state) => state.teacherProfit);
 
   const getTextValue = (value: string | BilingualText | undefined): string => {
     if (!value) return "";
@@ -1314,14 +1317,14 @@ function TeacherDashboard({ stats }: { stats: TeacherStats }) {
       </div>
 
       {/* Profit Statistics Section */}
-      {profitStats && (
-        <>
-          <div className="mt-4">
-            <h3 className="text-lg font-semibold mb-2">
-              {isRtl ? "إحصائيات الأرباح" : "Profit Statistics"}
-            </h3>
-          </div>
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold mb-2">
+          {isRtl ? "إحصائيات الأرباح" : "Profit Statistics"}
+        </h3>
+      </div>
 
+      {profitStats ? (
+        <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {/* Total Profit Card */}
             <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
@@ -1439,6 +1442,27 @@ function TeacherDashboard({ stats }: { stats: TeacherStats }) {
             </Card>
           )}
         </>
+      ) : profitError ? (
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <DollarSign className="h-12 w-12 text-red-400 mb-4" />
+            <p className="text-red-600 text-center font-medium mb-2">
+              {isRtl ? "خطأ في تحميل بيانات الأرباح" : "Error loading profit data"}
+            </p>
+            <p className="text-red-500 text-sm text-center">{profitError}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="bg-muted/50">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <DollarSign className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground text-center">
+              {isRtl
+                ? "لا توجد بيانات أرباح بعد. ستظهر البيانات عند حدوث مبيعات أو اشتراكات."
+                : "No profit data available yet. Data will appear when sales or subscriptions occur."}
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-4">
