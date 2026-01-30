@@ -19,8 +19,6 @@ import AnalyticsService from "../services/analyticsService.js";
  * @route   GET /api/dashboard/stats
  * @access  Private/Admin
  */
-import StudentMember from "../models/studentMemberModel.js";
-
 export const getDashboardStats = async (req, res, next) => {
   try {
     const now = new Date();
