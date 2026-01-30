@@ -63,17 +63,31 @@ export class TeacherProfitService {
       }
     }
 
-    // Check if this is a subscription payment linked to a teacher group
-    if (payment.studentMemberId) {
-      const TeacherGroup = (await import("../models/teacherGroupModel.js")).default;
-      const group = await TeacherGroup.findOne({
-        "students.studentId": payment.studentMemberId,
-      });
-      if (group) {
-        teacherId = group.teacherId;
+    // Check if this is a subscription payment linked to a teacher
+    if (payment.studentMemberId && !teacherId) {
+      // First check if student member is directly assigned to a teacher
+      const StudentMember = (await import("../models/studentMemberModel.js")).default;
+      const studentMember = await StudentMember.findById(
+        payment.studentMemberId._id || payment.studentMemberId
+      );
+      
+      if (studentMember && studentMember.assignedTeacherId) {
+        teacherId = studentMember.assignedTeacherId;
         revenueType = "subscription";
-        sourceId = group._id;
-        sourceModel = "TeacherGroup";
+        sourceId = studentMember._id;
+        sourceModel = "StudentMember";
+      } else {
+        // Fallback: Check TeacherGroup if not directly assigned
+        const TeacherGroup = (await import("../models/teacherGroupModel.js")).default;
+        const group = await TeacherGroup.findOne({
+          "students.studentId": payment.studentMemberId._id || payment.studentMemberId,
+        });
+        if (group) {
+          teacherId = group.teacherId;
+          revenueType = "subscription";
+          sourceId = group._id;
+          sourceModel = "TeacherGroup";
+        }
       }
     }
 
