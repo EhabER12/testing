@@ -527,9 +527,22 @@ export default function SettingsDashboardPage() {
       reviewsSettings,
       whyGenounSettings,
       emailSettings,
-      financeSettings,
-      apiKeys,
-      teacherProfitSettings,
+      financeSettings: {
+        baseCurrency: financeSettings.baseCurrency,
+        exchangeRates: financeSettings.exchangeRates,
+        // lastRatesUpdate will be set by backend automatically
+      },
+      apiKeys: {
+        geminiApiKey: apiKeys.geminiApiKey,
+        googleCloudCredentials: apiKeys.googleCloudCredentials,
+        // lastUpdated will be set by backend automatically
+      },
+      teacherProfitSettings: {
+        enabled: teacherProfitSettings.enabled,
+        courseSalesPercentage: teacherProfitSettings.courseSalesPercentage,
+        subscriptionPercentage: teacherProfitSettings.subscriptionPercentage,
+        // lastUpdated will be set by backend automatically
+      },
     };
 
     delete updateData.logoFile;
