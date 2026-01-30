@@ -248,6 +248,13 @@ const menuItems: MenuItem[] = [
         href: "/dashboard/teacher-details",
         roles: ["admin", "moderator"],
       },
+      {
+        titleKey: "admin.sidebar.myStudents",
+        title: "My Students",
+        icon: <Users className="h-4 w-4" />,
+        href: "/dashboard/my-students",
+        roles: ["teacher"],
+      },
     ],
   },
   {

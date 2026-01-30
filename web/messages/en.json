@@ -321,7 +321,29 @@
       "profits": "Profits",
       "packages": "Packages",
       "teachers": "Teachers",
-      "teacherDetails": "Teacher Details"
+      "teacherDetails": "Teacher Details",
+      "myStudents": "My Students"
+    },
+    "myStudents": {
+      "title": "My Students",
+      "description": "View and manage students assigned to you",
+      "totalStudents": "Total Students",
+      "subscriptionStudents": "Subscription Students",
+      "directStudents": "Direct Students",
+      "searchPlaceholder": "Search by name, phone, or email...",
+      "studentList": "Student List",
+      "studentListDescription": "All students assigned to you from courses and subscriptions",
+      "noStudents": "No students found",
+      "name": "Name",
+      "contact": "Contact",
+      "type": "Type",
+      "status": "Status",
+      "joinedDate": "Joined",
+      "active": "Active",
+      "inactive": "Inactive",
+      "expired": "Expired",
+      "subscription": "Subscription",
+      "direct": "Direct"
     },
     "analytics": {
       "title": "Analytics",

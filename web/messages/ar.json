@@ -321,7 +321,29 @@
       "profits": "الأرباح",
       "packages": "الباقات",
       "teachers": "المدرسين",
-      "teacherDetails": "تفاصيل المدرسين"
+      "teacherDetails": "تفاصيل المدرسين",
+      "myStudents": "طلابي"
+    },
+    "myStudents": {
+      "title": "طلابي",
+      "description": "عرض وإدارة الطلاب المرتبطين بك",
+      "totalStudents": "إجمالي الطلاب",
+      "subscriptionStudents": "طلاب الاشتراكات",
+      "directStudents": "طلاب مباشرين",
+      "searchPlaceholder": "البحث بالاسم أو الهاتف أو البريد...",
+      "studentList": "قائمة الطلاب",
+      "studentListDescription": "جميع الطلاب المرتبطين بك من الدورات والاشتراكات",
+      "noStudents": "لا يوجد طلاب",
+      "name": "الاسم",
+      "contact": "التواصل",
+      "type": "النوع",
+      "status": "الحالة",
+      "joinedDate": "تاريخ الانضمام",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "expired": "منتهي",
+      "subscription": "اشتراك",
+      "direct": "مباشر"
     },
     "analytics": {
       "title": "التحليلات",
