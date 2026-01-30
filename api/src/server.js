@@ -223,6 +223,8 @@ const defaultAllowedOrigins = [
   process.env.CLIENT_URL,
   process.env.ADMIN_URL,
   process.env.WEBSITE_URL,
+  "https://med-side.net",
+  "https://www.med-side.net",
   ...extraOrigins,
 ].filter(Boolean);
 
@@ -244,7 +246,12 @@ app.use(
 // CORS Configuration
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || allowFallbackForDev) {
+    const normalizedInboundOrigin = origin ? normalizeOrigin(origin) : null;
+    if (
+      !origin ||
+      allowedOrigins.includes(normalizedInboundOrigin) ||
+      allowFallbackForDev
+    ) {
       callback(null, true);
     } else {
       logger.warn("CORS: blocked origin", { origin });
