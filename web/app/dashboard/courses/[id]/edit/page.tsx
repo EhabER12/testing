@@ -58,6 +58,7 @@ export default function EditCoursePage() {
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [retryTick, setRetryTick] = useState(0);
     const hydratedIdRef = useRef<string | null>(null);
+    const isDirtyRef = useRef(false);
     const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -122,13 +123,7 @@ export default function EditCoursePage() {
         const targetId = currentCourseId ? String(currentCourseId) : "";
         if (!targetId) return;
 
-        if (hydratedIdRef.current === targetId) return;
-
-        if (typeof window !== "undefined") {
-            // Debug: see actual payload for edit page
-            console.log("[EditCourse] courseDataRaw", courseDataRaw);
-            console.log("[EditCourse] id", id, "currentCourseId", currentCourseId, "isCourseMatch", isCourseMatch);
-        }
+        if (hydratedIdRef.current === targetId && isDirtyRef.current) return;
 
         setFormData({
                 title: {
@@ -162,11 +157,17 @@ export default function EditCoursePage() {
                 setThumbnailPreview(courseDataRaw.thumbnail);
             }
         hydratedIdRef.current = targetId;
+        isDirtyRef.current = false;
     }, [courseDataRaw, currentCourseId, id, isCourseMatch]);
 
     useEffect(() => {
         hydratedIdRef.current = null;
+        isDirtyRef.current = false;
     }, [id]);
+
+    const markDirty = () => {
+        isDirtyRef.current = true;
+    };
 
     // Authorization check: Teachers can only edit their own courses
     useEffect(() => {
@@ -248,6 +249,7 @@ export default function EditCoursePage() {
 
         try {
             const imageUrl = await uploadImage(file);
+            markDirty();
             setFormData({ ...formData, thumbnail: imageUrl });
         } catch (err: any) {
             setError(err.message || "Failed to upload image");
@@ -258,6 +260,7 @@ export default function EditCoursePage() {
     };
 
     const removeThumbnail = () => {
+        markDirty();
         setFormData({ ...formData, thumbnail: "" });
         setThumbnailPreview(null);
     };
@@ -342,10 +345,11 @@ export default function EditCoursePage() {
                                     required
                                     value={formData.title.ar}
                                     onChange={(e) =>
+                                        (markDirty(),
                                         setFormData({
                                             ...formData,
                                             title: { ...formData.title, ar: e.target.value },
-                                        })
+                                        }))
                                     }
                                 />
                             </div>
@@ -356,10 +360,11 @@ export default function EditCoursePage() {
                                     required
                                     value={formData.title.en}
                                     onChange={(e) =>
+                                        (markDirty(),
                                         setFormData({
                                             ...formData,
                                             title: { ...formData.title, en: e.target.value },
-                                        })
+                                        }))
                                     }
                                 />
                             </div>
@@ -374,10 +379,11 @@ export default function EditCoursePage() {
                                     rows={4}
                                     value={formData.description.ar}
                                     onChange={(e) =>
+                                        (markDirty(),
                                         setFormData({
                                             ...formData,
                                             description: { ...formData.description, ar: e.target.value },
-                                        })
+                                        }))
                                     }
                                 />
                             </div>
@@ -389,10 +395,11 @@ export default function EditCoursePage() {
                                     rows={4}
                                     value={formData.description.en}
                                     onChange={(e) =>
+                                        (markDirty(),
                                         setFormData({
                                             ...formData,
                                             description: { ...formData.description, en: e.target.value },
-                                        })
+                                        }))
                                     }
                                 />
                             </div>
@@ -406,10 +413,11 @@ export default function EditCoursePage() {
                                     rows={2}
                                     value={formData.shortDescription.ar}
                                     onChange={(e) =>
+                                        (markDirty(),
                                         setFormData({
                                             ...formData,
                                             shortDescription: { ...formData.shortDescription, ar: e.target.value },
-                                        })
+                                        }))
                                     }
                                 />
                             </div>
@@ -420,10 +428,11 @@ export default function EditCoursePage() {
                                     rows={2}
                                     value={formData.shortDescription.en}
                                     onChange={(e) =>
+                                        (markDirty(),
                                         setFormData({
                                             ...formData,
                                             shortDescription: { ...formData.shortDescription, en: e.target.value },
-                                        })
+                                        }))
                                     }
                                 />
                             </div>
@@ -484,7 +493,10 @@ export default function EditCoursePage() {
                                 <Label htmlFor="categoryId">{isRtl ? "التصنيف (اختياري)" : "Category (Optional)"}</Label>
                                 <Select
                                     value={formData.categoryId}
-                                    onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                                    onValueChange={(value) => {
+                                        markDirty();
+                                        setFormData({ ...formData, categoryId: value });
+                                    }}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder={isRtl ? "اختر التصنيف" : "Select category"} />
@@ -514,7 +526,10 @@ export default function EditCoursePage() {
                                 <Label htmlFor="accessType">{isRtl ? "نوع الوصول" : "Access Type"}</Label>
                                 <Select
                                     value={formData.accessType}
-                                    onValueChange={(value: any) => setFormData({ ...formData, accessType: value })}
+                                    onValueChange={(value: any) => {
+                                        markDirty();
+                                        setFormData({ ...formData, accessType: value });
+                                    }}
                                 >
                                     <SelectTrigger>
                                         <SelectValue />
@@ -535,7 +550,10 @@ export default function EditCoursePage() {
                                         type="number"
                                         step="0.01"
                                         value={formData.price}
-                                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                        onChange={(e) => {
+                                            markDirty();
+                                            setFormData({ ...formData, price: e.target.value });
+                                        }}
                                     />
                                 </div>
                             )}
@@ -544,7 +562,10 @@ export default function EditCoursePage() {
                                 <Label htmlFor="level">{isRtl ? "المستوى" : "Level"}</Label>
                                 <Select
                                     value={formData.level}
-                                    onValueChange={(value: any) => setFormData({ ...formData, level: value })}
+                                    onValueChange={(value: any) => {
+                                        markDirty();
+                                        setFormData({ ...formData, level: value });
+                                    }}
                                 >
                                     <SelectTrigger>
                                         <SelectValue />
@@ -563,7 +584,10 @@ export default function EditCoursePage() {
                                     id="duration"
                                     type="number"
                                     value={formData.duration}
-                                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                                    onChange={(e) => {
+                                        markDirty();
+                                        setFormData({ ...formData, duration: e.target.value });
+                                    }}
                                 />
                             </div>
 
@@ -571,7 +595,10 @@ export default function EditCoursePage() {
                                 <Label htmlFor="language">{isRtl ? "اللغة" : "Language"}</Label>
                                 <Select
                                     value={formData.language}
-                                    onValueChange={(value) => setFormData({ ...formData, language: value })}
+                                    onValueChange={(value) => {
+                                        markDirty();
+                                        setFormData({ ...formData, language: value });
+                                    }}
                                 >
                                     <SelectTrigger>
                                         <SelectValue />
@@ -600,7 +627,8 @@ export default function EditCoursePage() {
                                 id="certificateEnabled"
                                 checked={formData.certificateEnabled}
                                 onCheckedChange={(checked) =>
-                                    setFormData({ ...formData, certificateEnabled: checked })
+                                    (markDirty(),
+                                    setFormData({ ...formData, certificateEnabled: checked }))
                                 }
                             />
                         </div>
@@ -613,12 +641,13 @@ export default function EditCoursePage() {
                                     </Label>
                                     <Switch
                                         id="requiresExam"
-                                        checked={formData.requiresExam}
-                                        onCheckedChange={(checked) =>
-                                            setFormData({ ...formData, requiresExam: checked })
-                                        }
-                                    />
-                                </div>
+                                    checked={formData.requiresExam}
+                                    onCheckedChange={(checked) =>
+                                        (markDirty(),
+                                        setFormData({ ...formData, requiresExam: checked }))
+                                    }
+                                />
+                            </div>
 
                                 {formData.requiresExam && (
                                     <div className="grid gap-4 md:grid-cols-2">
@@ -633,7 +662,8 @@ export default function EditCoursePage() {
                                                 max="100"
                                                 value={formData.passingScore}
                                                 onChange={(e) =>
-                                                    setFormData({ ...formData, passingScore: e.target.value })
+                                                    (markDirty(),
+                                                    setFormData({ ...formData, passingScore: e.target.value }))
                                                 }
                                             />
                                         </div>
@@ -643,7 +673,10 @@ export default function EditCoursePage() {
                                             </Label>
                                             <Select
                                                 value={formData.examQuizId}
-                                                onValueChange={(value) => setFormData({ ...formData, examQuizId: value })}
+                                                onValueChange={(value) => {
+                                                    markDirty();
+                                                    setFormData({ ...formData, examQuizId: value });
+                                                }}
                                             >
                                                 <SelectTrigger>
                                                     <SelectValue placeholder={isRtl ? "اختر الاختبار" : "Select quiz"} />
