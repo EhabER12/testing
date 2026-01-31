@@ -1,84 +1,246 @@
+import axios from "axios";
 import crypto from "crypto";
 
+/**
+ * KashierService - Modern Payment Sessions API v3
+ * Official Documentation: https://developers.kashier.io/payment/payment-sessions
+ */
 class KashierService {
-  generateHash({ orderId, amount, currency, credentials }) {
-    const { mid, paymentApiKey } = credentials;
-
-    const data = `${mid}${orderId}${amount}${currency}${paymentApiKey}`;
-    return crypto.createHash("sha256").update(data).digest("hex");
+  /**
+   * Get the appropriate API base URL based on mode
+   */
+  getApiBaseUrl(mode) {
+    return mode === "live" 
+      ? "https://api.kashier.io" 
+      : "https://test-api.kashier.io";
   }
 
-  generateCheckoutUrl({ orderId, amount, currency, customer, config }) {
-    const {
-      mode,
-      credentials,
-      config: providerConfig,
-    } = config;
+  /**
+   * Get the payment page URL based on mode
+   */
+  getPaymentPageUrl(mode) {
+    return "https://payments.kashier.io";
+  }
 
-    const hash = this.generateHash({
-      orderId,
-      amount,
-      currency,
-      credentials,
-    });
+  /**
+   * Create a payment session using Kashier Payment Sessions API v3
+   * @returns {Promise<{sessionId: string, sessionUrl: string, status: string}>}
+   */
+  async createPaymentSession({
+    orderId,
+    amount,
+    currency,
+    customer,
+    config,
+    merchantRedirect,
+    serverWebhook,
+    description = "Payment",
+  }) {
+    const { mode, credentials } = config;
+    const { mid, paymentApiKey, secretKey } = credentials;
 
-    const params = new URLSearchParams({
-      merchantId: credentials.mid,
-      orderId,
+    if (!mid || !paymentApiKey || !secretKey) {
+      throw new Error("Kashier credentials (mid, paymentApiKey, secretKey) are required");
+    }
+
+    const apiBaseUrl = this.getApiBaseUrl(mode);
+    const paymentPageUrl = this.getPaymentPageUrl(mode);
+
+    // Prepare the payment session payload
+    const sessionPayload = {
+      merchantId: mid,
+      order: orderId,
       amount: amount.toString(),
-      currency,
-      hash,
-      mode,
-      paymentMethod: providerConfig.paymentMethod,
-      customerName: customer.name,
-      customerEmail: customer.email,
-      redirectUrl: providerConfig.redirectUrl,
-      callbackUrl: providerConfig.callbackUrl,
-    });
+      currency: currency || "EGP",
+      paymentType: "credit",
+      type: "one-time",
+      allowedMethods: "card,wallet",
+      display: "en",
+      merchantRedirect: merchantRedirect,
+      serverWebhook: serverWebhook,
+      description: description,
+      customer: {
+        email: customer.email,
+        reference: customer.reference || orderId,
+      },
+      enable3DS: true,
+      interactionSource: "ECOMMERCE",
+      maxFailureAttempts: 3,
+      saveCard: "optional",
+      retrieveSavedCard: false,
+      failureRedirect: true,
+      manualCapture: false,
+      metaData: {
+        orderId: orderId,
+        customerName: customer.name,
+      },
+    };
 
-    return `${providerConfig.checkoutUrl}/payment?${params.toString()}`;
+    try {
+      console.log("🔄 Creating Kashier payment session...", {
+        mode,
+        merchantId: mid,
+        orderId,
+        amount,
+        currency,
+      });
+
+      const response = await axios.post(
+        `${apiBaseUrl}/v3/payment/sessions`,
+        sessionPayload,
+        {
+          headers: {
+            "Authorization": secretKey,
+            "api-key": paymentApiKey,
+            "Content-Type": "application/json",
+          },
+          timeout: 30000, // 30 seconds
+        }
+      );
+
+      const sessionData = response.data;
+
+      console.log("✅ Kashier payment session created:", {
+        sessionId: sessionData._id,
+        status: sessionData.status,
+      });
+
+      return {
+        sessionId: sessionData._id,
+        sessionUrl: sessionData.sessionUrl,
+        status: sessionData.status,
+        merchantOrderId: orderId,
+        rawResponse: sessionData,
+      };
+    } catch (error) {
+      console.error("❌ Kashier payment session creation failed:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+      });
+
+      // Handle specific error cases
+      if (error.response?.status === 401) {
+        throw new Error("Kashier authentication failed. Check your API credentials.");
+      } else if (error.response?.status === 400) {
+        throw new Error(
+          `Kashier validation error: ${JSON.stringify(error.response.data)}`
+        );
+      }
+
+      throw new Error(
+        `Failed to create Kashier payment session: ${error.message}`
+      );
+    }
   }
 
-  verifyHash({ query, credentials }) {
-    const { mid, paymentApiKey } = credentials;
-    const { paymentStatus, cardDataToken, maskedCard, merchantOrderId, orderId, cardBrand, orderReference, transactionId, amount, currency } = query;
+  /**
+   * Get payment session details
+   */
+  async getPaymentSession({ sessionId, config }) {
+    const { mode, credentials } = config;
+    const { secretKey } = credentials;
 
-    // Construct the string to hash according to Kashier documentation
-    // Note: The order of fields matters. Usually it is:
-    // mid + merchantOrderId + amount + currency + orderId + paymentStatus + paymentApiKey (this varies, check docs or use standard)
-    // Standard Kashier Hash for Callback:
-    // sha256(mid + "&" + paymentStatus + "&" + merchantOrderId + "&" + amount + "&" + currency + "&" + paymentApiKey)
-    // Wait, let's allow flexibility or follow standard. 
-    // Based on common Kashier implementation: path/?paymentStatus=SUCCESS&cardDataToken=...
-    // The query string signature usually signed with the secret. 
+    const apiBaseUrl = this.getApiBaseUrl(mode);
 
-    // Let's implement the standard hash construction for verification
-    // Assuming the payload coming back has a 'signature' or 'hash' field to compare against, 
-    // OR we re-calculate to ensure data integrity.
+    try {
+      const response = await axios.get(
+        `${apiBaseUrl}/v3/payment/sessions/${sessionId}/payment`,
+        {
+          headers: {
+            Authorization: secretKey,
+          },
+        }
+      );
 
-    // If the callback provides a hash/signature, we should verify it.
-    // If not provided in query, we can't verify. 
-    // Let's assume there's a 'hash' or 'signature' in the query.
+      return response.data.data;
+    } catch (error) {
+      console.error("❌ Failed to get Kashier payment session:", error.message);
+      throw new Error(`Failed to get payment session: ${error.message}`);
+    }
+  }
 
-    // For now, let's simply expose a helper that takes the raw values and re-hashes them 
-    // so the controller can compare.
+  /**
+   * Verify webhook signature from Kashier
+   * Kashier sends webhooks with payment status updates
+   */
+  verifyWebhookSignature({ payload, signature, secretKey }) {
+    // Kashier webhook verification logic
+    // The exact implementation depends on Kashier's webhook signing method
+    // Typically: HMAC-SHA256(payload, secretKey)
+    
+    try {
+      const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+      const calculatedSignature = crypto
+        .createHmac("sha256", secretKey)
+        .update(payloadString)
+        .digest("hex");
 
-    // Simplified verification for now:
-    // Only re-implement the same logic as generateHash if the callback uses the same (rare).
-    // Usually callbacks have different signing. 
+      return calculatedSignature === signature;
+    } catch (error) {
+      console.error("❌ Webhook signature verification failed:", error.message);
+      return false;
+    }
+  }
 
-    // Let's rely on `paymentService` to call this with the right fields.
-    // We will clean this up to be invalid-proof.
+  /**
+   * Parse webhook payload from Kashier
+   */
+  parseWebhookPayload(body) {
+    try {
+      // Kashier webhook payload structure
+      const {
+        sessionId,
+        merchantOrderId,
+        status,
+        amount,
+        currency,
+        method,
+        orderId,
+        transactionId,
+        customer,
+        metaData,
+        createdAt,
+        updatedAt,
+      } = body;
 
-    const queryString = `&paymentStatus=${paymentStatus}&merchantOrderId=${merchantOrderId}&amount=${amount}&currency=${currency}`;
-    const secret = paymentApiKey; // Using API Key as secret for now. 
+      return {
+        sessionId,
+        merchantOrderId: merchantOrderId || metaData?.orderId,
+        status, // PENDING, COMPLETED, FAILED, EXPIRED
+        amount,
+        currency,
+        paymentMethod: method,
+        transactionId: orderId || transactionId,
+        customerEmail: customer?.email,
+        metaData,
+        createdAt,
+        updatedAt,
+        rawPayload: body,
+      };
+    } catch (error) {
+      console.error("❌ Failed to parse webhook payload:", error.message);
+      throw new Error("Invalid webhook payload");
+    }
+  }
 
-    // Actually, let's implement the standard hash generation for the response
-    // mid + orderId + amount + currency + paymentApiKey
-    const data = `${mid}${orderId}${amount}${currency}${paymentApiKey}`;
-    const calculatedHash = crypto.createHash("sha256").update(data).digest("hex");
+  /**
+   * Map Kashier status to internal payment status
+   */
+  mapPaymentStatus(kashierStatus) {
+    const statusMap = {
+      CREATED: "pending",
+      PENDING: "pending",
+      OPENED: "pending",
+      COMPLETED: "success",
+      SUCCESS: "success",
+      FAILED: "failed",
+      EXPIRED: "failed",
+      CANCELLED: "cancelled",
+    };
 
-    return calculatedHash;
+    return statusMap[kashierStatus?.toUpperCase()] || "pending";
   }
 }
 

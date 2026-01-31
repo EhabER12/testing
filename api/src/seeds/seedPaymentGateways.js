@@ -49,38 +49,37 @@ const seedPaymentGateways = async () => {
             console.log("ℹ️ PayPal payment method already exists");
         }
 
-        // Check if Cashier already exists
-        let cashier = await PaymentMethod.findOne({ provider: "cashier" });
+        // Check if Kashier already exists
+        let kashier = await PaymentMethod.findOne({ provider: "cashier" });
 
-        if (!cashier) {
-            console.log("📝 Creating Cashier payment method...");
-            cashier = await PaymentMethod.create({
+        if (!kashier) {
+            console.log("📝 Creating Kashier payment method...");
+            kashier = await PaymentMethod.create({
                 provider: "cashier",
                 displayName: {
                     ar: "كاشير",
-                    en: "Cashier",
+                    en: "Kashier",
                 },
                 description: {
-                    ar: "الدفع عبر كاشير",
-                    en: "Pay with Cashier (Kashier)",
+                    ar: "الدفع عبر كاشير - بطاقات ائتمانية ومحافظ إلكترونية",
+                    en: "Pay with Kashier - Cards & Wallets",
                 },
                 credentials: {
-                    mid: "",
-                    paymentApiKey: "",
-                    secretKey: "",
+                    mid: "", // Merchant ID from Kashier Dashboard
+                    paymentApiKey: "", // API Key for authentication
+                    secretKey: "", // Secret Key for webhook verification
                 },
                 mode: "sandbox",
                 config: {
-                    checkoutUrl: "",
-                    callbackUrl: "",
-                    redirectUrl: "",
+                    webhookUrl: "", // Optional: For reference
+                    redirectUrl: "", // Optional: Custom redirect URL
                 },
                 isActive: false,
                 order: 2,
             });
-            console.log("✅ Cashier payment method created");
+            console.log("✅ Kashier payment method created");
         } else {
-            console.log("ℹ️ Cashier payment method already exists");
+            console.log("ℹ️ Kashier payment method already exists");
         }
 
         console.log("✅ Payment gateways seeded successfully!");

@@ -433,10 +433,11 @@ export const createCashierPaymentThunk = createAsyncThunk<
   Payment,
   CreateCashierPaymentPayload,
   { rejectValue: string }
->("payments/cashierCreate", async (data, thunkAPI) => {
+>("payments/kashierCreate", async (data, thunkAPI) => {
   try {
-    const response = await axiosInstance.post("/payments/cashier/create", data);
-    return response.data.data; // Expected to contain checkoutUrl
+    // Use new kashier endpoint (cashier is alias for backward compatibility)
+    const response = await axiosInstance.post("/payments/kashier/create", data);
+    return response.data.data; // Contains sessionUrl as checkoutUrl, sessionId, merchantOrderId, paymentId
   } catch (error: any) {
     const message =
       (error.response && error.response.data && error.response.data.message) ||

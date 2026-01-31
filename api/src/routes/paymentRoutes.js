@@ -13,6 +13,7 @@ import {
   capturePaypalOrder,
   createCashierPayment,
   cashierCallback,
+  kashierWebhook,
   paypalWebhook,
 } from "../controllers/paymentController.js";
 import {
@@ -56,8 +57,12 @@ router.post("/paypal/create", optionalAuth, createPaypalPayment);
 router.post("/paypal/capture/:orderId", optionalAuth, capturePaypalOrder);
 router.post("/paypal/webhook", paypalWebhook); // Public
 
-// ==================== Cashier ====================
-router.post("/cashier/create", optionalAuth, createCashierPayment);
-router.post("/cashier/callback", cashierCallback); // Public - called by Cashier
+// ==================== Kashier (Modern Payment Sessions API) ====================
+router.post("/kashier/create", optionalAuth, createCashierPayment);
+router.post("/kashier/webhook", kashierWebhook); // Public - Primary webhook handler
+
+// ==================== Cashier (Deprecated - Backward Compatibility) ====================
+router.post("/cashier/create", optionalAuth, createCashierPayment); // Alias for kashier
+router.post("/cashier/callback", cashierCallback); // Deprecated callback handler
 
 export default router;

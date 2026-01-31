@@ -269,17 +269,18 @@ export default function CheckoutPage() {
           }
         }
       }
-      // 2. Cashier
+      // 2. Kashier (Payment Sessions API v3)
       else if (selectedMethodId === "cashier") {
         const response = await dispatch(createCashierPaymentThunk({
           amount: total,
-          currency: items[0]?.product?.currency || "EGP", // Cashier uses EGP
+          currency: items[0]?.product?.currency || "EGP",
           customer: {
             name: formData.name,
             email: formData.email
           }
         })).unwrap();
 
+        // Redirect to Kashier payment session URL
         if (response.checkoutUrl) {
           window.location.href = response.checkoutUrl;
           return;

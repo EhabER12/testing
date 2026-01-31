@@ -22,14 +22,13 @@ const paymentMethodSchema = new mongoose.Schema(
             clientSecret: String,
             webhookId: String,
 
-            // Cashier (Kashier)
+            // Kashier (Payment Sessions API v3)
             mid: String, // Merchant ID
-            paymentApiKey: String,
-            secretKey: String,
+            paymentApiKey: String, // API Key for authentication
+            secretKey: String, // Secret Key for webhook verification
 
             // Stripe (future)
             publishableKey: String,
-            secretKey: String,
         },
         mode: {
             type: String,
@@ -41,11 +40,12 @@ const paymentMethodSchema = new mongoose.Schema(
             returnUrl: String,
             cancelUrl: String,
 
-            // Cashier
-            checkoutUrl: String,
-            callbackUrl: String,
-            redirectUrl: String,
-            paymentMethod: String, // card, fawry, etc.
+            // Kashier - Removed deprecated fields
+            // Note: Payment Sessions API v3 doesn't need these URLs
+            // Webhooks are configured via serverWebhook parameter in API call
+            // Redirects are configured via merchantRedirect parameter
+            webhookUrl: String, // Optional: For reference only
+            redirectUrl: String, // Optional: For reference only
         },
         isActive: {
             type: Boolean,

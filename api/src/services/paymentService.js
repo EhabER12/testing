@@ -761,7 +761,7 @@ export class PaymentService {
     }
   }
 
-  // --- Cashier (Kashier) ---
+  // --- Cashier (Kashier) - Payment Sessions API v3 ---
 
   async createCashierPayment({ userId, courseId, productId, amount, currency, customer }) {
     const config = await this.getGatewayConfig("cashier");
@@ -769,17 +769,23 @@ export class PaymentService {
 
     const merchantOrderId = `KASHIER-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
+    // Get base URL for webhooks and redirects
+    const settings = await this.settingsRepository.getSettings();
+    const baseUrl = settings.siteSettings?.siteUrl || process.env.SITE_URL || "http://localhost:3000";
+    const apiBaseUrl = settings.siteSettings?.apiUrl || process.env.API_URL || "http://localhost:5000";
+
     const paymentData = {
       userId,
       productId: finalProductId,
       amount,
-      currency: currency || "EGP", // Kashier is usually EGP
+      currency: currency || "EGP",
       status: "pending",
-      paymentMethod: "Cashier",
+      paymentMethod: "Kashier",
       merchantOrderId,
       paymentDetails: {
-        methodType: "kashier_checkout",
-        gatewayMode: config.mode
+        methodType: "kashier_session",
+        gatewayMode: config.mode,
+        sessionId: null, // Will be updated after session creation
       },
       billingInfo: {
         name: customer.name,
@@ -789,31 +795,148 @@ export class PaymentService {
 
     const payment = await this.paymentRepository.create(paymentData);
 
-    // Generate Checkout URL
-    const checkoutUrl = kashierService.generateCheckoutUrl({
-      orderId: merchantOrderId,
-      amount,
-      currency: currency || "EGP",
-      customer,
-      config
-    });
+    try {
+      // Create Payment Session using new API
+      const session = await kashierService.createPaymentSession({
+        orderId: merchantOrderId,
+        amount,
+        currency: currency || "EGP",
+        customer: {
+          email: customer.email,
+          name: customer.name,
+          reference: userId?.toString() || merchantOrderId,
+        },
+        config,
+        merchantRedirect: `${baseUrl}/payment/result?paymentId=${payment._id}`,
+        serverWebhook: `${apiBaseUrl}/api/payments/kashier/webhook`,
+        description: `Payment for ${finalProductId ? 'product' : 'course'} - Order ${merchantOrderId}`,
+      });
 
-    return {
-      paymentId: payment._id,
-      merchantOrderId,
-      checkoutUrl
-    };
+      // Update payment with session information
+      await this.paymentRepository.update(payment._id, {
+        paymentDetails: {
+          ...paymentData.paymentDetails,
+          sessionId: session.sessionId,
+          sessionUrl: session.sessionUrl,
+          sessionStatus: session.status,
+        },
+      });
+
+      console.log("✅ Kashier payment created:", {
+        paymentId: payment._id,
+        merchantOrderId,
+        sessionId: session.sessionId,
+      });
+
+      return {
+        paymentId: payment._id,
+        merchantOrderId,
+        sessionId: session.sessionId,
+        checkoutUrl: session.sessionUrl,
+        sessionUrl: session.sessionUrl,
+      };
+    } catch (error) {
+      // If session creation fails, mark payment as failed
+      await this.paymentRepository.updateStatus(payment._id, "failed", null, {
+        ...paymentData.paymentDetails,
+        error: error.message,
+      });
+      throw error;
+    }
   }
 
-  async handleCashierCallback(payload) {
-    // Verify Hash
+  async handleKashierWebhook(payload, signature) {
     const config = await this.getGatewayConfig("cashier");
 
-    const { merchantOrderId, orderStatus, signature } = payload;
-    // Note: Kashier payload keys differ. 
-    // Usually query params like paymentStatus, merchantOrderId.
-    // Assuming payload is processed/normalized or we trust content.
-    // But standard way:
+    // Verify webhook signature if provided
+    if (signature) {
+      const isValid = kashierService.verifyWebhookSignature({
+        payload,
+        signature,
+        secretKey: config.credentials.secretKey,
+      });
+
+      if (!isValid) {
+        console.error("❌ Kashier webhook signature verification failed");
+        throw new ApiError(400, "Invalid webhook signature");
+      }
+    }
+
+    // Parse webhook payload
+    const webhookData = kashierService.parseWebhookPayload(payload);
+    
+    console.log("📥 Kashier webhook received:", {
+      sessionId: webhookData.sessionId,
+      merchantOrderId: webhookData.merchantOrderId,
+      status: webhookData.status,
+      amount: webhookData.amount,
+    });
+
+    // Look up payment by merchantOrderId or sessionId
+    const Payment = (await import("../models/paymentModel.js")).default;
+    let payment = await Payment.findOne({ merchantOrderId: webhookData.merchantOrderId });
+
+    if (!payment) {
+      // Try finding by sessionId
+      payment = await Payment.findOne({ "paymentDetails.sessionId": webhookData.sessionId });
+    }
+
+    if (!payment) {
+      console.error("❌ Payment not found for webhook:", {
+        merchantOrderId: webhookData.merchantOrderId,
+        sessionId: webhookData.sessionId,
+      });
+      throw new ApiError(404, "Payment not found");
+    }
+
+    // Check if already processed
+    if (payment.status === "success") {
+      console.log("ℹ️ Payment already processed:", payment._id);
+      return payment;
+    }
+
+    // Map Kashier status to internal status
+    const newStatus = kashierService.mapPaymentStatus(webhookData.status);
+
+    // Update payment with webhook information
+    const updatedPaymentDetails = {
+      ...payment.paymentDetails,
+      sessionId: webhookData.sessionId,
+      sessionStatus: webhookData.status,
+      transactionId: webhookData.transactionId,
+      paymentMethod: webhookData.paymentMethod,
+      webhookReceivedAt: new Date(),
+      webhookData: webhookData.rawPayload,
+    };
+
+    await this.updatePaymentStatus(
+      payment._id,
+      newStatus,
+      webhookData.transactionId,
+      null,
+      `Kashier Webhook: ${webhookData.status}`
+    );
+
+    // Update payment details
+    await Payment.findByIdAndUpdate(payment._id, {
+      paymentDetails: updatedPaymentDetails,
+    });
+
+    console.log("✅ Payment updated from webhook:", {
+      paymentId: payment._id,
+      oldStatus: payment.status,
+      newStatus,
+    });
+
+    return payment;
+  }
+
+  // Keep old callback handler for backward compatibility (deprecated)
+  async handleCashierCallback(payload) {
+    console.warn("⚠️ Using deprecated Cashier callback handler. Please migrate to webhook handler.");
+    
+    const config = await this.getGatewayConfig("cashier");
+    const { merchantOrderId } = payload;
 
     // Look up payment by merchantOrderId
     const Payment = (await import("../models/paymentModel.js")).default;
@@ -823,29 +946,9 @@ export class PaymentService {
       throw new ApiError(404, "Payment not found");
     }
 
-    // Verify Hash
-    // Re-calculate hash using our credentials and the incoming data
-    const calculatedHash = kashierService.generateHash({
-      orderId: merchantOrderId,
-      amount: payment.amount,
-      currency: payment.currency,
-      credentials: config.credentials
-    });
-
-    // Check if signature matches (assuming signature is passed in payload, usually 'hash' or 'signature')
-    // payload.signature or payload.hash
-    const incomingSignature = signature || payload.hash;
-
-    if (incomingSignature && calculatedHash !== incomingSignature) {
-      console.error("Cashier Hash Mismatch", { calculated: calculatedHash, received: incomingSignature });
-      // We might want to throw error, or just log and mark as suspicious
-      throw new ApiError(400, "Invalid Payment Signature");
-    }
-
     if (payment.status === "success") return payment;
 
     // Update status based on callback
-    // Usually check query string 'paymentStatus' == 'SUCCESS'
     const status = payload.paymentStatus === "SUCCESS" ? "success" : "failed";
 
     await this.updatePaymentStatus(payment._id, status, null, null, `Cashier Callback: ${payload.paymentStatus}`);

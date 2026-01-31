@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, CreditCard, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CreditCard, CheckCircle2, XCircle, Info } from "lucide-react";
 import toast from "react-hot-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -44,8 +44,6 @@ export default function PaymentMethodsPage() {
         paymentApiKey: "",
         secretKey: "",
         mode: "sandbox" as "sandbox" | "live",
-        checkoutUrl: "",
-        callbackUrl: "",
         redirectUrl: "",
         isActive: false,
     });
@@ -87,8 +85,6 @@ export default function PaymentMethodsPage() {
                     paymentApiKey: cashierMethod.credentials?.paymentApiKey || "",
                     secretKey: cashierMethod.credentials?.secretKey || "",
                     mode: cashierMethod.mode as "sandbox" | "live",
-                    checkoutUrl: cashierMethod.config?.checkoutUrl || "",
-                    callbackUrl: cashierMethod.config?.callbackUrl || "",
                     redirectUrl: cashierMethod.config?.redirectUrl || "",
                     isActive: cashierMethod.isActive,
                 });
@@ -167,21 +163,19 @@ export default function PaymentMethodsPage() {
                 },
                 mode: cashierForm.mode,
                 config: {
-                    checkoutUrl: cashierForm.checkoutUrl,
-                    callbackUrl: cashierForm.callbackUrl,
                     redirectUrl: cashierForm.redirectUrl,
                 },
                 isActive: cashierForm.isActive,
             };
 
             if (cashier) {
-                // Update existing Cashier method
+                // Update existing Kashier method
                 await dispatch(
                     updatePaymentMethodThunk({ id: cashier._id, data: paymentData })
                 ).unwrap();
-                toast.success("Cashier configuration updated successfully");
+                toast.success("Kashier configuration updated successfully");
             } else {
-                // Create new Cashier method
+                // Create new Kashier method
                 const createData = {
                     ...paymentData,
                     provider: "cashier" as const,
@@ -371,9 +365,17 @@ export default function PaymentMethodsPage() {
                 <TabsContent value="cashier">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Cashier (Kashier) Configuration</CardTitle>
+                            <CardTitle>Kashier Configuration (Payment Sessions API v3)</CardTitle>
                             <CardDescription>
-                                Configure your Kashier payment gateway settings
+                                Configure your Kashier payment gateway. Get your credentials from{" "}
+                                <a 
+                                    href="https://merchant.kashier.io" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:underline"
+                                >
+                                    Kashier Merchant Dashboard
+                                </a>
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -381,9 +383,9 @@ export default function PaymentMethodsPage() {
                                 {/* Active Toggle */}
                                 <div className="flex items-center justify-between p-4 border rounded-lg">
                                     <div>
-                                        <Label className="text-base font-semibold">Enable Cashier</Label>
+                                        <Label className="text-base font-semibold">Enable Kashier</Label>
                                         <p className="text-sm text-muted-foreground">
-                                            Allow customers to pay with Cashier
+                                            Allow customers to pay with Kashier (Cards, Wallets, etc.)
                                         </p>
                                     </div>
                                     <Switch
@@ -407,28 +409,35 @@ export default function PaymentMethodsPage() {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="sandbox">Sandbox (Test)</SelectItem>
-                                            <SelectItem value="live">Live (Production)</SelectItem>
+                                            <SelectItem value="sandbox">Test Mode (Sandbox)</SelectItem>
+                                            <SelectItem value="live">Live Mode (Production)</SelectItem>
                                         </SelectContent>
                                     </Select>
+                                    <p className="text-xs text-muted-foreground">
+                                        Use Test Mode for testing. Switch to Live Mode when ready for production.
+                                    </p>
                                 </div>
 
                                 {/* Merchant ID */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="cashier-mid">Merchant ID</Label>
+                                    <Label htmlFor="cashier-mid">Merchant ID *</Label>
                                     <Input
                                         id="cashier-mid"
                                         value={cashierForm.mid}
                                         onChange={(e) =>
                                             setCashierForm({ ...cashierForm, mid: e.target.value })
                                         }
-                                        placeholder="Enter Cashier Merchant ID"
+                                        placeholder="MID-XXXX-XXXX"
+                                        required
                                     />
+                                    <p className="text-xs text-muted-foreground">
+                                        Your Merchant ID from Kashier Dashboard
+                                    </p>
                                 </div>
 
-                                {/* Payment API Key */}
+                                {/* API Key */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="cashier-api-key">Payment API Key</Label>
+                                    <Label htmlFor="cashier-api-key">API Key *</Label>
                                     <Input
                                         id="cashier-api-key"
                                         type="password"
@@ -436,13 +445,17 @@ export default function PaymentMethodsPage() {
                                         onChange={(e) =>
                                             setCashierForm({ ...cashierForm, paymentApiKey: e.target.value })
                                         }
-                                        placeholder="Enter Payment API Key"
+                                        placeholder="Enter your API Key"
+                                        required
                                     />
+                                    <p className="text-xs text-muted-foreground">
+                                        API Key for authenticating payment requests
+                                    </p>
                                 </div>
 
                                 {/* Secret Key */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="cashier-secret">Secret Key</Label>
+                                    <Label htmlFor="cashier-secret">Secret Key *</Label>
                                     <Input
                                         id="cashier-secret"
                                         type="password"
@@ -450,39 +463,31 @@ export default function PaymentMethodsPage() {
                                         onChange={(e) =>
                                             setCashierForm({ ...cashierForm, secretKey: e.target.value })
                                         }
-                                        placeholder="Enter Secret Key"
+                                        placeholder="Enter your Secret Key"
+                                        required
                                     />
+                                    <p className="text-xs text-muted-foreground">
+                                        Secret Key for webhook signature verification
+                                    </p>
                                 </div>
 
-                                {/* Checkout URL */}
+                                {/* Webhook URL (Read-only) */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="cashier-checkout-url">Checkout URL</Label>
+                                    <Label htmlFor="cashier-webhook-url">Webhook URL (Configure in Kashier Dashboard)</Label>
                                     <Input
-                                        id="cashier-checkout-url"
-                                        value={cashierForm.checkoutUrl}
-                                        onChange={(e) =>
-                                            setCashierForm({ ...cashierForm, checkoutUrl: e.target.value })
-                                        }
-                                        placeholder="https://checkout.kashier.io"
+                                        id="cashier-webhook-url"
+                                        value={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/payments/kashier/webhook`}
+                                        readOnly
+                                        className="bg-muted"
                                     />
+                                    <p className="text-xs text-muted-foreground">
+                                        Copy this URL and add it to your Kashier Merchant Dashboard → Settings → Webhooks
+                                    </p>
                                 </div>
 
-                                {/* Callback URL */}
+                                {/* Success Redirect URL (Optional) */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="cashier-callback-url">Callback URL</Label>
-                                    <Input
-                                        id="cashier-callback-url"
-                                        value={cashierForm.callbackUrl}
-                                        onChange={(e) =>
-                                            setCashierForm({ ...cashierForm, callbackUrl: e.target.value })
-                                        }
-                                        placeholder="https://yoursite.com/api/payments/cashier/callback"
-                                    />
-                                </div>
-
-                                {/* Redirect URL */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="cashier-redirect-url">Redirect URL</Label>
+                                    <Label htmlFor="cashier-redirect-url">Success Redirect URL (Optional)</Label>
                                     <Input
                                         id="cashier-redirect-url"
                                         value={cashierForm.redirectUrl}
@@ -491,11 +496,28 @@ export default function PaymentMethodsPage() {
                                         }
                                         placeholder="https://yoursite.com/payment/success"
                                     />
+                                    <p className="text-xs text-muted-foreground">
+                                        Where to redirect customers after successful payment (default: /payment/result)
+                                    </p>
                                 </div>
 
-                                <Button type="submit" disabled={saving}>
+                                {/* Instructions */}
+                                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                        <Info className="w-4 h-4" />
+                                        Setup Instructions
+                                    </h4>
+                                    <ol className="text-sm space-y-1 list-decimal list-inside text-muted-foreground">
+                                        <li>Sign up or log in to <a href="https://merchant.kashier.io" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Kashier Merchant Dashboard</a></li>
+                                        <li>Go to Settings → API Keys to get your Merchant ID, API Key, and Secret Key</li>
+                                        <li>Copy the Webhook URL above and add it in Settings → Webhooks</li>
+                                        <li>Test with Sandbox mode first, then switch to Live mode when ready</li>
+                                    </ol>
+                                </div>
+
+                                <Button type="submit" disabled={saving} className="w-full">
                                     {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                    {cashier ? "Save Cashier Configuration" : "Create Cashier Configuration"}
+                                    {cashier ? "Save Kashier Configuration" : "Create Kashier Configuration"}
                                 </Button>
                             </form>
                         </CardContent>

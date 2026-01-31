@@ -361,19 +361,19 @@ export const paypalWebhook = async (req, res, next) => {
   }
 };
 
-// ==================== Cashier ====================
+// ==================== Cashier/Kashier ====================
 
-// @desc    Create Cashier payment
-// @route   POST /api/payments/cashier/create
+// @desc    Create Kashier payment (Payment Session)
+// @route   POST /api/payments/kashier/create
 // @access  Private
 export const createCashierPayment = async (req, res, next) => {
   try {
-    const { courseId, amount, currency = "EGP", customer } = req.body;
+    const { courseId, productId, amount, currency = "EGP", customer } = req.body;
     const userId = req.user?._id;
     const user = req.user;
 
-    if (!courseId || !amount) {
-      return next(new ApiError(400, "Course ID and amount are required"));
+    if ((!courseId && !productId) || !amount) {
+      return next(new ApiError(400, "Course ID/Product ID and amount are required"));
     }
 
     // Determine customer info (use provided customer object or logged in user)
@@ -389,6 +389,7 @@ export const createCashierPayment = async (req, res, next) => {
     const payment = await paymentService.createCashierPayment({
       userId,
       courseId,
+      productId,
       amount,
       currency,
       customer: finalCustomer,
@@ -397,7 +398,7 @@ export const createCashierPayment = async (req, res, next) => {
     return ApiResponse.success(
       res,
       payment,
-      "Cashier payment created successfully",
+      "Kashier payment session created successfully",
       201
     );
   } catch (error) {
@@ -405,11 +406,41 @@ export const createCashierPayment = async (req, res, next) => {
   }
 };
 
-// @desc    Cashier payment callback
+// @desc    Kashier payment webhook (Primary - Payment Sessions API)
+// @route   POST /api/payments/kashier/webhook
+// @access  Public
+export const kashierWebhook = async (req, res, next) => {
+  try {
+    console.log("📥 Kashier webhook received");
+    
+    // Get signature from headers if provided
+    const signature = req.headers['x-kashier-signature'] || req.headers['kashier-signature'];
+    
+    const result = await paymentService.handleKashierWebhook(req.body, signature);
+
+    // Kashier expects 200 OK response
+    res.status(200).json({
+      success: true,
+      message: "Webhook processed successfully",
+    });
+  } catch (error) {
+    console.error("❌ Kashier webhook error:", error.message);
+    
+    // Still return 200 to prevent Kashier from retrying on our errors
+    // But we can distinguish between validation errors and processing errors
+    res.status(200).json({
+      success: false,
+      message: error.message || "Webhook processing failed",
+    });
+  }
+};
+
+// @desc    Kashier payment callback (Deprecated - for backward compatibility)
 // @route   POST /api/payments/cashier/callback
 // @access  Public
 export const cashierCallback = async (req, res, next) => {
   try {
+    console.warn("⚠️ Using deprecated Cashier callback endpoint");
     const result = await paymentService.handleCashierCallback(req.body);
 
     // Cashier expects 200 OK
