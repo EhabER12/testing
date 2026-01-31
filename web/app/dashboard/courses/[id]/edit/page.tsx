@@ -250,7 +250,7 @@ export default function EditCoursePage() {
         try {
             const imageUrl = await uploadImage(file);
             markDirty();
-            setFormData({ ...formData, thumbnail: imageUrl });
+            setFormData((prev) => ({ ...prev, thumbnail: imageUrl }));
         } catch (err: any) {
             setError(err.message || "Failed to upload image");
             setThumbnailPreview(null);
@@ -261,7 +261,7 @@ export default function EditCoursePage() {
 
     const removeThumbnail = () => {
         markDirty();
-        setFormData({ ...formData, thumbnail: "" });
+        setFormData((prev) => ({ ...prev, thumbnail: "" }));
         setThumbnailPreview(null);
     };
 
@@ -346,10 +346,10 @@ export default function EditCoursePage() {
                                     value={formData.title.ar}
                                     onChange={(e) =>
                                         (markDirty(),
-                                        setFormData({
-                                            ...formData,
-                                            title: { ...formData.title, ar: e.target.value },
-                                        }))
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            title: { ...prev.title, ar: e.target.value },
+                                        })))
                                     }
                                 />
                             </div>
@@ -361,10 +361,10 @@ export default function EditCoursePage() {
                                     value={formData.title.en}
                                     onChange={(e) =>
                                         (markDirty(),
-                                        setFormData({
-                                            ...formData,
-                                            title: { ...formData.title, en: e.target.value },
-                                        }))
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            title: { ...prev.title, en: e.target.value },
+                                        })))
                                     }
                                 />
                             </div>
@@ -380,10 +380,10 @@ export default function EditCoursePage() {
                                     value={formData.description.ar}
                                     onChange={(e) =>
                                         (markDirty(),
-                                        setFormData({
-                                            ...formData,
-                                            description: { ...formData.description, ar: e.target.value },
-                                        }))
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            description: { ...prev.description, ar: e.target.value },
+                                        })))
                                     }
                                 />
                             </div>
@@ -396,10 +396,10 @@ export default function EditCoursePage() {
                                     value={formData.description.en}
                                     onChange={(e) =>
                                         (markDirty(),
-                                        setFormData({
-                                            ...formData,
-                                            description: { ...formData.description, en: e.target.value },
-                                        }))
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            description: { ...prev.description, en: e.target.value },
+                                        })))
                                     }
                                 />
                             </div>
@@ -414,10 +414,10 @@ export default function EditCoursePage() {
                                     value={formData.shortDescription.ar}
                                     onChange={(e) =>
                                         (markDirty(),
-                                        setFormData({
-                                            ...formData,
-                                            shortDescription: { ...formData.shortDescription, ar: e.target.value },
-                                        }))
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            shortDescription: { ...prev.shortDescription, ar: e.target.value },
+                                        })))
                                     }
                                 />
                             </div>
@@ -429,10 +429,10 @@ export default function EditCoursePage() {
                                     value={formData.shortDescription.en}
                                     onChange={(e) =>
                                         (markDirty(),
-                                        setFormData({
-                                            ...formData,
-                                            shortDescription: { ...formData.shortDescription, en: e.target.value },
-                                        }))
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            shortDescription: { ...prev.shortDescription, en: e.target.value },
+                                        })))
                                     }
                                 />
                             </div>
@@ -495,7 +495,7 @@ export default function EditCoursePage() {
                                     value={formData.categoryId}
                                     onValueChange={(value) => {
                                         markDirty();
-                                        setFormData({ ...formData, categoryId: value });
+                                        setFormData((prev) => ({ ...prev, categoryId: value }));
                                     }}
                                 >
                                     <SelectTrigger>
@@ -528,7 +528,7 @@ export default function EditCoursePage() {
                                     value={formData.accessType}
                                     onValueChange={(value: any) => {
                                         markDirty();
-                                        setFormData({ ...formData, accessType: value });
+                                        setFormData((prev) => ({ ...prev, accessType: value }));
                                     }}
                                 >
                                     <SelectTrigger>
@@ -552,7 +552,7 @@ export default function EditCoursePage() {
                                         value={formData.price}
                                         onChange={(e) => {
                                             markDirty();
-                                            setFormData({ ...formData, price: e.target.value });
+                                            setFormData((prev) => ({ ...prev, price: e.target.value }));
                                         }}
                                     />
                                 </div>
@@ -564,7 +564,7 @@ export default function EditCoursePage() {
                                     value={formData.level}
                                     onValueChange={(value: any) => {
                                         markDirty();
-                                        setFormData({ ...formData, level: value });
+                                        setFormData((prev) => ({ ...prev, level: value }));
                                     }}
                                 >
                                     <SelectTrigger>
@@ -586,7 +586,7 @@ export default function EditCoursePage() {
                                     value={formData.duration}
                                     onChange={(e) => {
                                         markDirty();
-                                        setFormData({ ...formData, duration: e.target.value });
+                                        setFormData((prev) => ({ ...prev, duration: e.target.value }));
                                     }}
                                 />
                             </div>
@@ -597,7 +597,7 @@ export default function EditCoursePage() {
                                     value={formData.language}
                                     onValueChange={(value) => {
                                         markDirty();
-                                        setFormData({ ...formData, language: value });
+                                        setFormData((prev) => ({ ...prev, language: value }));
                                     }}
                                 >
                                     <SelectTrigger>
@@ -628,7 +628,7 @@ export default function EditCoursePage() {
                                 checked={formData.certificateEnabled}
                                 onCheckedChange={(checked) =>
                                     (markDirty(),
-                                    setFormData({ ...formData, certificateEnabled: checked }))
+                                    setFormData((prev) => ({ ...prev, certificateEnabled: checked })))
                                 }
                             />
                         </div>
@@ -644,7 +644,7 @@ export default function EditCoursePage() {
                                     checked={formData.requiresExam}
                                     onCheckedChange={(checked) =>
                                         (markDirty(),
-                                        setFormData({ ...formData, requiresExam: checked }))
+                                        setFormData((prev) => ({ ...prev, requiresExam: checked })))
                                     }
                                 />
                             </div>
@@ -663,7 +663,7 @@ export default function EditCoursePage() {
                                                 value={formData.passingScore}
                                                 onChange={(e) =>
                                                     (markDirty(),
-                                                    setFormData({ ...formData, passingScore: e.target.value }))
+                                                    setFormData((prev) => ({ ...prev, passingScore: e.target.value })))
                                                 }
                                             />
                                         </div>
@@ -675,7 +675,7 @@ export default function EditCoursePage() {
                                                 value={formData.examQuizId}
                                                 onValueChange={(value) => {
                                                     markDirty();
-                                                    setFormData({ ...formData, examQuizId: value });
+                                                    setFormData((prev) => ({ ...prev, examQuizId: value }));
                                                 }}
                                             >
                                                 <SelectTrigger>
