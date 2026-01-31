@@ -9,7 +9,6 @@ import { getCategories } from "@/store/slices/categorySlice";
 import { getQuizzesByCourse } from "@/store/services/quizService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
 import { isAdmin, isTeacher } from "@/store/services/authService";
-import { clearCurrentCourse } from "@/store/slices/courseSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,22 +77,21 @@ export default function EditCoursePage() {
     // Extract course data safely (handle array if it happens)
     const courseDataRaw = Array.isArray(currentCourse) ? currentCourse[0] : currentCourse;
     const currentCourseId = courseDataRaw ? (courseDataRaw.id || courseDataRaw._id) : null;
-    const isReady = !!courseDataRaw && String(currentCourseId) === String(id);
+    const isCourseMatch = !!currentCourseId && String(currentCourseId) === String(id);
 
     useEffect(() => {
         dispatch(getCategories({ active: true }));
-        if (id) {
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (id && !isCourseMatch) {
             dispatch(getCourse(id));
             dispatch(getQuizzesByCourse(id));
         }
-
-        return () => {
-            dispatch(clearCurrentCourse());
-        };
-    }, [dispatch, id]);
+    }, [dispatch, id, isCourseMatch]);
 
     useEffect(() => {
-        if (isReady) {
+        if (isCourseMatch) {
             setFormData({
                 title: {
                     ar: courseDataRaw.title?.ar || "",
@@ -126,7 +124,7 @@ export default function EditCoursePage() {
                 setThumbnailPreview(courseDataRaw.thumbnail);
             }
         }
-    }, [courseDataRaw, isReady]);
+    }, [courseDataRaw, isCourseMatch]);
 
     // Authorization check: Teachers can only edit their own courses
     useEffect(() => {
@@ -222,7 +220,7 @@ export default function EditCoursePage() {
         setThumbnailPreview(null);
     };
 
-    if (courseLoading || !isReady) {
+    if (courseLoading || !isCourseMatch) {
         return (
             <div className="flex h-full items-center justify-center p-8">
                 <Loader2 className="h-16 w-16 animate-spin text-genoun-green" />
