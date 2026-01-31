@@ -42,13 +42,29 @@ jobs:
           else
             echo "📥 Pulling latest changes..."
             cd /var/www/genoun-main
+            
+            # Stash any local changes before pulling
+            echo "💾 Stashing local changes..."
+            git stash --include-untracked
+            
+            # Pull latest changes
             git pull origin main
+            
+            # Try to apply stashed changes (don't fail if conflicts)
+            echo "🔄 Applying stashed changes..."
+            git stash pop || echo "⚠️ Stash conflicts detected, using remote version"
           fi
           
           # Install backend dependencies
           echo "🔧 Installing backend dependencies..."
           cd api
           npm install --production
+          
+          # Run enrollment script for old course payments (one-time fix)
+          echo "📚 Checking for unenrolled paid students..."
+          if [ -f "src/scripts/enrollPaidStudents.js" ]; then
+            npm run script:enroll-paid-students || echo "⚠️ Enrollment script not available or already run"
+          fi
           
           # Install pnpm globally if not exists
           if ! command -v pnpm &> /dev/null; then
