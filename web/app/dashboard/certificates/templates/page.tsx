@@ -267,10 +267,24 @@ export default function CertificateDesignerPage() {
     setActiveIndex(design.placeholders.customText.length);
   };
 
-  const removeElement = (type: "custom" | "image", index: number) => {
-    const confirmMessage = type === "custom" 
-      ? (isRtl ? "هل أنت متأكد من حذف هذا النص؟" : "Are you sure you want to remove this text?")
-      : (isRtl ? "هل أنت متأكد من حذف هذه الصورة؟" : "Are you sure you want to remove this image?");
+  const removeElement = (type: "custom" | "image" | "standard", indexOrKey: number | string) => {
+    let confirmMessage = "";
+    
+    if (type === "custom") {
+      confirmMessage = isRtl ? "هل أنت متأكد من حذف هذا النص؟" : "Are you sure you want to remove this text?";
+    } else if (type === "image") {
+      confirmMessage = isRtl ? "هل أنت متأكد من حذف هذه الصورة؟" : "Are you sure you want to remove this image?";
+    } else if (type === "standard") {
+      const labels: any = {
+        studentName: isRtl ? "اسم الطالب" : "Student Name",
+        courseName: isRtl ? "اسم الدورة" : "Course Name",
+        issuedDate: isRtl ? "تاريخ الإصدار" : "Issue Date",
+        certificateNumber: isRtl ? "رقم الشهادة" : "Certificate Number"
+      };
+      confirmMessage = isRtl 
+        ? `هل أنت متأكد من حذف عنصر "${labels[indexOrKey]}"؟ سيتم إخفاؤه من الشهادة.`
+        : `Are you sure you want to remove "${labels[indexOrKey]}"? It will be hidden from the certificate.`;
+    }
     
     if (!confirm(confirmMessage)) {
       return;
@@ -278,7 +292,7 @@ export default function CertificateDesignerPage() {
 
     if (type === "custom") {
       const newCustom = [...design.placeholders.customText];
-      newCustom.splice(index, 1);
+      newCustom.splice(indexOrKey as number, 1);
       setDesign({
         ...design,
         placeholders: { ...design.placeholders, customText: newCustom }
@@ -287,9 +301,9 @@ export default function CertificateDesignerPage() {
       setActivePlaceholder("studentName");
       setActiveIndex(-1);
       toast.success(isRtl ? "تم حذف النص بنجاح" : "Text removed successfully");
-    } else {
+    } else if (type === "image") {
       const newImages = [...design.placeholders.images];
-      newImages.splice(index, 1);
+      newImages.splice(indexOrKey as number, 1);
       setDesign({
         ...design,
         placeholders: { ...design.placeholders, images: newImages }
@@ -298,6 +312,14 @@ export default function CertificateDesignerPage() {
       setActivePlaceholder("studentName");
       setActiveIndex(-1);
       toast.success(isRtl ? "تم حذف الصورة بنجاح" : "Image removed successfully");
+    } else if (type === "standard") {
+      // For standard elements, set them to null to indicate deletion
+      const key = indexOrKey as keyof typeof design.placeholders;
+      setDesign({
+        ...design,
+        placeholders: { ...design.placeholders, [key]: null as any }
+      });
+      toast.success(isRtl ? "تم حذف العنصر بنجاح" : "Element removed successfully");
     }
   };
 
@@ -687,17 +709,61 @@ export default function CertificateDesignerPage() {
                     <Select value={activePlaceholder} onValueChange={setActivePlaceholder}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="studentName">{isRtl ? "اسم الطالب" : "Student Name"}</SelectItem>
-                        <SelectItem value="courseName">{isRtl ? "اسم الدورة" : "Course Name"}</SelectItem>
-                        <SelectItem value="issuedDate">{isRtl ? "تاريخ الإصدار" : "Issue Date"}</SelectItem>
-                        <SelectItem value="certificateNumber">{isRtl ? "رقم الشهادة" : "Certificate ID"}</SelectItem>
+                        <SelectItem value="studentName">
+                          {isRtl ? "اسم الطالب" : "Student Name"}
+                          {!design.placeholders.studentName && " ❌"}
+                        </SelectItem>
+                        <SelectItem value="courseName">
+                          {isRtl ? "اسم الدورة" : "Course Name"}
+                          {!design.placeholders.courseName && " ❌"}
+                        </SelectItem>
+                        <SelectItem value="issuedDate">
+                          {isRtl ? "تاريخ الإصدار" : "Issue Date"}
+                          {!design.placeholders.issuedDate && " ❌"}
+                        </SelectItem>
+                        <SelectItem value="certificateNumber">
+                          {isRtl ? "رقم الشهادة" : "Certificate ID"}
+                          {!design.placeholders.certificateNumber && " ❌"}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
 
                     {(() => {
                       const k = activePlaceholder as keyof typeof design.placeholders;
                       const p = design.placeholders[k] as Placeholder;
-                      if (!p) return null;
+                      
+                      // If element is deleted (null), show restore option
+                      if (!p) {
+                        return (
+                          <div className="space-y-4 text-center py-8">
+                            <div className="text-muted-foreground">
+                              {isRtl ? "هذا العنصر محذوف حالياً" : "This element is currently deleted"}
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => {
+                                const defaultValues: any = {
+                                  studentName: { x: 600, y: 400, fontSize: 40, fontFamily: "Cairo", color: "#000000", align: "center", fontWeight: "bold" },
+                                  courseName: { x: 600, y: 500, fontSize: 30, fontFamily: "Cairo", color: "#000000", align: "center", fontWeight: "normal" },
+                                  issuedDate: { x: 600, y: 600, fontSize: 20, fontFamily: "Cairo", color: "#000000", align: "center", fontWeight: "normal" },
+                                  certificateNumber: { x: 600, y: 700, fontSize: 16, fontFamily: "Cairo", color: "#000000", align: "center", fontWeight: "normal" },
+                                };
+                                setDesign({
+                                  ...design,
+                                  placeholders: { ...design.placeholders, [k]: defaultValues[k] }
+                                });
+                                toast.success(isRtl ? "تم استعادة العنصر بنجاح" : "Element restored successfully");
+                              }} 
+                              className="w-full"
+                            >
+                              <Plus className="h-4 w-4 mr-2" /> 
+                              {isRtl ? "استعادة العنصر" : "Restore Element"}
+                            </Button>
+                          </div>
+                        );
+                      }
+                      
                       return (
                         <div className="space-y-4">
                           {/* Y Position Control - text is always centered horizontally */}
@@ -761,6 +827,20 @@ export default function CertificateDesignerPage() {
                                 <SelectItem value="800">Extra Bold</SelectItem>
                               </SelectContent>
                             </Select>
+                          </div>
+                          <div className="border-t pt-4">
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              onClick={() => removeElement("standard", k)} 
+                              className="w-full"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" /> 
+                              {isRtl ? "حذف هذا العنصر" : "Remove This Element"}
+                            </Button>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {isRtl ? "سيتم إخفاء هذا العنصر من الشهادة. يمكنك إعادته لاحقاً بالضغط على زر 'إعادة العنصر'." : "This element will be hidden from the certificate. You can restore it later by clicking 'Restore Element'."}
+                            </p>
                           </div>
                         </div>
                       );
@@ -964,6 +1044,10 @@ export default function CertificateDesignerPage() {
                 {Object.keys(design.placeholders).filter(k => !['customText', 'images', 'signature'].includes(k)).map((key) => {
                   const k = key as keyof typeof design.placeholders;
                   const p = design.placeholders[k] as Placeholder;
+                  
+                  // Skip rendering if element is deleted (null)
+                  if (!p) return null;
+                  
                   const isActive = activeType === "standard" && activePlaceholder === k;
 
                   // Get sample text for this placeholder

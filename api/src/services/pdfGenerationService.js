@@ -718,11 +718,12 @@ class PDFGenerationService {
       };
 
       // Normalize all placeholders before processing with appropriate default Y positions
+      // Handle null values for deleted standard elements
       const normalizedPlaceholders = {
-        studentName: normalizePlaceholderWithDefaultY(placeholders.studentName, 300),
-        courseName: normalizePlaceholderWithDefaultY(placeholders.courseName, 400),
-        issuedDate: normalizePlaceholderWithDefaultY(placeholders.issuedDate, 500),
-        certificateNumber: normalizePlaceholderWithDefaultY(placeholders.certificateNumber, 600),
+        studentName: placeholders.studentName ? normalizePlaceholderWithDefaultY(placeholders.studentName, 300) : null,
+        courseName: placeholders.courseName ? normalizePlaceholderWithDefaultY(placeholders.courseName, 400) : null,
+        issuedDate: placeholders.issuedDate ? normalizePlaceholderWithDefaultY(placeholders.issuedDate, 500) : null,
+        certificateNumber: placeholders.certificateNumber ? normalizePlaceholderWithDefaultY(placeholders.certificateNumber, 600) : null,
         customText: (placeholders.customText || []).map(ct => this.normalizeplaceholder(ct, width, height, true)).filter(Boolean),
         images: placeholders.images || [],
       };
@@ -736,26 +737,34 @@ class PDFGenerationService {
         imagesCount: normalizedPlaceholders.images?.length
       });
 
-      // Student Name - always draw
-      console.log('Drawing student name:', studentName, 'at position:', normalizedPlaceholders.studentName);
-      await drawText(studentName, normalizedPlaceholders.studentName, 300);
-      drewAnyPlaceholder = true;
+      // Student Name - only draw if not deleted
+      if (normalizedPlaceholders.studentName) {
+        console.log('Drawing student name:', studentName, 'at position:', normalizedPlaceholders.studentName);
+        await drawText(studentName, normalizedPlaceholders.studentName, 300);
+        drewAnyPlaceholder = true;
+      }
 
-      // Course Name - always draw
-      console.log('Drawing course name:', courseName, 'at position:', normalizedPlaceholders.courseName);
-      await drawText(courseName, normalizedPlaceholders.courseName, 400);
-      drewAnyPlaceholder = true;
+      // Course Name - only draw if not deleted
+      if (normalizedPlaceholders.courseName) {
+        console.log('Drawing course name:', courseName, 'at position:', normalizedPlaceholders.courseName);
+        await drawText(courseName, normalizedPlaceholders.courseName, 400);
+        drewAnyPlaceholder = true;
+      }
 
-      // Issue Date - always draw
-      console.log('Drawing issued date:', issuedDate, 'at position:', normalizedPlaceholders.issuedDate);
-      await drawText(issuedDate, normalizedPlaceholders.issuedDate, 500);
-      drewAnyPlaceholder = true;
+      // Issue Date - only draw if not deleted
+      if (normalizedPlaceholders.issuedDate) {
+        console.log('Drawing issued date:', issuedDate, 'at position:', normalizedPlaceholders.issuedDate);
+        await drawText(issuedDate, normalizedPlaceholders.issuedDate, 500);
+        drewAnyPlaceholder = true;
+      }
 
-      // Certificate Number - always draw
-      const certNumber = data.certificateNumber || "CERT-XXXX";
-      console.log('Drawing certificate number:', certNumber, 'at position:', normalizedPlaceholders.certificateNumber);
-      await drawText(certNumber, normalizedPlaceholders.certificateNumber, 600);
-      drewAnyPlaceholder = true;
+      // Certificate Number - only draw if not deleted
+      if (normalizedPlaceholders.certificateNumber) {
+        const certNumber = data.certificateNumber || "CERT-XXXX";
+        console.log('Drawing certificate number:', certNumber, 'at position:', normalizedPlaceholders.certificateNumber);
+        await drawText(certNumber, normalizedPlaceholders.certificateNumber, 600);
+        drewAnyPlaceholder = true;
+      }
 
       // Custom Text Elements
       if (normalizedPlaceholders.customText && normalizedPlaceholders.customText.length > 0) {
