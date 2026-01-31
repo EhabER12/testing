@@ -77,19 +77,23 @@ export default function EditCoursePage() {
 
     // Extract course data safely (handle array if it happens)
     const courseDataRaw = Array.isArray(currentCourse) ? currentCourse[0] : currentCourse;
-    const isReady = courseDataRaw && (courseDataRaw.id || courseDataRaw._id) === id;
+    const currentCourseId = courseDataRaw ? (courseDataRaw.id || courseDataRaw._id) : null;
+    const isReady = !!courseDataRaw && String(currentCourseId) === String(id);
 
     useEffect(() => {
-        dispatch(clearCurrentCourse());
         dispatch(getCategories({ active: true }));
         if (id) {
             dispatch(getCourse(id));
             dispatch(getQuizzesByCourse(id));
         }
+
+        return () => {
+            dispatch(clearCurrentCourse());
+        };
     }, [dispatch, id]);
 
     useEffect(() => {
-        if (courseDataRaw) {
+        if (isReady) {
             setFormData({
                 title: {
                     ar: courseDataRaw.title?.ar || "",
@@ -122,7 +126,7 @@ export default function EditCoursePage() {
                 setThumbnailPreview(courseDataRaw.thumbnail);
             }
         }
-    }, [courseDataRaw]);
+    }, [courseDataRaw, isReady]);
 
     // Authorization check: Teachers can only edit their own courses
     useEffect(() => {
