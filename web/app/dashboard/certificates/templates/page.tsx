@@ -268,6 +268,14 @@ export default function CertificateDesignerPage() {
   };
 
   const removeElement = (type: "custom" | "image", index: number) => {
+    const confirmMessage = type === "custom" 
+      ? (isRtl ? "هل أنت متأكد من حذف هذا النص؟" : "Are you sure you want to remove this text?")
+      : (isRtl ? "هل أنت متأكد من حذف هذه الصورة؟" : "Are you sure you want to remove this image?");
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
     if (type === "custom") {
       const newCustom = [...design.placeholders.customText];
       newCustom.splice(index, 1);
@@ -277,6 +285,8 @@ export default function CertificateDesignerPage() {
       });
       setActiveType("standard");
       setActivePlaceholder("studentName");
+      setActiveIndex(-1);
+      toast.success(isRtl ? "تم حذف النص بنجاح" : "Text removed successfully");
     } else {
       const newImages = [...design.placeholders.images];
       newImages.splice(index, 1);
@@ -286,6 +296,8 @@ export default function CertificateDesignerPage() {
       });
       setActiveType("standard");
       setActivePlaceholder("studentName");
+      setActiveIndex(-1);
+      toast.success(isRtl ? "تم حذف الصورة بنجاح" : "Image removed successfully");
     }
   };
 
@@ -998,7 +1010,11 @@ export default function CertificateDesignerPage() {
                   return (
                     <div
                       key={`custom-${idx}`}
-                      className={`absolute pointer-events-auto select-none border-2 transition-colors whitespace-nowrap ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
+                      onClick={() => {
+                        setActiveType("custom");
+                        setActiveIndex(idx);
+                      }}
+                      className={`absolute pointer-events-auto select-none border-2 transition-colors whitespace-nowrap cursor-pointer ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
                         top: p.y * previewScale,
                         left: leftPos,
@@ -1023,6 +1039,10 @@ export default function CertificateDesignerPage() {
                   return (
                     <div
                       key={`img-${idx}`}
+                      onClick={() => {
+                        setActiveType("image");
+                        setActiveIndex(idx);
+                      }}
                       onMouseDown={(e) => handleMouseDown(e, "image", idx)}
                       className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
