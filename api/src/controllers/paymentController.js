@@ -69,6 +69,7 @@ export const createManualPayment = async (req, res, next) => {
   try {
     const {
       productId,
+      courseId,
       serviceId,
       packageId,
       studentMemberId,
@@ -83,8 +84,8 @@ export const createManualPayment = async (req, res, next) => {
     const isAdmin = req.user.role === "admin" || req.user.role === "moderator";
     const paymentProofUrl = req.file ? `uploads/${req.file.filename}` : null;
 
-    if (!productId && !serviceId && !packageId) {
-      return next(new ApiError(400, "Product ID, Service ID, or Package ID is required"));
+    if (!productId && !courseId && !serviceId && !packageId) {
+      return next(new ApiError(400, "Product ID, Course ID, Service ID, or Package ID is required"));
     }
 
     if (!billingInfo || !billingInfo.name) {
@@ -99,6 +100,7 @@ export const createManualPayment = async (req, res, next) => {
       const payment = await paymentService.createAdminManualPayment({
         adminId: userId,
         productId,
+        courseId,
         serviceId,
         amount,
         currency: currency || "EGP",
@@ -122,6 +124,7 @@ export const createManualPayment = async (req, res, next) => {
       const payment = await paymentService.createManualPayment({
         userId,
         productId,
+        courseId,
         serviceId,
         packageId,
         studentMemberId,
@@ -150,6 +153,7 @@ export const createCustomerManualPayment = async (req, res, next) => {
   try {
     const {
       productId,
+      courseId,
       serviceId,
       packageId,
       studentMemberId,
@@ -163,8 +167,8 @@ export const createCustomerManualPayment = async (req, res, next) => {
     const userId = req.user?._id || null;
     const paymentProofUrl = req.file ? `uploads/${req.file.filename}` : null;
 
-    if (!productId && !serviceId && !packageId) {
-      return next(new ApiError(400, "Product ID, Service ID, or Package ID is required"));
+    if (!productId && !courseId && !serviceId && !packageId) {
+      return next(new ApiError(400, "Product ID, Course ID, Service ID, or Package ID is required"));
     }
 
     if (!pricingTierId) {
@@ -182,6 +186,7 @@ export const createCustomerManualPayment = async (req, res, next) => {
     const payment = await paymentService.createManualPayment({
       userId,
       productId,
+      courseId,
       serviceId,
       packageId,
       studentMemberId,

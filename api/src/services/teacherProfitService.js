@@ -41,7 +41,8 @@ export class TeacherProfitService {
   // Record profit from a successful payment
   async recordProfit(paymentId) {
     const payment = await Payment.findById(paymentId)
-      .populate("productId") // This is actually courseId in LMS context
+      .populate("courseId")
+      .populate("productId")
       .populate("studentMemberId");
 
     if (!payment || payment.status !== "success") {
@@ -52,14 +53,29 @@ export class TeacherProfitService {
     let teacherId, revenueType, sourceId, sourceModel, courseId;
 
     // Check if this is a course sale (paid course enrollment)
-    if (payment.productId && payment.productId.instructorId) {
-      const course = await Course.findById(payment.productId._id);
-      if (course && course.accessType === "paid") {
+    if (payment.courseId) {
+      const course = payment.courseId._id ? payment.courseId : await Course.findById(payment.courseId);
+      if (course && course.accessType === "paid" && course.instructorId) {
         teacherId = course.instructorId;
         revenueType = "course_sale";
         sourceId = course._id;
         sourceModel = "Course";
         courseId = course._id;
+      }
+    }
+    // Fallback: Check if productId actually refers to a Course (for backward compatibility)
+    else if (payment.productId && !teacherId) {
+      try {
+        const course = await Course.findById(payment.productId._id || payment.productId);
+        if (course && course.accessType === "paid" && course.instructorId) {
+          teacherId = course.instructorId;
+          revenueType = "course_sale";
+          sourceId = course._id;
+          sourceModel = "Course";
+          courseId = course._id;
+        }
+      } catch (err) {
+        // Not a course, continue to check other options
       }
     }
 

@@ -62,6 +62,10 @@ export class PaymentService {
           select: "_id name slug basePrice coverImage",
         },
         {
+          path: "courseId",
+          select: "_id title slug price thumbnail instructorId",
+        },
+        {
           path: "serviceId",
           select: "_id title slug startingPrice",
         },
@@ -284,6 +288,7 @@ export class PaymentService {
   async createManualPayment({
     userId,
     productId,
+    courseId,
     serviceId,
     packageId,
     studentMemberId,
@@ -357,6 +362,7 @@ export class PaymentService {
       const paymentData = {
         userId: linkedUserId,
         productId,
+        courseId,
         serviceId,
         packageId,
         studentMemberId,
@@ -439,13 +445,14 @@ export class PaymentService {
   }
 
   async createAdminManualPayment(data) {
-    const { adminId, productId, serviceId, amount, currency, billingInfo, notes } = data;
+    const { adminId, productId, courseId, serviceId, amount, currency, billingInfo, notes } = data;
     // Verification logic...
     const merchantOrderId = `ADMIN-MANUAL-${Date.now()}`;
 
     const paymentData = {
       userId: adminId,
       productId,
+      courseId,
       serviceId,
       amount,
       currency: currency || "EGP",
@@ -540,6 +547,7 @@ export class PaymentService {
 
     // Map courseId to productId if present (for compatibility)
     const finalProductId = productId || courseId;
+    const finalCourseId = courseId || null;
 
     // Create a pending payment record first
     const merchantOrderId = `PAYPAL-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
@@ -547,6 +555,7 @@ export class PaymentService {
     const paymentData = {
       userId,
       productId: finalProductId,
+      courseId: finalCourseId,
       serviceId,
       amount,
       currency,
@@ -766,6 +775,7 @@ export class PaymentService {
   async createCashierPayment({ userId, courseId, productId, amount, currency, customer }) {
     const config = await this.getGatewayConfig("cashier");
     const finalProductId = productId || courseId;
+    const finalCourseId = courseId || null;
 
     const merchantOrderId = `KASHIER-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
@@ -777,6 +787,7 @@ export class PaymentService {
     const paymentData = {
       userId,
       productId: finalProductId,
+      courseId: finalCourseId,
       amount,
       currency: currency || "EGP",
       status: "pending",

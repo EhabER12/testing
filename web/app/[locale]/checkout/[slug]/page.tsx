@@ -298,8 +298,9 @@ export default function CourseCheckoutPage() {
                 }
 
                 const paymentData = {
-                    // Use courseId as productId for backend compatibility
-                    productId: courseId,
+                    // Pass courseId explicitly
+                    courseId: courseId,
+                    productId: undefined,
                     serviceId: undefined,
                     pricingTierId: "course_enrollment",
                     manualPaymentMethodId: selectedMethodId,

@@ -10,6 +10,10 @@ const paymentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
     },
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+    },
     serviceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Service",
