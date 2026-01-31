@@ -117,6 +117,10 @@ export default function EditCoursePage() {
 
     useEffect(() => {
         if (isCourseMatch) {
+            if (typeof window !== "undefined") {
+                // Debug: see actual payload for edit page
+                console.log("[EditCourse] courseDataRaw", courseDataRaw);
+            }
             setFormData({
                 title: {
                     ar: courseDataRaw.title?.ar || "",
