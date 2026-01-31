@@ -194,10 +194,29 @@ export class PaymentService {
       }
 
       // Auto-enroll student in course if this is a course payment
-      if (payment.metadata && payment.metadata.type === "course" && payment.metadata.courseId) {
-        // ... (existing course enrollment logic could be added here or handled by another service) ...
-        // For now, assuming user purchased a specific product/course and we might need to trigger enrollment
-        // But since this is general payment service, we'll leave specific enrollment logic to the caller or listener
+      if (payment.courseId) {
+        try {
+          const Course = (await import("../models/courseModel.js")).default;
+          const course = await Course.findById(payment.courseId);
+          
+          if (course && payment.userId) {
+            const { CourseService } = await import("./courseService.js");
+            const courseService = new CourseService();
+            await courseService.enrollStudent(payment.courseId, payment.userId);
+            logger.info("Student auto-enrolled in course after payment", { 
+              userId: payment.userId, 
+              courseId: payment.courseId,
+              paymentId: payment._id 
+            });
+          }
+        } catch (enrollError) {
+          logger.error("Failed to auto-enroll student in course", { 
+            error: enrollError.message,
+            userId: payment.userId,
+            courseId: payment.courseId
+          });
+          // Don't fail the payment if enrollment fails
+        }
       }
 
       // Handle package payments

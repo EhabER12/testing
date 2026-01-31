@@ -1389,7 +1389,9 @@
     },
     "statuses": {
       "pending": "Pending",
+      "processing": "Processing",
       "success": "Success",
+      "delivered": "Delivered",
       "failed": "Failed",
       "refunded": "Refunded",
       "cancelled": "Cancelled",

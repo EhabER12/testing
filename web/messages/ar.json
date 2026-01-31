@@ -1391,7 +1391,9 @@
     },
     "statuses": {
       "pending": "قيد الانتظار",
+      "processing": "قيد المعالجة",
       "success": "ناجح",
+      "delivered": "مكتمل",
       "failed": "فشل",
       "refunded": "تم رد المبلغ",
       "cancelled": "ملغي",
