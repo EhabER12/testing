@@ -173,6 +173,7 @@ export const getPaymentDetailsThunk = createAsyncThunk<
 
 interface CreateManualPaymentPayload {
   productId?: string;
+  courseId?: string;
   serviceId?: string;
   pricingTierId: string;
   manualPaymentMethodId: string;
@@ -200,6 +201,9 @@ export const createCustomerManualPaymentThunk = createAsyncThunk<
     const formData = new FormData();
     if (paymentData.productId) {
       formData.append("productId", paymentData.productId);
+    }
+    if (paymentData.courseId) {
+      formData.append("courseId", paymentData.courseId);
     }
     if (paymentData.serviceId) {
       formData.append("serviceId", paymentData.serviceId);

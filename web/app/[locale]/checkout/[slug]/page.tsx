@@ -300,8 +300,7 @@ export default function CourseCheckoutPage() {
                 const paymentData = {
                     // Pass courseId explicitly
                     courseId: courseId,
-                    productId: undefined,
-                    serviceId: undefined,
+                    // Don't send productId and serviceId at all if they're undefined
                     pricingTierId: "course_enrollment",
                     manualPaymentMethodId: selectedMethodId,
                     paymentProof: processedProof || undefined,
@@ -331,7 +330,7 @@ export default function CourseCheckoutPage() {
                         courseSlug: slug,
                         courseName: getLocalizedText(currentCourse?.title, locale),
                     },
-                };
+                } as any;
 
                 await dispatch(createCustomerManualPaymentThunk(paymentData)).unwrap();
 
