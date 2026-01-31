@@ -54,6 +54,9 @@ export default function EditCoursePage() {
 
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [isFetchingCourse, setIsFetchingCourse] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
+    const [retryTick, setRetryTick] = useState(0);
     const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -84,11 +87,33 @@ export default function EditCoursePage() {
     }, [dispatch]);
 
     useEffect(() => {
+        let isMounted = true;
+
+        const fetchCourseData = async () => {
+            setFetchError(null);
+            setIsFetchingCourse(true);
+            try {
+                await dispatch(getCourse(id)).unwrap();
+                await dispatch(getQuizzesByCourse(id)).unwrap();
+            } catch (err: any) {
+                if (isMounted) {
+                    setFetchError(err?.message || String(err) || "Failed to load course");
+                }
+            } finally {
+                if (isMounted) {
+                    setIsFetchingCourse(false);
+                }
+            }
+        };
+
         if (id && !isCourseMatch) {
-            dispatch(getCourse(id));
-            dispatch(getQuizzesByCourse(id));
+            fetchCourseData();
         }
-    }, [dispatch, id, isCourseMatch]);
+
+        return () => {
+            isMounted = false;
+        };
+    }, [dispatch, id, isCourseMatch, retryTick]);
 
     useEffect(() => {
         if (isCourseMatch) {
@@ -220,10 +245,34 @@ export default function EditCoursePage() {
         setThumbnailPreview(null);
     };
 
-    if (courseLoading || !isCourseMatch) {
+    if ((courseLoading || isFetchingCourse) && !isCourseMatch) {
         return (
             <div className="flex h-full items-center justify-center p-8">
                 <Loader2 className="h-16 w-16 animate-spin text-genoun-green" />
+            </div>
+        );
+    }
+
+    if (!isCourseMatch) {
+        return (
+            <div className="flex h-full items-center justify-center p-8">
+                <Card className="max-w-md w-full">
+                    <CardHeader>
+                        <CardTitle>{isRtl ? "تعذر تحميل بيانات الدورة" : "Failed to load course"}</CardTitle>
+                        <CardDescription>
+                            {fetchError
+                                ? fetchError
+                                : isRtl
+                                    ? "لا توجد بيانات متاحة للكورس حالياً"
+                                    : "No course data available yet"}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex justify-end">
+                        <Button onClick={() => setRetryTick((t) => t + 1)}>
+                            {isRtl ? "إعادة المحاولة" : "Retry"}
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         );
     }
