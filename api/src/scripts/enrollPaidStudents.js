@@ -116,8 +116,8 @@ async function enrollPaidStudents() {
           continue;
         }
 
-        // Enroll the student
-        await courseService.enrollStudent(courseId, userId);
+        // Enroll the student (skip payment check since we know they paid)
+        await courseService.enrollStudent(courseId, userId, true);
         enrolled++;
 
         console.log(`   ✅ Enrolled user ${userId} in course "${payment.courseId.title?.en || payment.courseId.title?.ar}"`);

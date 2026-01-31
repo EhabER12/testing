@@ -499,7 +499,8 @@ export class CourseService {
   }
 
   // Enroll student in course
-  async enrollStudent(courseId, userId) {
+  // skipPaymentCheck: set to true when calling after successful payment (payment already verified)
+  async enrollStudent(courseId, userId, skipPaymentCheck = false) {
     const course = await Course.findById(courseId);
     if (!course) {
       throw new ApiError(404, "Course not found");
@@ -524,8 +525,8 @@ export class CourseService {
       return existingProgress;
     }
 
-    // Access check - bypass for admins
-    if (!isAdmin && (course.accessType === "paid" || course.accessType === "byPackage")) {
+    // Access check - bypass for admins or when payment is already verified
+    if (!isAdmin && !skipPaymentCheck && (course.accessType === "paid" || course.accessType === "byPackage")) {
       // If access type is byPackage, check for active StudentMember subscription
       if (course.accessType === "byPackage") {
         const { StudentMemberService } = await import("./studentMemberService.js");
@@ -546,10 +547,15 @@ export class CourseService {
         // Check if there is a successful payment for this course by this user
         const { PaymentRepository } = await import("../repositories/paymentRepository.js");
         const paymentRepo = new PaymentRepository();
+        
+        // Check both courseId and productId for backward compatibility
         const hasPaid = await paymentRepo.model.findOne({
           userId,
-          productId: courseId,
-          status: 'success'
+          $or: [
+            { courseId: courseId },
+            { productId: courseId }
+          ],
+          status: { $in: ['success', 'delivered'] }
         });
 
         if (!hasPaid) {

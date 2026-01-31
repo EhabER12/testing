@@ -194,29 +194,58 @@ export class PaymentService {
       }
 
       // Auto-enroll student in course if this is a course payment
-      if (payment.courseId) {
+      // Check both courseId (new) and productId (legacy) for backward compatibility
+      const paymentCourseId = payment.courseId || payment.productId;
+      
+      logger.info("Checking for course enrollment", {
+        paymentId: payment._id,
+        courseId: payment.courseId,
+        productId: payment.productId,
+        paymentCourseId,
+        userId: payment.userId,
+        metadata: payment.metadata
+      });
+      
+      if (paymentCourseId && payment.userId) {
         try {
           const Course = (await import("../models/courseModel.js")).default;
-          const course = await Course.findById(payment.courseId);
+          const course = await Course.findById(paymentCourseId);
           
-          if (course && payment.userId) {
+          logger.info("Course lookup result", {
+            paymentCourseId,
+            courseFound: !!course,
+            courseTitle: course?.title?.en || course?.title?.ar
+          });
+          
+          // Only auto-enroll if it's actually a course (not a product)
+          if (course) {
             const { CourseService } = await import("./courseService.js");
             const courseService = new CourseService();
-            await courseService.enrollStudent(payment.courseId, payment.userId);
+            // Skip payment check since we're calling this after payment success
+            await courseService.enrollStudent(paymentCourseId, payment.userId, true);
             logger.info("Student auto-enrolled in course after payment", { 
               userId: payment.userId, 
-              courseId: payment.courseId,
+              courseId: paymentCourseId,
               paymentId: payment._id 
             });
+          } else {
+            logger.info("No course found for payment - might be a product", { paymentCourseId });
           }
         } catch (enrollError) {
           logger.error("Failed to auto-enroll student in course", { 
             error: enrollError.message,
+            stack: enrollError.stack,
             userId: payment.userId,
-            courseId: payment.courseId
+            courseId: paymentCourseId
           });
           // Don't fail the payment if enrollment fails
         }
+      } else {
+        logger.info("No courseId/productId or userId found for payment", {
+          paymentId: payment._id,
+          hasPaymentCourseId: !!paymentCourseId,
+          hasUserId: !!payment.userId
+        });
       }
 
       // Handle package payments
