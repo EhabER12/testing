@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -57,6 +57,7 @@ export default function EditCoursePage() {
     const [isFetchingCourse, setIsFetchingCourse] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [retryTick, setRetryTick] = useState(0);
+    const hydratedIdRef = useRef<string | null>(null);
     const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -116,13 +117,20 @@ export default function EditCoursePage() {
     }, [dispatch, id, isCourseMatch, retryTick]);
 
     useEffect(() => {
-        if (isCourseMatch) {
-            if (typeof window !== "undefined") {
-                // Debug: see actual payload for edit page
-                console.log("[EditCourse] courseDataRaw", courseDataRaw);
-                console.log("[EditCourse] id", id, "currentCourseId", currentCourseId, "isCourseMatch", isCourseMatch);
-            }
-            setFormData({
+        if (!isCourseMatch) return;
+
+        const targetId = currentCourseId ? String(currentCourseId) : "";
+        if (!targetId) return;
+
+        if (hydratedIdRef.current === targetId) return;
+
+        if (typeof window !== "undefined") {
+            // Debug: see actual payload for edit page
+            console.log("[EditCourse] courseDataRaw", courseDataRaw);
+            console.log("[EditCourse] id", id, "currentCourseId", currentCourseId, "isCourseMatch", isCourseMatch);
+        }
+
+        setFormData({
                 title: {
                     ar: courseDataRaw.title?.ar || "",
                     en: courseDataRaw.title?.en || "",
@@ -153,14 +161,12 @@ export default function EditCoursePage() {
             if (courseDataRaw.thumbnail) {
                 setThumbnailPreview(courseDataRaw.thumbnail);
             }
-        }
-    }, [courseDataRaw, isCourseMatch]);
+        hydratedIdRef.current = targetId;
+    }, [courseDataRaw, currentCourseId, id, isCourseMatch]);
 
     useEffect(() => {
-        if (typeof window !== "undefined") {
-            console.log("[EditCourse] formData", formData);
-        }
-    }, [formData]);
+        hydratedIdRef.current = null;
+    }, [id]);
 
     // Authorization check: Teachers can only edit their own courses
     useEffect(() => {
