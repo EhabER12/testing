@@ -10,7 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed": "node src/scripts/seed.js",
     "seed:reviews": "node src/seeds/seedReviews.js",
-    "seed:services": "node src/seeds/seedServices.js"
+    "seed:services": "node src/seeds/seedServices.js",
+    "script:enroll-paid-students": "node src/scripts/enrollPaidStudents.js"
   },
   "keywords": [
     "nodejs",
