@@ -120,6 +120,7 @@ export default function EditCoursePage() {
             if (typeof window !== "undefined") {
                 // Debug: see actual payload for edit page
                 console.log("[EditCourse] courseDataRaw", courseDataRaw);
+                console.log("[EditCourse] id", id, "currentCourseId", currentCourseId, "isCourseMatch", isCourseMatch);
             }
             setFormData({
                 title: {
@@ -154,6 +155,12 @@ export default function EditCoursePage() {
             }
         }
     }, [courseDataRaw, isCourseMatch]);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            console.log("[EditCourse] formData", formData);
+        }
+    }, [formData]);
 
     // Authorization check: Teachers can only edit their own courses
     useEffect(() => {
