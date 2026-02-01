@@ -34,21 +34,24 @@ export class StudentMemberService {
     for (const [index, record] of records.entries()) {
       try {
         // Validation
-        if (!record.name || !record.phone || !record.plan) {
-          throw new Error('Missing required fields: name, phone, or plan');
+        const nameValue = record.name?.trim();
+        if (!nameValue) {
+          throw new Error('Missing required field: name');
         }
 
         // Find package (Case insensitive and trimmed)
         const normalize = (str) => str?.trim().toLowerCase() || "";
-        const recordPlan = normalize(record.plan);
+        let pkg = null;
+        if (record.plan) {
+          const recordPlan = normalize(record.plan);
+          pkg = packages.find(p =>
+            normalize(p.name?.ar) === recordPlan ||
+            normalize(p.name?.en) === recordPlan
+          );
 
-        const pkg = packages.find(p =>
-          normalize(p.name?.ar) === recordPlan ||
-          normalize(p.name?.en) === recordPlan
-        );
-
-        if (!pkg) {
-          throw new Error(`Package not found: ${record.plan}`);
+          if (!pkg) {
+            throw new Error(`Package not found: ${record.plan}`);
+          }
         }
 
         // Find teacher if provided
@@ -104,7 +107,14 @@ export class StudentMemberService {
           return new Date(); // Fallback to now
         };
 
-        const startDate = parseDateValue(record['start time']);
+        const startDateInput =
+          record['start time'] ||
+          record['start time (YYYY-MM-DD)'] ||
+          record['start date'] ||
+          record.startDate ||
+          record.start_date ||
+          "";
+        const startDate = parseDateValue(startDateInput);
 
         // Handle billingDay: usually 1-28. If they provided a date, extract the day.
         let billingDay = 1;
@@ -126,14 +136,17 @@ export class StudentMemberService {
 
         // Prepare data
         const memberData = {
-          name: { ar: record.name, en: record.name },
-          phone: record.phone,
+          name: { ar: nameValue, en: nameValue },
+          phone: record.phone || "",
           governorate: record.governorate || record.province || "", // Support both column names
-          packageId: pkg._id,
           startDate: startDate,
           billingDay: billingDay,
-          packagePrice: pkg.price
         };
+
+        if (pkg) {
+          memberData.packageId = pkg._id;
+          memberData.packagePrice = pkg.price;
+        }
         
         // Add teacher information if available
         if (assignedTeacherId) {

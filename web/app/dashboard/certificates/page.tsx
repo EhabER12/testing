@@ -1095,7 +1095,9 @@ export default function CertificatesPage() {
           <DialogHeader>
             <DialogTitle>{isRtl ? "استيراد طلاب (CSV)" : "Import Students (CSV)"}</DialogTitle>
             <DialogDescription>
-              {isRtl ? "قم برفع ملف CSV. (اسم الباقة يقبل بالعربي أو الإنجليزي)" : "Upload a CSV file. (Plan accepts Arabic or English names)"}
+              {isRtl
+                ? "قم برفع ملف CSV. الاسم فقط مطلوب والباقي اختياري. (اسم الباقة يقبل بالعربي أو الإنجليزي)"
+                : "Upload a CSV file. Only the name is required; the rest are optional. (Plan accepts Arabic or English names)"}
             </DialogDescription>
           </DialogHeader>
 

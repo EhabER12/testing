@@ -17,7 +17,6 @@ const studentMemberSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      required: [true, "Phone number is required"],
       index: true,
     },
     governorate: {
