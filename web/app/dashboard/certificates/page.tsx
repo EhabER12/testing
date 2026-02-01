@@ -14,12 +14,10 @@ import {
   issueCertificate,
   getAllTemplates,
   deleteCertificate,
-  bulkIssuePackageCertificates,
 } from "@/store/services/certificateService";
-import { getCourses, Course } from "@/store/services/courseService";
+import { getCourses } from "@/store/services/courseService";
 import { getAllUsers } from "@/store/services/userService";
 import { getStudentMembers, importStudentMembers } from "@/store/services/studentMemberService";
-import { getPackages } from "@/store/services/packageService";
 import { resetStatus } from "@/store/slices/certificateSlice";
 import { isAuthenticated, isAdmin, isModerator } from "@/store/services/authService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
@@ -66,6 +64,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   MoreHorizontal,
   Download,
@@ -99,7 +98,9 @@ export default function CertificatesPage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<any>(null);
-  const [selectedPackageId, setSelectedPackageId] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("certificates");
+  const [bulkGovernorate, setBulkGovernorate] = useState<string>("all");
+  const [bulkTeacher, setBulkTeacher] = useState<string>("all");
   const [issueDialog, setIssueDialog] = useState({
     open: false,
     userId: "",
@@ -119,7 +120,6 @@ export default function CertificatesPage() {
   );
 
   const { courses } = useAppSelector((state) => state.courses);
-  const { packages } = useAppSelector((state) => state.packages);
   const { users } = useAppSelector((state) => state.userManagement);
   const { studentMembers } = useAppSelector((state) => state.studentMembers);
   const { user } = useAppSelector((state) => state.auth);
@@ -137,7 +137,6 @@ export default function CertificatesPage() {
 
     dispatch(getCertificates());
     dispatch(getCourses({}));
-    dispatch(getPackages({ isActive: true }));
     dispatch(getAllUsers());
     dispatch(getAllTemplates());
     dispatch(getStudentMembers());
@@ -267,70 +266,88 @@ export default function CertificatesPage() {
   };
 
   const handleGenerateCertificates = async () => {
-    if (selectedPackageId === "all") {
-      toast.error(isRtl ? "الرجاء اختيار باقة أولاً" : "Please select a package first");
+    const filteredStudents = studentMembers
+      .filter((s) => s.status === "active")
+      .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
+      .filter((s) => {
+        if (bulkTeacher === "all") return true;
+        const teacherName = s.assignedTeacherId?.fullName
+          ? getTextValue(s.assignedTeacherId.fullName)
+          : s.assignedTeacherName;
+        return teacherName === bulkTeacher;
+      });
+
+    if (filteredStudents.length === 0) {
+      toast.error(isRtl ? "لا يوجد طلاب مطابقين للفلاتر" : "No students match the selected filters");
       return;
     }
 
-    if (confirm(isRtl ? "هل أنت متأكد من استخراج شهادات لجميع الطلاب النشطين في هذه الباقة؟" : "Are you sure you want to generate certificates for all active students in this package?")) {
+    if (confirm(isRtl ? "هل أنت متأكد من استخراج شهادات لجميع الطلاب النشطين حسب الفلاتر؟" : "Are you sure you want to generate certificates for all active students in these filters?")) {
       setGenerateLoading(true);
       try {
-        const result = await dispatch(bulkIssuePackageCertificates(selectedPackageId)).unwrap();
-        const successCount = result.data?.success?.length || 0;
-        const failedCount = result.data?.failed?.length || 0;
+        let successCount = 0;
+        let failedCount = 0;
+        const failedNames: string[] = [];
+
+        for (const student of filteredStudents) {
+          const studentId = student.id || student._id;
+          const packageId = student.packageId?.id || student.packageId?._id;
+          if (!studentId || !packageId) {
+            failedCount += 1;
+            failedNames.push(getTextValue(student.studentName || student.name) || "Unknown");
+            continue;
+          }
+
+          const packageTemplate = templates.find(
+            (t: any) => t.packageId === packageId || String(t.packageId) === String(packageId)
+          );
+          if (!packageTemplate) {
+            failedCount += 1;
+            failedNames.push(getTextValue(student.studentName || student.name) || "Unknown");
+            continue;
+          }
+
+          try {
+            const certificate = await dispatch(
+              issueCertificate({
+                studentMemberId: studentId,
+                packageId: packageId,
+                templateId: packageTemplate.id || packageTemplate._id,
+              })
+            ).unwrap();
+
+            const certId = certificate?.id || certificate?._id;
+            if (certId) {
+              const blob = await dispatch(downloadCertificate(certId)).unwrap();
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              const studentName = getTextValue(student.studentName || student.name) || "student";
+              link.download = `certificate-${studentName.replace(/\\s+/g, "_")}.pdf`;
+              link.click();
+              window.URL.revokeObjectURL(url);
+            }
+            successCount += 1;
+          } catch (err) {
+            failedCount += 1;
+            failedNames.push(getTextValue(student.studentName || student.name) || "Unknown");
+            console.error("Failed to issue certificate for student:", studentId, err);
+          }
+        }
 
         if (successCount > 0) {
           toast.success(
             isRtl
-              ? `تم إصدار ${successCount} شهادة بنجاح. جاري التحميل...` : `Successfully issued ${successCount} certificates. Downloading...`
+              ? `تم إصدار ${successCount} شهادة بنجاح` : `Successfully issued ${successCount} certificates`
           );
-
           await dispatch(getCertificates()).unwrap();
-
-          const issuedCertificates = result.data?.success || [];
-          let downloadedCount = 0;
-
-          for (const cert of issuedCertificates) {
-            const certId = cert.certificateId || cert.certificate?.id || cert.certificate?._id;
-            if (certId) {
-              try {
-                await new Promise((resolve) => setTimeout(resolve, 500));
-                const blob = await dispatch(downloadCertificate(certId)).unwrap();
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = url;
-                const nameValue = cert.name;
-                const studentName = typeof nameValue === "object"
-                  ? (nameValue?.ar || nameValue?.en || `student_${downloadedCount + 1}`)
-                  : (nameValue || cert.studentName || `student_${downloadedCount + 1}`);
-                link.download = `certificate-${String(studentName).replace(/\\s+/g, "_")}.pdf`;
-                link.click();
-                window.URL.revokeObjectURL(url);
-                downloadedCount++;
-              } catch (downloadErr) {
-                console.error(`Failed to download certificate ${certId}:`, downloadErr);
-              }
-            }
-          }
-
-          if (downloadedCount > 0) {
-            toast.success(
-              isRtl
-                ? `تم تحميل ${downloadedCount} شهادة بنجاح` : `Successfully downloaded ${downloadedCount} certificates`
-            );
-          }
         }
 
         if (failedCount > 0) {
-          const failedNames = result.data.failed.map((f: any) => {
-            const name = f.name;
-            return typeof name === "object" ? (name?.ar || name?.en || "Unknown") : (name || "Unknown");
-          }).join("، ");
           const msg = isRtl
-            ? `فشل إصدار ${failedCount} شهادة. الطلاب: ${failedNames}.` : `Failed to issue ${failedCount} certificates. Students: ${failedNames}.`;
-
+            ? `فشل إصدار ${failedCount} شهادة. الطلاب: ${failedNames.join("، ")}.`
+            : `Failed to issue ${failedCount} certificates. Students: ${failedNames.join(", ")}.`;
           toast.error(msg, { duration: 6000 });
-          console.error("Failed certificates:", result.data.failed);
         }
       } catch (err: any) {
         console.error("Bulk certificate generation failed:", err);
@@ -406,6 +423,13 @@ export default function CertificatesPage() {
     if (!value) return "";
     if (typeof value === "string") return value;
     return (isRtl ? value.ar : value.en) || value.en || value.ar || "";
+  };
+
+  const getTeacherLabel = (student: any): string => {
+    if (student?.assignedTeacherId?.fullName) {
+      return getTextValue(student.assignedTeacherId.fullName);
+    }
+    return student?.assignedTeacherName || "";
   };
 
   const getStatusBadge = (status: string) => {
@@ -485,277 +509,308 @@ export default function CertificatesPage() {
         </Card>
       )}
 
-      <Card className="border-purple-200 bg-purple-50">
-        <CardHeader>
-          <CardTitle className="text-purple-900">
-            {isRtl ? "إدارة الشهادات الجماعية" : "Bulk Certificates"}
-          </CardTitle>
-          <CardDescription className="text-purple-700">
-            {isRtl
-              ? "ارفع شيت الطلاب ثم اختر الباقة لإصدار الشهادات دفعة واحدة"
-              : "Upload students CSV then choose a package to issue certificates in bulk"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="grid gap-2">
-            <Label>{isRtl ? "الباقة" : "Package"}</Label>
-            <Select value={selectedPackageId} onValueChange={setSelectedPackageId}>
-              <SelectTrigger className="w-[240px]">
-                <SelectValue placeholder={isRtl ? "اختر الباقة" : "Select package"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{isRtl ? "اختر الباقة" : "Select package"}</SelectItem>
-                {packages.map((pkg) => (
-                  <SelectItem key={pkg.id || pkg._id} value={pkg.id || pkg._id || ""}>
-                    {isRtl ? pkg.name.ar : pkg.name.en}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-purple-700">
-              {selectedPackageId === "all"
-                ? (isRtl ? "اختر باقة لعرض زر الإصدار الجماعي." : "Choose a package to enable bulk issuing.")
-                : (isRtl
-                  ? `عدد الطلاب النشطين: ${studentMembers.filter(s => s.status === "active" && (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).length}`
-                  : `Active students: ${studentMembers.filter(s => s.status === "active" && (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).length}`)}
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-              <Upload className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-              {isRtl ? "رفع شيت الطلاب (CSV)" : "Upload Students CSV"}
-            </Button>
-            <Button
-              onClick={handleGenerateCertificates}
-              disabled={
-                generateLoading ||
-                selectedPackageId === "all" ||
-                studentMembers.filter(s => s.status === "active" && (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).length === 0
-              }
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              <Award className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-              {generateLoading
-                ? (isRtl ? "جاري الإصدار..." : "Generating...")
-                : (isRtl ? "إصدار شهادات بالجملة" : "Issue Bulk Certificates")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="bg-muted/60 p-1 h-auto flex-wrap justify-start">
+          <TabsTrigger value="certificates" className="px-4 py-2">
+            {isRtl ? "الشهادات" : "Certificates"}
+          </TabsTrigger>
+          <TabsTrigger value="bulk" className="px-4 py-2">
+            {isRtl ? "إصدار بالجملة من الشيت" : "Bulk From Sheet"}
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {isRtl ? "إجمالي الشهادات" : "Total Certificates"}
-            </CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{certificates.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {isRtl ? "الشهادات المصدرة" : "Issued"}
-            </CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {certificates.filter((c) => c.status === "issued").length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {isRtl ? "الشهادات الملغاة" : "Revoked"}
-            </CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {certificates.filter((c) => c.status === "revoked").length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>{isRtl ? "جميع الشهادات" : "All Certificates"}</CardTitle>
-              <CardDescription>
-                {isRtl
-                  ? `${certificates.length} شهادة مصدرة`
-                  : `${certificates.length} certificates issued`}
-              </CardDescription>
-            </div>
-            <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder={isRtl ? "تصفية حسب المحافظة" : "Filter by Governorate"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{isRtl ? "جميع المحافظات" : "All Governorates"}</SelectItem>
-                {Array.from(new Set(certificates.map(c => c.governorate).filter(Boolean))).sort().map((gov) => (
-                  <SelectItem key={gov} value={gov!}>{gov}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <TabsContent value="certificates" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {isRtl ? "إجمالي الشهادات" : "Total Certificates"}
+                </CardTitle>
+                <Award className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{certificates.length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {isRtl ? "الشهادات المصدرة" : "Issued"}
+                </CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {certificates.filter((c) => c.status === "issued").length}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {isRtl ? "الشهادات الملغاة" : "Revoked"}
+                </CardTitle>
+                <XCircle className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">
+                  {certificates.filter((c) => c.status === "revoked").length}
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardHeader>
-        <CardContent>
-          {certificates.length === 0 ? (
-            <div className="text-center py-12">
-              <Award className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-semibold text-gray-900">
-                {isRtl ? "لا توجد شهادات" : "No certificates"}
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {isRtl
-                  ? "سيتم إصدار الشهادات تلقائياً عند إتمام الطلاب للدورات"
-                  : "Certificates will be issued automatically when students complete courses"}
-              </p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{isRtl ? "رقم الشهادة" : "Certificate #"}</TableHead>
-                  <TableHead>{isRtl ? "الطالب" : "Student"}</TableHead>
-                  <TableHead>{isRtl ? "المحافظة" : "Governorate"}</TableHead>
-                  <TableHead>{isRtl ? "الدورة / الباقة" : "Course / Package"}</TableHead>
-                  <TableHead>{isRtl ? "تاريخ الإصدار" : "Issue Date"}</TableHead>
-                  <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
-                  <TableHead className="text-right">
-                    {isRtl ? "الإجراءات" : "Actions"}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {certificates
-                  .filter(c => selectedGovernorate === "all" || c.governorate === selectedGovernorate)
-                  .map((certificate, index) => (
-                  <TableRow key={certificate.id || certificate._id || `cert-${index}`}>
-                    <TableCell className="font-mono font-medium">
-                      {certificate.certificateNumber}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        {certificate.userId
-                          ? getTextValue(certificate.userId.fullName)
-                          : (certificate.studentName ? getTextValue(certificate.studentName) : "-")}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">{certificate.governorate || "-"}</span>
-                    </TableCell>
-                    <TableCell>
-                      {certificate.courseId
-                        ? getTextValue(certificate.courseId.title)
-                        : (certificate.packageId ? (isRtl ? `باقة: ${getTextValue(certificate.packageId.name)}` : `Package: ${getTextValue(certificate.packageId.name)}`) : "-")}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        {certificate.issuedAt ? format(new Date(certificate.issuedAt), "yyyy-MM-dd") : "-"}
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(certificate.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>
-                            {isRtl ? "الإجراءات" : "Actions"}
-                          </DropdownMenuLabel>
-                          <DropdownMenuItem
-                            onClick={() => handleDownload((certificate.id || certificate._id)!)}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            {isRtl ? "تحميل PDF" : "Download PDF"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleRegeneratePDF((certificate.id || certificate._id)!)}
-                            disabled={regenerateLoading === (certificate.id || certificate._id)}
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            {regenerateLoading === (certificate.id || certificate._id)
-                              ? isRtl ? "جاري التجديد..." : "Regenerating..."
-                              : isRtl ? "تجديد PDF" : "Regenerate PDF"}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleReissue((certificate.id || certificate._id)!)}
-                            disabled={reissueLoading === (certificate.id || certificate._id)}
-                            className={certificate.status === "revoked" ? "" : "text-orange-600"}
-                          >
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            {reissueLoading === (certificate.id || certificate._id)
-                              ? isRtl ? "جاري التغيير..." : "Toggling..."
-                              : certificate.status === "revoked"
-                                ? isRtl ? "استعادة الشهادة" : "Restore Certificate"
-                                : isRtl ? "إلغاء الشهادة" : "Revoke Certificate"}
-                          </DropdownMenuItem>
-                          {certificate.status === "issued" && (
-                            <>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>{isRtl ? "جميع الشهادات" : "All Certificates"}</CardTitle>
+                  <CardDescription>
+                    {isRtl
+                      ? `${certificates.length} شهادة مصدرة`
+                      : `${certificates.length} certificates issued`}
+                  </CardDescription>
+                </div>
+                <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder={isRtl ? "تصفية حسب المحافظة" : "Filter by Governorate"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{isRtl ? "جميع المحافظات" : "All Governorates"}</SelectItem>
+                    {Array.from(new Set(certificates.map(c => c.governorate).filter(Boolean))).sort().map((gov) => (
+                      <SelectItem key={gov} value={gov!}>{gov}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {certificates.length === 0 ? (
+                <div className="text-center py-12">
+                  <Award className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-semibold text-gray-900">
+                    {isRtl ? "لا توجد شهادات" : "No certificates"}
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {isRtl
+                      ? "سيتم إصدار الشهادات تلقائياً عند إتمام الطلاب للدورات"
+                      : "Certificates will be issued automatically when students complete courses"}
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{isRtl ? "رقم الشهادة" : "Certificate #"}</TableHead>
+                      <TableHead>{isRtl ? "الطالب" : "Student"}</TableHead>
+                      <TableHead>{isRtl ? "المحافظة" : "Governorate"}</TableHead>
+                      <TableHead>{isRtl ? "الدورة / الباقة" : "Course / Package"}</TableHead>
+                      <TableHead>{isRtl ? "تاريخ الإصدار" : "Issue Date"}</TableHead>
+                      <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
+                      <TableHead className="text-right">
+                        {isRtl ? "الإجراءات" : "Actions"}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {certificates
+                      .filter(c => selectedGovernorate === "all" || c.governorate === selectedGovernorate)
+                      .map((certificate, index) => (
+                      <TableRow key={certificate.id || certificate._id || `cert-${index}`}>
+                        <TableCell className="font-mono font-medium">
+                          {certificate.certificateNumber}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            {certificate.userId
+                              ? getTextValue(certificate.userId.fullName)
+                              : (certificate.studentName ? getTextValue(certificate.studentName) : "-")}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">{certificate.governorate || "-"}</span>
+                        </TableCell>
+                        <TableCell>
+                          {certificate.courseId
+                            ? getTextValue(certificate.courseId.title)
+                            : (certificate.packageId ? (isRtl ? `باقة: ${getTextValue(certificate.packageId.name)}` : `Package: ${getTextValue(certificate.packageId.name)}`) : "-")}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            {certificate.issuedAt ? format(new Date(certificate.issuedAt), "yyyy-MM-dd") : "-"}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(certificate.status)}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>
+                                {isRtl ? "الإجراءات" : "Actions"}
+                              </DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onClick={() => handleDownload((certificate.id || certificate._id)!)}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                {isRtl ? "تحميل PDF" : "Download PDF"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleRegeneratePDF((certificate.id || certificate._id)!)}
+                                disabled={regenerateLoading === (certificate.id || certificate._id)}
+                              >
+                                <FileText className="h-4 w-4 mr-2" />
+                                {regenerateLoading === (certificate.id || certificate._id)
+                                  ? isRtl ? "جاري التجديد..." : "Regenerating..."
+                                  : isRtl ? "تجديد PDF" : "Regenerate PDF"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleReissue((certificate.id || certificate._id)!)}
+                                disabled={reissueLoading === (certificate.id || certificate._id)}
+                                className={certificate.status === "revoked" ? "" : "text-orange-600"}
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                {reissueLoading === (certificate.id || certificate._id)
+                                  ? isRtl ? "جاري التغيير..." : "Toggling..."
+                                  : certificate.status === "revoked"
+                                    ? isRtl ? "استعادة الشهادة" : "Restore Certificate"
+                                    : isRtl ? "إلغاء الشهادة" : "Revoke Certificate"}
+                              </DropdownMenuItem>
+                              {certificate.status === "issued" && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={() => handleRevoke((certificate.id || certificate._id)!)}
+                                    disabled={revokeLoading === (certificate.id || certificate._id)}
+                                  >
+                                    <XCircle className="h-4 w-4 mr-2" />
+                                    {revokeLoading === (certificate.id || certificate._id)
+                                      ? isRtl
+                                        ? "جاري الإلغاء..."
+                                        : "Revoking..."
+                                      : isRtl
+                                        ? "إلغاء الشهادة"
+                                        : "Revoke"}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-red-600"
-                                onClick={() => handleRevoke((certificate.id || certificate._id)!)}
-                                disabled={revokeLoading === (certificate.id || certificate._id)}
+                                onClick={() => handleDelete((certificate.id || certificate._id)!)}
+                                disabled={deleteLoading === (certificate.id || certificate._id)}
                               >
-                                <XCircle className="h-4 w-4 mr-2" />
-                                {revokeLoading === (certificate.id || certificate._id)
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {deleteLoading === (certificate.id || certificate._id)
                                   ? isRtl
-                                    ? "جاري الإلغاء..."
-                                    : "Revoking..."
+                                    ? "جاري الحذف..."
+                                    : "Deleting..."
                                   : isRtl
-                                    ? "إلغاء الشهادة"
-                                    : "Revoke"}
+                                    ? "حذف نهائي"
+                                    : "Delete Permanently"}
                               </DropdownMenuItem>
-                            </>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleDelete((certificate.id || certificate._id)!)}
-                            disabled={deleteLoading === (certificate.id || certificate._id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            {deleteLoading === (certificate.id || certificate._id)
-                              ? isRtl
-                                ? "جاري الحذف..."
-                                : "Deleting..."
-                              : isRtl
-                                ? "حذف نهائي"
-                                : "Delete Permanently"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {certificates.filter(c => selectedGovernorate === "all" || c.governorate === selectedGovernorate).length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
-                      {isRtl ? "لا توجد شهادات تطابق الفلتر المحدد" : "No certificates match the selected filter"}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {certificates.filter(c => selectedGovernorate === "all" || c.governorate === selectedGovernorate).length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center">
+                          {isRtl ? "لا توجد شهادات تطابق الفلتر المحدد" : "No certificates match the selected filter"}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="bulk" className="space-y-4">
+          <Card className="border-purple-200 bg-purple-50">
+            <CardHeader>
+              <CardTitle className="text-purple-900">
+                {isRtl ? "إدارة الشهادات من الشيت" : "Bulk Certificates From Sheet"}
+              </CardTitle>
+              <CardDescription className="text-purple-700">
+                {isRtl
+                  ? "ارفع شيت الطلاب ثم فلتر بالمعلم أو المحافظة لإصدار الشهادات"
+                  : "Upload students CSV then filter by teacher or governorate to issue certificates"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div className="flex flex-wrap gap-2">
+                  <div className="grid gap-2">
+                    <Label>{isRtl ? "المعلم" : "Teacher"}</Label>
+                    <Select value={bulkTeacher} onValueChange={setBulkTeacher}>
+                      <SelectTrigger className="w-[220px]">
+                        <SelectValue placeholder={isRtl ? "تصفية حسب المعلم" : "Filter by Teacher"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{isRtl ? "جميع المعلمين" : "All Teachers"}</SelectItem>
+                        {Array.from(new Set(studentMembers.map((s) => getTeacherLabel(s)).filter(Boolean))).sort().map((teacher) => (
+                          <SelectItem key={teacher} value={teacher!}>{teacher}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>{isRtl ? "المحافظة" : "Governorate"}</Label>
+                    <Select value={bulkGovernorate} onValueChange={setBulkGovernorate}>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder={isRtl ? "تصفية حسب المحافظة" : "Filter by Governorate"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{isRtl ? "جميع المحافظات" : "All Governorates"}</SelectItem>
+                        {Array.from(new Set(studentMembers.map(s => s.governorate).filter(Boolean))).sort().map((gov) => (
+                          <SelectItem key={gov} value={gov!}>{gov}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                    <Upload className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+                    {isRtl ? "رفع شيت الطلاب (CSV)" : "Upload Students CSV"}
+                  </Button>
+                  <Button
+                    onClick={handleGenerateCertificates}
+                    disabled={generateLoading}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    <Award className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+                    {generateLoading
+                      ? (isRtl ? "جاري الإصدار..." : "Generating...")
+                      : (isRtl ? "إصدار شهادات بالجملة" : "Issue Bulk Certificates")}
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-purple-700">
+                {isRtl
+                  ? `عدد الطلاب النشطين بعد الفلتر: ${studentMembers
+                      .filter((s) => s.status === "active")
+                      .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
+                      .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher).length}`
+                  : `Active students after filters: ${studentMembers
+                      .filter((s) => s.status === "active")
+                      .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
+                      .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher).length}`}
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog
         open={verifyDialog.open}
