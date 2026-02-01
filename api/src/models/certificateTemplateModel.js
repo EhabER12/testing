@@ -47,6 +47,11 @@ const certificateTemplateSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
     },
+    // Linked Sheet Name (Optional)
+    sheetName: {
+      type: String,
+      index: true,
+    },
 
     // Background Image
     backgroundImage: {

@@ -83,6 +83,7 @@ export default function CertificateDesignerPage() {
     name: string;
     packageId?: string;
     courseId?: string;
+    sheetName?: string;
     backgroundImage: string;
     width: number;
     height: number;
@@ -100,6 +101,7 @@ export default function CertificateDesignerPage() {
     name: "",
     packageId: "",
     courseId: "",
+    sheetName: "",
     backgroundImage: "",
     width: 1200,
     height: 900,
@@ -162,6 +164,7 @@ export default function CertificateDesignerPage() {
       name: template.name,
       packageId: template.packageId || "",
       courseId: (template as any).courseId || "",
+      sheetName: (template as any).sheetName || "",
       backgroundImage: template.backgroundImage,
       width: template.width,
       height: template.height,
@@ -184,6 +187,7 @@ export default function CertificateDesignerPage() {
       name: design.name || "",
       packageId: "",
       courseId: "",
+      sheetName: "",
       backgroundImage: "",
       width: 1200,
       height: 900,
@@ -335,11 +339,17 @@ export default function CertificateDesignerPage() {
 
     // Clean up empty values before sending
     const cleanedData = { ...design };
+    if (cleanedData.sheetName) {
+      cleanedData.sheetName = cleanedData.sheetName.trim();
+    }
     if (!cleanedData.packageId || cleanedData.packageId === "none") {
       delete cleanedData.packageId;
     }
     if (!cleanedData.courseId || cleanedData.courseId === "none") {
       delete cleanedData.courseId;
+    }
+    if (!cleanedData.sheetName || cleanedData.sheetName === "none") {
+      delete cleanedData.sheetName;
     }
 
     try {
@@ -551,7 +561,10 @@ export default function CertificateDesignerPage() {
               </div>
               <CardHeader className="p-4">
                 <CardTitle className="text-lg">{template.name}</CardTitle>
-                <CardDescription>{template.width}x{template.height} px</CardDescription>
+                <CardDescription>
+                  {template.width}x{template.height} px
+                  {template.sheetName ? ` • ${isRtl ? "الشيت" : "Sheet"}: ${template.sheetName}` : ""}
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0 flex justify-between">
                 <Button variant="outline" size="sm" onClick={() => handleSelectTemplate(template)}>
@@ -624,6 +637,15 @@ export default function CertificateDesignerPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{isRtl ? "ربط باسم الشيت (اختياري)" : "Link to Sheet Name (Optional)"}</Label>
+                <Input
+                  value={design.sheetName || ""}
+                  onChange={(e) => setDesign({ ...design, sheetName: e.target.value })}
+                  placeholder={isRtl ? "مثال: شيت x" : "e.g. Sheet X"}
+                />
               </div>
 
               <div className="space-y-2">

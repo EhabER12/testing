@@ -65,6 +65,7 @@ export interface CertificateTemplate {
   id: string;
   name: string;
   packageId?: string; // Linked package
+  sheetName?: string; // Linked sheet name
   description?: string;
 
   backgroundImage: string;

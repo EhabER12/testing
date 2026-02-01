@@ -296,10 +296,15 @@ export default function CertificatesPage() {
             continue;
           }
 
+          const sheetTemplate = student.sheetName
+            ? templates.find((t: any) => t.sheetName === student.sheetName)
+            : null;
           const packageTemplate = templates.find(
             (t: any) => t.packageId === packageId || String(t.packageId) === String(packageId)
           );
-          if (!packageTemplate) {
+          const selectedTemplate = sheetTemplate || packageTemplate;
+
+          if (!selectedTemplate) {
             failedCount += 1;
             missingTemplateNames.push(getTextValue(student.studentName || student.name) || "Unknown");
             continue;
@@ -311,7 +316,7 @@ export default function CertificatesPage() {
               issueCertificate({
                 studentMemberId: studentId,
                 packageId: packageId,
-                templateId: packageTemplate.id || packageTemplate._id,
+                templateId: selectedTemplate.id || selectedTemplate._id,
                 studentName: nameValue ? { ar: nameValue, en: nameValue } : undefined,
               })
             ).unwrap();

@@ -865,6 +865,9 @@ class CertificateService {
     if (!cleanedData.courseId || cleanedData.courseId === '' || cleanedData.courseId === 'none') {
       delete cleanedData.courseId;
     }
+    if (!cleanedData.sheetName || cleanedData.sheetName === '' || cleanedData.sheetName === 'none') {
+      delete cleanedData.sheetName;
+    }
     
     const template = await CertificateTemplate.create(cleanedData);
     return template;
@@ -909,6 +912,10 @@ class CertificateService {
     if (updates.courseId === '' || updates.courseId === null || updates.courseId === 'none') {
       template.courseId = undefined;
       delete updates.courseId;
+    }
+    if (updates.sheetName === '' || updates.sheetName === null || updates.sheetName === 'none') {
+      template.sheetName = undefined;
+      delete updates.sheetName;
     }
 
     Object.keys(updates).forEach((key) => {
