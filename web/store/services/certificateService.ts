@@ -21,6 +21,7 @@ export interface Certificate {
     _id?: string;
     name: BilingualText;
   };
+  sheetName?: string;
   studentMemberId?: string;
   studentName?: {
     ar: string;

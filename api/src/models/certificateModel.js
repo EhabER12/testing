@@ -17,12 +17,16 @@ const certificateSchema = new mongoose.Schema(
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
-      required: function () { return !this.packageId; }, // Required if no packageId
+      required: function () { return !this.packageId && !this.sheetName; }, // Required if no packageId or sheetName
       index: true,
     },
     packageId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Package",
+      index: true,
+    },
+    sheetName: {
+      type: String,
       index: true,
     },
 
@@ -169,6 +173,18 @@ certificateSchema.index(
       packageId: { $exists: true, $ne: null }, 
       studentMemberId: { $exists: true, $ne: null } 
     } 
+  }
+);
+
+// For sheet certificates with studentMemberId (sheet-based without packageId)
+certificateSchema.index(
+  { studentMemberId: 1, sheetName: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      sheetName: { $exists: true, $ne: null },
+      studentMemberId: { $exists: true, $ne: null }
+    }
   }
 );
 

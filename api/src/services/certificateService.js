@@ -33,6 +33,17 @@ class CertificateService {
     console.log('studentMemberId:', studentMemberId);
     console.log('================================');
 
+    // Resolve sheet name for sheet-based students (if any)
+    let sheetNameFromStudent = null;
+    if (studentMemberId && !packageId) {
+      try {
+        const sheetInfo = await StudentMember.findById(studentMemberId).select("sheetName").lean();
+        sheetNameFromStudent = sheetInfo?.sheetName || null;
+      } catch (err) {
+        console.warn("Failed to resolve sheet name for studentMember:", err.message);
+      }
+    }
+
     // Check if certificate already exists
     const query = {};
     
@@ -41,6 +52,10 @@ class CertificateService {
       // For package students, check by studentMemberId + packageId
       query.studentMemberId = studentMemberId;
       query.packageId = packageId;
+    } else if (studentMemberId && sheetNameFromStudent) {
+      // For sheet-based students, check by studentMemberId + sheetName
+      query.studentMemberId = studentMemberId;
+      query.sheetName = sheetNameFromStudent;
     } else if (userId && courseId) {
       // For course users, check by userId + courseId
       query.userId = userId;
@@ -49,6 +64,9 @@ class CertificateService {
       // For package users, check by userId + packageId
       query.userId = userId;
       query.packageId = packageId;
+    } else if (studentMemberId) {
+      // Fallback: sheet-based or package-less students
+      query.studentMemberId = studentMemberId;
     } else {
       throw new Error("Insufficient parameters to identify certificate uniqueness");
     }
@@ -132,6 +150,9 @@ class CertificateService {
           name: studentMember.name || studentMember.studentName,
           packageId: studentMember.packageId?._id
         });
+        if (!sheetNameFromStudent && studentMember.sheetName) {
+          sheetNameFromStudent = studentMember.sheetName;
+        }
       } catch (err) {
         console.error('Error fetching studentMember:', err.message);
         throw new Error(`Failed to fetch student: ${err.message}`);
@@ -151,8 +172,11 @@ class CertificateService {
     console.log('package name:', pkg?.name);
     console.log('================================');
 
-    if ((!user && !studentMember) || (!course && !pkg)) {
-      throw new Error("Recipient (User/Student) or Source (Course/Package) not found");
+    if (!user && !studentMember) {
+      throw new Error("Recipient (User/Student) not found");
+    }
+    if (!course && !pkg && !sheetNameFromStudent) {
+      throw new Error("Source (Course/Package/Sheet) not found");
     }
 
     // Determine Names (allow override)
@@ -191,10 +215,18 @@ class CertificateService {
       const pkgTemplate = await CertificateTemplate.findOne({ packageId: pkg._id });
       if (pkgTemplate) templateId = pkgTemplate._id;
     }
+    if (!templateId && sheetNameFromStudent) {
+      const sheetTemplate = await CertificateTemplate.findOne({ sheetName: sheetNameFromStudent });
+      if (sheetTemplate) templateId = sheetTemplate._id;
+    }
 
     // Prepare certificate data
-    const courseNameAr = course ? course.title?.ar : (pkg ? pkg.name?.ar : "Certificate");
-    const courseNameEn = course ? course.title?.en : (pkg ? pkg.name?.en : "Certificate");
+    const courseNameAr = course
+      ? course.title?.ar
+      : (pkg ? pkg.name?.ar : (sheetNameFromStudent || "Certificate"));
+    const courseNameEn = course
+      ? course.title?.en
+      : (pkg ? pkg.name?.en : (sheetNameFromStudent || "Certificate"));
 
     console.log('=== CREATING CERTIFICATE WITH DATA ===');
     console.log('studentNameAr:', studentNameAr);
@@ -210,6 +242,7 @@ class CertificateService {
         studentMemberId: studentMemberId || undefined,
         courseId,
         packageId,
+        sheetName: sheetNameFromStudent || undefined,
         certificateNumber,
         studentName: {
           ar: studentNameAr,
@@ -667,6 +700,15 @@ class CertificateService {
       if (template) {
         certificate.templateId = template._id;
         console.log(`Found template linked to course ${courseIdStr}: ${template.name}`);
+      }
+    }
+
+    // 2c. Try to find template linked directly to the sheet name
+    if (!template && certificate.sheetName) {
+      template = await CertificateTemplate.findOne({ sheetName: certificate.sheetName }).lean();
+      if (template) {
+        certificate.templateId = template._id;
+        console.log(`Found template linked to sheet ${certificate.sheetName}: ${template.name}`);
       }
     }
 

@@ -290,7 +290,7 @@ export default function CertificatesPage() {
         for (const student of filteredStudents) {
           const studentId = student.id || student._id;
           const packageId = student.packageId?.id || student.packageId?._id;
-          if (!studentId || !packageId) {
+          if (!studentId) {
             failedCount += 1;
             failedNames.push(getTextValue(student.studentName || student.name) || "Unknown");
             continue;
@@ -299,9 +299,9 @@ export default function CertificatesPage() {
           const sheetTemplate = student.sheetName
             ? templates.find((t: any) => t.sheetName === student.sheetName)
             : null;
-          const packageTemplate = templates.find(
-            (t: any) => t.packageId === packageId || String(t.packageId) === String(packageId)
-          );
+          const packageTemplate = packageId
+            ? templates.find((t: any) => t.packageId === packageId || String(t.packageId) === String(packageId))
+            : null;
           const selectedTemplate = sheetTemplate || packageTemplate;
 
           if (!selectedTemplate) {
