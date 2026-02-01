@@ -5,7 +5,6 @@ import { useAppDispatch } from "@/store/hooks";
 import {
     getPaymentMethodsThunk,
     updatePaymentMethodThunk,
-    togglePaymentMethodThunk,
     createPaymentMethodThunk,
     PaymentMethod,
 } from "@/store/services/paymentMethodService";
@@ -23,7 +22,6 @@ export default function PaymentMethodsPage() {
     const dispatch = useAppDispatch();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [methods, setMethods] = useState<PaymentMethod[]>([]);
 
     // PayPal state
     const [paypal, setPaypal] = useState<PaymentMethod | null>(null);
@@ -49,17 +47,21 @@ export default function PaymentMethodsPage() {
     });
 
     useEffect(() => {
-        loadPaymentMethods();
+        let isMounted = true;
+        loadPaymentMethods(() => isMounted);
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
-    const loadPaymentMethods = async () => {
+    const loadPaymentMethods = async (getIsMounted?: () => boolean) => {
         try {
             setLoading(true);
             const result = await dispatch(
                 getPaymentMethodsThunk({ includeInactive: true })
             ).unwrap();
 
-            setMethods(result);
+            if (getIsMounted && !getIsMounted()) return;
 
             // Find PayPal and Cashier
             const paypalMethod = result.find((m) => m.provider === "paypal");
@@ -90,9 +92,11 @@ export default function PaymentMethodsPage() {
                 });
             }
         } catch (error: any) {
-            toast.error(error || "Failed to load payment methods");
+            toast.error(error?.message || "Failed to load payment methods");
         } finally {
-            setLoading(false);
+            if (!getIsMounted || getIsMounted()) {
+                setLoading(false);
+            }
         }
     };
 
@@ -102,16 +106,28 @@ export default function PaymentMethodsPage() {
         try {
             setSaving(true);
 
+            const clientId = paypalForm.clientId.trim();
+            const clientSecret = paypalForm.clientSecret.trim();
+            const webhookId = paypalForm.webhookId.trim();
+            const returnUrl = paypalForm.returnUrl.trim();
+            const cancelUrl = paypalForm.cancelUrl.trim();
+
+            if (!clientId || !clientSecret) {
+                toast.error("Client ID and Client Secret are required");
+                setSaving(false);
+                return;
+            }
+
             const paymentData: Partial<PaymentMethod> = {
                 credentials: {
-                    clientId: paypalForm.clientId,
-                    clientSecret: paypalForm.clientSecret,
-                    webhookId: paypalForm.webhookId,
+                    clientId,
+                    clientSecret,
+                    webhookId,
                 },
                 mode: paypalForm.mode,
                 config: {
-                    returnUrl: paypalForm.returnUrl,
-                    cancelUrl: paypalForm.cancelUrl,
+                    returnUrl,
+                    cancelUrl,
                 },
                 isActive: paypalForm.isActive,
             };
@@ -143,7 +159,7 @@ export default function PaymentMethodsPage() {
 
             await loadPaymentMethods();
         } catch (error: any) {
-            toast.error(error || "Failed to save PayPal configuration");
+            toast.error(error?.message || "Failed to save PayPal configuration");
         } finally {
             setSaving(false);
         }
@@ -155,15 +171,26 @@ export default function PaymentMethodsPage() {
         try {
             setSaving(true);
 
+            const mid = cashierForm.mid.trim();
+            const paymentApiKey = cashierForm.paymentApiKey.trim();
+            const secretKey = cashierForm.secretKey.trim();
+            const redirectUrl = cashierForm.redirectUrl.trim();
+
+            if (!mid || !paymentApiKey || !secretKey) {
+                toast.error("Merchant ID, API Key, and Secret Key are required");
+                setSaving(false);
+                return;
+            }
+
             const paymentData: Partial<PaymentMethod> = {
                 credentials: {
-                    mid: cashierForm.mid,
-                    paymentApiKey: cashierForm.paymentApiKey,
-                    secretKey: cashierForm.secretKey,
+                    mid,
+                    paymentApiKey,
+                    secretKey,
                 },
                 mode: cashierForm.mode,
                 config: {
-                    redirectUrl: cashierForm.redirectUrl,
+                    redirectUrl,
                 },
                 isActive: cashierForm.isActive,
             };
@@ -195,7 +222,7 @@ export default function PaymentMethodsPage() {
 
             await loadPaymentMethods();
         } catch (error: any) {
-            toast.error(error || "Failed to save Cashier configuration");
+            toast.error(error?.message || "Failed to save Cashier configuration");
         } finally {
             setSaving(false);
         }
