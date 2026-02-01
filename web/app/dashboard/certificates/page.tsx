@@ -145,7 +145,7 @@ export default function CertificatesPage() {
 
   useEffect(() => {
     if (isSuccess && issueDialog.open) {
-      toast.success(isRtl ? "ØªÙ… Ø¥ØµØ¯Ø§Ø± Ø§Ù„Ø´Ù‡Ø§Ø¯Ø© Ø¨Ù†Ø¬Ø§Ø­" : "Certificate issued successfully");
+      toast.success(isRtl ? "تم إصدار الشهادة بنجاح" : "Certificate issued successfully");
       setIssueDialog({ open: false, userId: "", studentMemberId: "", courseId: "", templateId: "" });
       dispatch(resetStatus());
     }
@@ -155,14 +155,14 @@ export default function CertificatesPage() {
     if (
       confirm(
         isRtl
-          ? "Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ù…Ù† Ø¥Ù„ØºØ§Ø¡ Ù‡Ø°Ù‡ Ø§Ù„Ø´Ù‡Ø§Ø¯Ø©ØŸ"
+          ? "هل أنت متأكد من إلغاء هذه الشهادة؟"
           : "Are you sure you want to revoke this certificate?"
       )
     ) {
       setRevokeLoading(id);
       try {
         await dispatch(revokeCertificate(id)).unwrap();
-        toast.success(isRtl ? "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø´Ù‡Ø§Ø¯Ø©" : "Certificate revoked");
+        toast.success(isRtl ? "تم إلغاء الشهادة" : "Certificate revoked");
         dispatch(getCertificates());
       } catch (err) {
         console.warn("Failed to revoke certificate:", err);
@@ -177,14 +177,14 @@ export default function CertificatesPage() {
     if (
       confirm(
         isRtl
-          ? "Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ù…Ù† Ø­Ø°Ù Ù‡Ø°Ù‡ Ø§Ù„Ø´Ù‡Ø§Ø¯Ø© Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹ØŸ Ù‡Ø°Ø§ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ù„ØªØ±Ø§Ø¬Ø¹ Ø¹Ù†Ù‡."
+          ? "هل أنت متأكد من حذف هذه الشهادة نهائياً؟ هذا الإجراء لا يمكن التراجع عنه."
           : "Are you sure you want to permanently delete this certificate? This action cannot be undone."
       )
     ) {
       setDeleteLoading(id);
       try {
         await dispatch(deleteCertificate(id)).unwrap();
-        toast.success(isRtl ? "ØªÙ… Ø­Ø°Ù Ø§Ù„Ø´Ù‡Ø§Ø¯Ø©" : "Certificate deleted");
+        toast.success(isRtl ? "تم حذف الشهادة" : "Certificate deleted");
       } catch (err) {
         console.warn("Failed to delete certificate:", err);
         toast.error(typeof err === 'string' ? err : "Failed to delete certificate");
@@ -202,8 +202,8 @@ export default function CertificatesPage() {
       confirm(
         isRtl
           ? isRevoked 
-            ? "Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ù…Ù† Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ù‡Ø°Ù‡ Ø§Ù„Ø´Ù‡Ø§Ø¯Ø© Ø¥Ù„Ù‰ Ø­Ø§Ù„Ø© Ù…ØµØ¯Ø±Ø©ØŸ"
-            : "Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ù…Ù† Ø¥Ù„ØºØ§Ø¡ Ù‡Ø°Ù‡ Ø§Ù„Ø´Ù‡Ø§Ø¯Ø©ØŸ"
+            ? "هل أنت متأكد من استعادة هذه الشهادة إلى حالة مصدرة؟"
+            : "هل أنت متأكد من إلغاء هذه الشهادة؟"
           : isRevoked
             ? "Are you sure you want to restore this certificate to issued status?"
             : "Are you sure you want to revoke this certificate?"
@@ -215,8 +215,8 @@ export default function CertificatesPage() {
         toast.success(
           isRtl 
             ? isRevoked 
-              ? "ØªÙ… Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ø§Ù„Ø´Ù‡Ø§Ø¯Ø© Ø¨Ù†Ø¬Ø§Ø­" 
-              : "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø´Ù‡Ø§Ø¯Ø© Ø¨Ù†Ø¬Ø§Ø­"
+              ? "تم استعادة الشهادة بنجاح" 
+              : "تم إلغاء الشهادة بنجاح"
             : isRevoked
               ? "Certificate restored successfully"
               : "Certificate revoked successfully"
@@ -235,7 +235,7 @@ export default function CertificatesPage() {
     setRegenerateLoading(id);
     try {
       await dispatch(regenerateCertificatePDF(id)).unwrap();
-      toast.success(isRtl ? "ØªÙ… ØªØ¬Ø¯ÙŠØ¯ PDF Ø¨Ù†Ø¬Ø§Ø­" : "PDF regenerated successfully");
+      toast.success(isRtl ? "تم تجديد PDF بنجاح" : "PDF regenerated successfully");
     } catch (err) {
       console.warn("Failed to regenerate PDF:", err);
       toast.error(typeof err === 'string' ? err : "Failed to regenerate PDF");
@@ -246,7 +246,7 @@ export default function CertificatesPage() {
 
   const handleIssue = async () => {
     if ((!issueDialog.userId && !issueDialog.studentMemberId) || !issueDialog.courseId) {
-      toast.error(isRtl ? "ÙŠØ±Ø¬Ù‰ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø·Ø§Ù„Ø¨ ÙˆØ§Ù„Ø¯ÙˆØ±Ø©" : "Please select a student and a course");
+      toast.error(isRtl ? "يرجى اختيار الطالب والدورة" : "Please select a student and a course");
       return;
     }
 
@@ -386,7 +386,7 @@ export default function CertificatesPage() {
 
   const handleDownload = async (id: string) => {
     if (!id || id === 'undefined') {
-      toast.error(isRtl ? "Ù…Ø¹Ø±Ù Ø§Ù„Ø´Ù‡Ø§Ø¯Ø© ØºÙŠØ± ØµØ§Ù„Ø­" : "Invalid certificate ID");
+      toast.error(isRtl ? "معرف الشهادة غير صالح" : "Invalid certificate ID");
       return;
     }
     try {
@@ -414,14 +414,14 @@ export default function CertificatesPage() {
         return (
           <Badge className="bg-green-100 text-green-800">
             <CheckCircle className="h-3 w-3 mr-1" />
-            {isRtl ? "Ù…ØµØ¯Ø±" : "Issued"}
+            {isRtl ? "مصدر" : "Issued"}
           </Badge>
         );
       case "revoked":
         return (
           <Badge className="bg-red-100 text-red-800">
             <XCircle className="h-3 w-3 mr-1" />
-            {isRtl ? "Ù…Ù„ØºÙŠ" : "Revoked"}
+            {isRtl ? "ملغي" : "Revoked"}
           </Badge>
         );
       default:
@@ -445,11 +445,11 @@ export default function CertificatesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {isRtl ? "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø´Ù‡Ø§Ø¯Ø§Øª" : "Certificates Management"}
+            {isRtl ? "إدارة الشهادات" : "Certificates Management"}
           </h2>
           <p className="text-muted-foreground">
             {isRtl
-              ? "Ø¹Ø±Ø¶ ÙˆØ¥Ø¯Ø§Ø±Ø© Ø´Ù‡Ø§Ø¯Ø§Øª Ø§Ù„Ø·Ù„Ø§Ø¨"
+              ? "عرض وإدارة شهادات الطلاب"
               : "View and manage student certificates"}
           </p>
         </div>
@@ -457,7 +457,7 @@ export default function CertificatesPage() {
           <Link href="/dashboard/certificates/templates">
             <Button variant="outline">
               <Award className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-              {isRtl ? "ØªØµÙ…ÙŠÙ… Ø§Ù„Ù‚ÙˆØ§Ù„Ø¨" : "Design Templates"}
+              {isRtl ? "تصميم القوالب" : "Design Templates"}
             </Button>
           </Link>
           <Button
@@ -465,14 +465,14 @@ export default function CertificatesPage() {
             className="bg-genoun-green hover:bg-genoun-green/90"
           >
             <Plus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-            {isRtl ? "Ø¥ØµØ¯Ø§Ø± Ø´Ù‡Ø§Ø¯Ø© ÙŠØ¯ÙˆÙŠØ§Ù‹" : "Issue Manually"}
+            {isRtl ? "إصدار شهادة يدوياً" : "Issue Manually"}
           </Button>
           <Button
             onClick={() => setVerifyDialog({ open: true, certificateNumber: "" })}
             variant="outline"
           >
             <Search className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-            {isRtl ? "Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø´Ù‡Ø§Ø¯Ø©" : "Verify Certificate"}
+            {isRtl ? "التحقق من شهادة" : "Verify Certificate"}
           </Button>
         </div>
       </div>
@@ -547,7 +547,7 @@ export default function CertificatesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {isRtl ? "Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø´Ù‡Ø§Ø¯Ø§Øª" : "Total Certificates"}
+              {isRtl ? "إجمالي الشهادات" : "Total Certificates"}
             </CardTitle>
             <Award className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -558,7 +558,7 @@ export default function CertificatesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {isRtl ? "Ø§Ù„Ø´Ù‡Ø§Ø¯Ø§Øª Ø§Ù„Ù…ØµØ¯Ø±Ø©" : "Issued"}
+              {isRtl ? "الشهادات المصدرة" : "Issued"}
             </CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
@@ -571,7 +571,7 @@ export default function CertificatesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {isRtl ? "Ø§Ù„Ø´Ù‡Ø§Ø¯Ø§Øª Ø§Ù„Ù…Ù„ØºØ§Ø©" : "Revoked"}
+              {isRtl ? "الشهادات الملغاة" : "Revoked"}
             </CardTitle>
             <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
@@ -587,19 +587,19 @@ export default function CertificatesPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>{isRtl ? "Ø¬Ù…ÙŠØ¹ Ø§Ù„Ø´Ù‡Ø§Ø¯Ø§Øª" : "All Certificates"}</CardTitle>
+              <CardTitle>{isRtl ? "جميع الشهادات" : "All Certificates"}</CardTitle>
               <CardDescription>
                 {isRtl
-                  ? `${certificates.length} Ø´Ù‡Ø§Ø¯Ø© Ù…ØµØ¯Ø±Ø©`
+                  ? `${certificates.length} شهادة مصدرة`
                   : `${certificates.length} certificates issued`}
               </CardDescription>
             </div>
             <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate}>
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder={isRtl ? "ØªØµÙÙŠØ© Ø­Ø³Ø¨ Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø©" : "Filter by Governorate"} />
+                <SelectValue placeholder={isRtl ? "تصفية حسب المحافظة" : "Filter by Governorate"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{isRtl ? "Ø¬Ù…ÙŠØ¹ Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø§Øª" : "All Governorates"}</SelectItem>
+                <SelectItem value="all">{isRtl ? "جميع المحافظات" : "All Governorates"}</SelectItem>
                 {Array.from(new Set(certificates.map(c => c.governorate).filter(Boolean))).sort().map((gov) => (
                   <SelectItem key={gov} value={gov!}>{gov}</SelectItem>
                 ))}
@@ -612,11 +612,11 @@ export default function CertificatesPage() {
             <div className="text-center py-12">
               <Award className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-semibold text-gray-900">
-                {isRtl ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø´Ù‡Ø§Ø¯Ø§Øª" : "No certificates"}
+                {isRtl ? "لا توجد شهادات" : "No certificates"}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
                 {isRtl
-                  ? "Ø³ÙŠØªÙ… Ø¥ØµØ¯Ø§Ø± Ø§Ù„Ø´Ù‡Ø§Ø¯Ø§Øª ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹ Ø¹Ù†Ø¯ Ø¥ØªÙ…Ø§Ù… Ø§Ù„Ø·Ù„Ø§Ø¨ Ù„Ù„Ø¯ÙˆØ±Ø§Øª"
+                  ? "سيتم إصدار الشهادات تلقائياً عند إتمام الطلاب للدورات"
                   : "Certificates will be issued automatically when students complete courses"}
               </p>
             </div>
@@ -624,14 +624,14 @@ export default function CertificatesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{isRtl ? "Ø±Ù‚Ù… Ø§Ù„Ø´Ù‡Ø§Ø¯Ø©" : "Certificate #"}</TableHead>
-                  <TableHead>{isRtl ? "Ø§Ù„Ø·Ø§Ù„Ø¨" : "Student"}</TableHead>
-                  <TableHead>{isRtl ? "Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø©" : "Governorate"}</TableHead>
-                  <TableHead>{isRtl ? "Ø§Ù„Ø¯ÙˆØ±Ø© / Ø§Ù„Ø¨Ø§Ù‚Ø©" : "Course / Package"}</TableHead>
-                  <TableHead>{isRtl ? "ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¥ØµØ¯Ø§Ø±" : "Issue Date"}</TableHead>
-                  <TableHead>{isRtl ? "Ø§Ù„Ø­Ø§Ù„Ø©" : "Status"}</TableHead>
+                  <TableHead>{isRtl ? "رقم الشهادة" : "Certificate #"}</TableHead>
+                  <TableHead>{isRtl ? "الطالب" : "Student"}</TableHead>
+                  <TableHead>{isRtl ? "المحافظة" : "Governorate"}</TableHead>
+                  <TableHead>{isRtl ? "الدورة / الباقة" : "Course / Package"}</TableHead>
+                  <TableHead>{isRtl ? "تاريخ الإصدار" : "Issue Date"}</TableHead>
+                  <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
                   <TableHead className="text-right">
-                    {isRtl ? "Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª" : "Actions"}
+                    {isRtl ? "الإجراءات" : "Actions"}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -657,7 +657,7 @@ export default function CertificatesPage() {
                     <TableCell>
                       {certificate.courseId
                         ? getTextValue(certificate.courseId.title)
-                        : (certificate.packageId ? (isRtl ? `Ø¨Ø§Ù‚Ø©: ${getTextValue(certificate.packageId.name)}` : `Package: ${getTextValue(certificate.packageId.name)}`) : "-")}
+                        : (certificate.packageId ? (isRtl ? `باقة: ${getTextValue(certificate.packageId.name)}` : `Package: ${getTextValue(certificate.packageId.name)}`) : "-")}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -675,13 +675,13 @@ export default function CertificatesPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>
-                            {isRtl ? "Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª" : "Actions"}
+                            {isRtl ? "الإجراءات" : "Actions"}
                           </DropdownMenuLabel>
                           <DropdownMenuItem
                             onClick={() => handleDownload((certificate.id || certificate._id)!)}
                           >
                             <Download className="h-4 w-4 mr-2" />
-                            {isRtl ? "ØªØ­Ù…ÙŠÙ„ PDF" : "Download PDF"}
+                            {isRtl ? "تحميل PDF" : "Download PDF"}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleRegeneratePDF((certificate.id || certificate._id)!)}
@@ -689,8 +689,8 @@ export default function CertificatesPage() {
                           >
                             <FileText className="h-4 w-4 mr-2" />
                             {regenerateLoading === (certificate.id || certificate._id)
-                              ? isRtl ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØ¬Ø¯ÙŠØ¯..." : "Regenerating..."
-                              : isRtl ? "ØªØ¬Ø¯ÙŠØ¯ PDF" : "Regenerate PDF"}
+                              ? isRtl ? "جاري التجديد..." : "Regenerating..."
+                              : isRtl ? "تجديد PDF" : "Regenerate PDF"}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -700,10 +700,10 @@ export default function CertificatesPage() {
                           >
                             <RefreshCw className="h-4 w-4 mr-2" />
                             {reissueLoading === (certificate.id || certificate._id)
-                              ? isRtl ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØºÙŠÙŠØ±..." : "Toggling..."
+                              ? isRtl ? "جاري التغيير..." : "Toggling..."
                               : certificate.status === "revoked"
-                                ? isRtl ? "Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ø§Ù„Ø´Ù‡Ø§Ø¯Ø©" : "Restore Certificate"
-                                : isRtl ? "Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø´Ù‡Ø§Ø¯Ø©" : "Revoke Certificate"}
+                                ? isRtl ? "استعادة الشهادة" : "Restore Certificate"
+                                : isRtl ? "إلغاء الشهادة" : "Revoke Certificate"}
                           </DropdownMenuItem>
                           {certificate.status === "issued" && (
                             <>
@@ -716,10 +716,10 @@ export default function CertificatesPage() {
                                 <XCircle className="h-4 w-4 mr-2" />
                                 {revokeLoading === (certificate.id || certificate._id)
                                   ? isRtl
-                                    ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥Ù„ØºØ§Ø¡..."
+                                    ? "جاري الإلغاء..."
                                     : "Revoking..."
                                   : isRtl
-                                    ? "Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø´Ù‡Ø§Ø¯Ø©"
+                                    ? "إلغاء الشهادة"
                                     : "Revoke"}
                               </DropdownMenuItem>
                             </>
@@ -733,10 +733,10 @@ export default function CertificatesPage() {
                             <Trash2 className="h-4 w-4 mr-2" />
                             {deleteLoading === (certificate.id || certificate._id)
                               ? isRtl
-                                ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­Ø°Ù..."
+                                ? "جاري الحذف..."
                                 : "Deleting..."
                               : isRtl
-                                ? "Ø­Ø°Ù Ù†Ù‡Ø§Ø¦ÙŠ"
+                                ? "حذف نهائي"
                                 : "Delete Permanently"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -747,7 +747,7 @@ export default function CertificatesPage() {
                 {certificates.filter(c => selectedGovernorate === "all" || c.governorate === selectedGovernorate).length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
-                      {isRtl ? "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø´Ù‡Ø§Ø¯Ø§Øª ØªØ·Ø§Ø¨Ù‚ Ø§Ù„ÙÙ„ØªØ± Ø§Ù„Ù…Ø­Ø¯Ø¯" : "No certificates match the selected filter"}
+                      {isRtl ? "لا توجد شهادات تطابق الفلتر المحدد" : "No certificates match the selected filter"}
                     </TableCell>
                   </TableRow>
                 )}
@@ -766,18 +766,18 @@ export default function CertificatesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {isRtl ? "Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø´Ù‡Ø§Ø¯Ø©" : "Verify Certificate"}
+              {isRtl ? "التحقق من شهادة" : "Verify Certificate"}
             </DialogTitle>
             <DialogDescription>
               {isRtl
-                ? "Ø£Ø¯Ø®Ù„ Ø±Ù‚Ù… Ø§Ù„Ø´Ù‡Ø§Ø¯Ø© Ù„Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ØµØ­ØªÙ‡Ø§"
+                ? "أدخل رقم الشهادة للتحقق من صحتها"
                 : "Enter the certificate number to verify its authenticity"}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="certificateNumber">
-                {isRtl ? "Ø±Ù‚Ù… Ø§Ù„Ø´Ù‡Ø§Ø¯Ø©" : "Certificate Number"}
+                {isRtl ? "رقم الشهادة" : "Certificate Number"}
               </Label>
               <Input
                 id="certificateNumber"
@@ -803,24 +803,24 @@ export default function CertificatesPage() {
                   {verifyResult.error ? (
                     <p className="text-red-800">
                       {isRtl
-                        ? "Ø§Ù„Ø´Ù‡Ø§Ø¯Ø© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø© Ø£Ùˆ Ù…Ù„ØºØ§Ø©"
+                        ? "الشهادة غير موجودة أو ملغاة"
                         : "Certificate not found or revoked"}
                     </p>
                   ) : (
                     <div className="space-y-2">
                       <p className="font-semibold text-green-800">
-                        {isRtl ? "Ø´Ù‡Ø§Ø¯Ø© ØµØ­ÙŠØ­Ø© âœ“" : "Valid Certificate âœ“"}
+                        {isRtl ? "شهادة صحيحة ✓" : "Valid Certificate âœ“"}
                       </p>
                       <p className="text-sm">
-                        <strong>{isRtl ? "Ø§Ù„Ø·Ø§Ù„Ø¨:" : "Student:"}</strong>{" "}
+                        <strong>{isRtl ? "الطالب:" : "Student:"}</strong>{" "}
                         {getTextValue(verifyResult.userId?.fullName)}
                       </p>
                       <p className="text-sm">
-                        <strong>{isRtl ? "Ø§Ù„Ø¯ÙˆØ±Ø©:" : "Course:"}</strong>{" "}
+                        <strong>{isRtl ? "الدورة:" : "Course:"}</strong>{" "}
                         {getTextValue(verifyResult.courseId?.title)}
                       </p>
                       <p className="text-sm">
-                        <strong>{isRtl ? "ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¥ØµØ¯Ø§Ø±:" : "Issue Date:"}</strong>{" "}
+                        <strong>{isRtl ? "تاريخ الإصدار:" : "Issue Date:"}</strong>{" "}
                         {verifyResult.issuedAt ? format(new Date(verifyResult.issuedAt), "yyyy-MM-dd") : "-"}
                       </p>
                     </div>
@@ -837,14 +837,14 @@ export default function CertificatesPage() {
                 setVerifyResult(null);
               }}
             >
-              {isRtl ? "Ø¥ØºÙ„Ø§Ù‚" : "Close"}
+              {isRtl ? "إغلاق" : "Close"}
             </Button>
             <Button
               className="bg-genoun-green hover:bg-genoun-green/90"
               onClick={handleVerify}
               disabled={!verifyDialog.certificateNumber}
             >
-              {isRtl ? "Ø§Ù„ØªØ­Ù‚Ù‚" : "Verify"}
+              {isRtl ? "التحقق" : "Verify"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -859,23 +859,23 @@ export default function CertificatesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {isRtl ? "Ø¥ØµØ¯Ø§Ø± Ø´Ù‡Ø§Ø¯Ø© ÙŠØ¯ÙˆÙŠØ§Ù‹" : "Issue Certificate Manually"}
+              {isRtl ? "إصدار شهادة يدوياً" : "Issue Certificate Manually"}
             </DialogTitle>
             <DialogDescription>
               {isRtl
-                ? "Ø§Ø®ØªØ± Ø§Ù„Ø·Ø§Ù„Ø¨ ÙˆØ§Ù„Ø¯ÙˆØ±Ø© Ù„Ø¥ØµØ¯Ø§Ø± Ø§Ù„Ø´Ù‡Ø§Ø¯Ø© Ù„Ù‡ Ù…Ø¨Ø§Ø´Ø±Ø©"
+                ? "اختر الطالب والدورة لإصدار الشهادة له مباشرة"
                 : "Select a student and a course to issue a certificate immediately"}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label>{isRtl ? "Ø§Ù„Ø·Ø§Ù„Ø¨ (Ù…Ù† Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†)" : "Student (From Users)"}</Label>
+              <Label>{isRtl ? "الطالب (من المستخدمين)" : "Student (From Users)"}</Label>
               <Select
                 value={issueDialog.userId}
                 onValueChange={(val) => setIssueDialog({ ...issueDialog, userId: val, studentMemberId: "" })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={isRtl ? "Ø§Ø®ØªØ± Ø§Ù„Ø·Ø§Ù„Ø¨" : "Select Student"} />
+                  <SelectValue placeholder={isRtl ? "اختر الطالب" : "Select Student"} />
                 </SelectTrigger>
                 <SelectContent>
                   {users.filter(u => u && (u.id || u._id) && String(u.id || u._id) !== "").map((u, index) => (
@@ -887,13 +887,13 @@ export default function CertificatesPage() {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>{isRtl ? "Ø£Ùˆ Ø·Ø§Ù„Ø¨ Ù…Ù† Ø¨Ø§Ù‚Ø©" : "Or Package Student"}</Label>
+              <Label>{isRtl ? "أو طالب من باقة" : "Or Package Student"}</Label>
               <Select
                 value={issueDialog.studentMemberId}
                 onValueChange={(val) => setIssueDialog({ ...issueDialog, studentMemberId: val, userId: "" })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={isRtl ? "Ø§Ø®ØªØ± Ø·Ø§Ù„Ø¨ Ø¨Ø§Ù‚Ø©" : "Select Package Student"} />
+                  <SelectValue placeholder={isRtl ? "اختر طالب باقة" : "Select Package Student"} />
                 </SelectTrigger>
                 <SelectContent>
                   {studentMembers.filter(s => s && (s.id || s._id) && String(s.id || s._id) !== "").map((s, index) => (
@@ -905,13 +905,13 @@ export default function CertificatesPage() {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>{isRtl ? "Ø§Ù„Ø¯ÙˆØ±Ø©" : "Course"}</Label>
+              <Label>{isRtl ? "الدورة" : "Course"}</Label>
               <Select
                 value={issueDialog.courseId}
                 onValueChange={(val) => setIssueDialog({ ...issueDialog, courseId: val })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={isRtl ? "Ø§Ø®ØªØ± Ø§Ù„Ø¯ÙˆØ±Ø©" : "Select Course"} />
+                  <SelectValue placeholder={isRtl ? "اختر الدورة" : "Select Course"} />
                 </SelectTrigger>
                 <SelectContent>
                   {courses.filter(c => c && (c.id || c._id) && String(c.id || c._id) !== "" && c.certificateSettings?.enabled).map((c, index) => (
@@ -923,17 +923,17 @@ export default function CertificatesPage() {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>{isRtl ? "Ø§Ù„Ù‚Ø§Ù„Ø¨ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)" : "Template (Optional)"}</Label>
+              <Label>{isRtl ? "القالب (اختياري)" : "Template (Optional)"}</Label>
               <Select
                 value={issueDialog.templateId}
                 onValueChange={(val) => setIssueDialog({ ...issueDialog, templateId: val })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={isRtl ? "Ø§Ø³ØªØ®Ø¯Ù… Ù‚Ø§Ù„Ø¨ Ø§Ù„Ø¯ÙˆØ±Ø© Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠ" : "Use Course Default Template"} />
+                  <SelectValue placeholder={isRtl ? "استخدم قالب الدورة الافتراضي" : "Use Course Default Template"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">
-                    {isRtl ? "Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠ (Ø­Ø³Ø¨ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø¯ÙˆØ±Ø©)" : "Default (Based on Course Settings)"}
+                    {isRtl ? "الافتراضي (حسب إعدادات الدورة)" : "Default (Based on Course Settings)"}
                   </SelectItem>
                   {templates.filter(t => t && (t.id || t._id) && String(t.id || t._id) !== "").map((t, index) => (
                     <SelectItem key={t.id || t._id || `tpl-${index}`} value={String(t.id || t._id)}>
@@ -951,14 +951,14 @@ export default function CertificatesPage() {
                 setIssueDialog({ open: false, userId: "", studentMemberId: "", courseId: "", templateId: "" });
               }}
             >
-              {isRtl ? "Ø¥Ù„ØºØ§Ø¡" : "Cancel"}
+              {isRtl ? "إلغاء" : "Cancel"}
             </Button>
             <Button
               className="bg-genoun-green hover:bg-genoun-green/90"
               onClick={handleIssue}
               disabled={issueLoading || ((!issueDialog.userId && !issueDialog.studentMemberId) || !issueDialog.courseId)}
             >
-              {issueLoading ? (isRtl ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¥ØµØ¯Ø§Ø±..." : "Issuing...") : (isRtl ? "Ø¥ØµØ¯Ø§Ø± Ø§Ù„Ø´Ù‡Ø§Ø¯Ø©" : "Issue Certificate")}
+              {issueLoading ? (isRtl ? "جاري الإصدار..." : "Issuing...") : (isRtl ? "إصدار الشهادة" : "Issue Certificate")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1042,5 +1042,6 @@ export default function CertificatesPage() {
     </div>
   );
 }
+
 
 
