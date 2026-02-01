@@ -851,6 +851,75 @@ export default function CertificatesPage() {
         </TabsContent>
 
         <TabsContent value="bulk" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>{isRtl ? "طلاب الشيت" : "Sheet Students"}</CardTitle>
+                  <CardDescription>
+                    {isRtl
+                      ? `${sheetRows.length} طالب في الشيت`
+                      : `${sheetRows.length} students in sheet`}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {sheetRows.length === 0 ? (
+                <div className="text-center py-10">
+                  <User className="mx-auto h-10 w-10 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-semibold text-gray-900">
+                    {isRtl ? "لا توجد بيانات من الشيت" : "No sheet data"}
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {isRtl ? "ارفع ملف CSV أولاً" : "Upload a CSV file first"}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{isRtl ? "الاسم" : "Name"}</TableHead>
+                        <TableHead>{isRtl ? "رقم الهاتف" : "Phone"}</TableHead>
+                        <TableHead>{isRtl ? "المحافظة" : "Governorate"}</TableHead>
+                        <TableHead>{isRtl ? "الباقة" : "Plan"}</TableHead>
+                        <TableHead>{isRtl ? "المعلم" : "Teacher"}</TableHead>
+                        <TableHead>{isRtl ? "تاريخ البدء" : "Start Date"}</TableHead>
+                        <TableHead>{isRtl ? "يوم التجديد" : "Billing Day"}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sheetRows
+                        .filter((r) => bulkGovernorate === "all" || r.governorate === bulkGovernorate)
+                        .filter((r) => bulkTeacher === "all" || r.teacher === bulkTeacher)
+                        .map((row, index) => (
+                          <TableRow key={`sheet-${index}`}>
+                            <TableCell className="font-medium">{row.name || "-"}</TableCell>
+                            <TableCell dir="ltr">{row.phone || "-"}</TableCell>
+                            <TableCell>{row.governorate || "-"}</TableCell>
+                            <TableCell>{row.plan || "-"}</TableCell>
+                            <TableCell>{row.teacher || "-"}</TableCell>
+                            <TableCell>{row.startDate || "-"}</TableCell>
+                            <TableCell>{row.billingDay || "-"}</TableCell>
+                          </TableRow>
+                        ))}
+                      {sheetRows
+                        .filter((r) => bulkGovernorate === "all" || r.governorate === bulkGovernorate)
+                        .filter((r) => bulkTeacher === "all" || r.teacher === bulkTeacher).length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="h-24 text-center">
+                            {isRtl ? "لا توجد بيانات تطابق الفلتر" : "No rows match the filters"}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="border-purple-200 bg-purple-50">
             <CardHeader>
               <CardTitle className="text-purple-900">
