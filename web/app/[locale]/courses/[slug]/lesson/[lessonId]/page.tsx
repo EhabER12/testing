@@ -134,6 +134,21 @@ export default function LessonPage() {
     return url;
   };
 
+  const getVimeoEmbedUrl = (url: string): string => {
+    const patterns = [
+      /vimeo\.com\/(?:video\/)?(\d+)/,
+      /player\.vimeo\.com\/video\/(\d+)/,
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return `https://player.vimeo.com/video/${match[1]}`;
+      }
+    }
+    return url;
+  };
+
   // Get all lessons flattened
   const getAllLessons = () => {
     const allLessons: any[] = [];
@@ -282,7 +297,11 @@ export default function LessonPage() {
               ) : (
                 // Use iframe for YouTube/Vimeo
                 <iframe
-                  src={getYouTubeEmbedUrl(currentLesson.videoUrl)}
+                  src={
+                    currentLesson?.videoSource === "vimeo"
+                      ? getVimeoEmbedUrl(currentLesson.videoUrl)
+                      : getYouTubeEmbedUrl(currentLesson.videoUrl)
+                  }
                   className="absolute top-0 left-0 w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen

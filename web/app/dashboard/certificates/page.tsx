@@ -624,13 +624,35 @@ export default function CertificatesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{isRtl ? "رقم الشهادة" : "Certificate #"}</TableHead>
-                      <TableHead>{isRtl ? "الطالب" : "Student"}</TableHead>
-                      <TableHead>{isRtl ? "المحافظة" : "Governorate"}</TableHead>
-                      <TableHead>{isRtl ? "الدورة / الباقة" : "Course / Package"}</TableHead>
-                      <TableHead>{isRtl ? "تاريخ الإصدار" : "Issue Date"}</TableHead>
-                      <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
-                      <TableHead className="text-right">
+                      <TableHead className="py-2 text-start whitespace-nowrap">
+                        {isRtl ? "رقم الشهادة" : "Certificate #"}
+                      </TableHead>
+                      <TableHead className="py-2 text-start whitespace-nowrap">
+                        <div
+                          className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}
+                        >
+                          <span className="inline-block h-4 w-4" aria-hidden="true" />
+                          <span>{isRtl ? "الطالب" : "Student"}</span>
+                        </div>
+                      </TableHead>
+                      <TableHead className="py-2 text-start whitespace-nowrap">
+                        {isRtl ? "المحافظة" : "Governorate"}
+                      </TableHead>
+                      <TableHead className="py-2 text-start whitespace-nowrap">
+                        {isRtl ? "الدورة / الباقة" : "Course / Package"}
+                      </TableHead>
+                      <TableHead className="py-2 text-start whitespace-nowrap">
+                        <div
+                          className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}
+                        >
+                          <span className="inline-block h-4 w-4" aria-hidden="true" />
+                          <span>{isRtl ? "تاريخ الإصدار" : "Issue Date"}</span>
+                        </div>
+                      </TableHead>
+                      <TableHead className="py-2 text-start whitespace-nowrap">
+                        {isRtl ? "الحالة" : "Status"}
+                      </TableHead>
+                      <TableHead className="py-2 text-right whitespace-nowrap">
                         {isRtl ? "الإجراءات" : "Actions"}
                       </TableHead>
                     </TableRow>
@@ -640,10 +662,10 @@ export default function CertificatesPage() {
                       .filter(c => selectedGovernorate === "all" || c.governorate === selectedGovernorate)
                       .map((certificate, index) => (
                       <TableRow key={certificate.id || certificate._id || `cert-${index}`}>
-                        <TableCell className="font-mono font-medium">
+                        <TableCell className="py-2 align-middle font-mono font-medium">
                           {certificate.certificateNumber}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-2 align-middle">
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-muted-foreground" />
                             {certificate.userId
@@ -651,22 +673,22 @@ export default function CertificatesPage() {
                               : (certificate.studentName ? getTextValue(certificate.studentName) : "-")}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-2 align-middle">
                           <span className="text-sm text-muted-foreground">{certificate.governorate || "-"}</span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-2 align-middle">
                           {certificate.courseId
                             ? getTextValue(certificate.courseId.title)
                             : (certificate.packageId ? (isRtl ? `باقة: ${getTextValue(certificate.packageId.name)}` : `Package: ${getTextValue(certificate.packageId.name)}`) : "-")}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-2 align-middle">
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             {certificate.issuedAt ? format(new Date(certificate.issuedAt), "yyyy-MM-dd") : "-"}
                           </div>
                         </TableCell>
-                        <TableCell>{getStatusBadge(certificate.status)}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="py-2 align-middle">{getStatusBadge(certificate.status)}</TableCell>
+                        <TableCell className="py-2 align-middle text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0">
