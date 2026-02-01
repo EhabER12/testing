@@ -623,11 +623,11 @@ export default function CertificatesPage() {
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="py-2 text-start whitespace-nowrap">
+                    <TableRow className="h-10">
+                      <TableHead className="py-2 align-middle text-start whitespace-nowrap">
                         {isRtl ? "رقم الشهادة" : "Certificate #"}
                       </TableHead>
-                      <TableHead className="py-2 text-start whitespace-nowrap">
+                      <TableHead className="py-2 align-middle text-start whitespace-nowrap">
                         <div
                           className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}
                         >
@@ -635,13 +635,13 @@ export default function CertificatesPage() {
                           <span>{isRtl ? "الطالب" : "Student"}</span>
                         </div>
                       </TableHead>
-                      <TableHead className="py-2 text-start whitespace-nowrap">
+                      <TableHead className="py-2 align-middle text-start whitespace-nowrap">
                         {isRtl ? "المحافظة" : "Governorate"}
                       </TableHead>
-                      <TableHead className="py-2 text-start whitespace-nowrap">
+                      <TableHead className="py-2 align-middle text-start whitespace-nowrap">
                         {isRtl ? "الدورة / الباقة" : "Course / Package"}
                       </TableHead>
-                      <TableHead className="py-2 text-start whitespace-nowrap">
+                      <TableHead className="py-2 align-middle text-start whitespace-nowrap">
                         <div
                           className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}
                         >
@@ -649,10 +649,10 @@ export default function CertificatesPage() {
                           <span>{isRtl ? "تاريخ الإصدار" : "Issue Date"}</span>
                         </div>
                       </TableHead>
-                      <TableHead className="py-2 text-start whitespace-nowrap">
+                      <TableHead className="py-2 align-middle text-start whitespace-nowrap">
                         {isRtl ? "الحالة" : "Status"}
                       </TableHead>
-                      <TableHead className="py-2 text-right whitespace-nowrap">
+                      <TableHead className="py-2 align-middle text-right whitespace-nowrap">
                         {isRtl ? "الإجراءات" : "Actions"}
                       </TableHead>
                     </TableRow>
