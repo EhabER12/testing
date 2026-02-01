@@ -291,30 +291,58 @@ export default function CertificatesPage() {
         let failedCount = 0;
         const failedNames: string[] = [];
         const missingNames: string[] = [];
+        const ambiguousNames: string[] = [];
+        const duplicateNames: string[] = [];
 
         const normalizePhone = (value: string) => value.replace(/\\D+/g, "");
-        const normalizeName = (value: string) => value.trim().toLowerCase();
-
-        const studentByPhone = new Map<string, any>();
-        const studentByName = new Map<string, any>();
-        for (const s of studentMembers) {
-          const phone = normalizePhone(s.phone || s.whatsappNumber || "");
-          if (phone) studentByPhone.set(phone, s);
-          const name = normalizeName(getTextValue(s.studentName || s.name) || "");
-          if (name) studentByName.set(name, s);
-        }
+        const normalizeText = (value: string) => value.trim().toLowerCase().replace(/\\s+/g, " ");
+        const seenStudentIds = new Set<string>();
 
         for (const row of filteredRows) {
           const rowPhone = normalizePhone(row.phone || "");
-          const rowName = normalizeName(row.name || "");
-          const matchedStudent = rowPhone
-            ? studentByPhone.get(rowPhone)
-            : (rowName ? studentByName.get(rowName) : null);
+          const rowName = normalizeText(row.name || "");
+          const rowPlan = normalizeText(row.plan || "");
+          const rowTeacher = normalizeText(row.teacher || "");
+          const rowGov = normalizeText(row.governorate || "");
 
-          if (!matchedStudent) {
+          let candidates = studentMembers;
+          if (rowPhone) {
+            candidates = candidates.filter((s) => normalizePhone(s.phone || s.whatsappNumber || "") === rowPhone);
+          } else if (rowName) {
+            candidates = candidates.filter((s) => normalizeText(getTextValue(s.studentName || s.name) || "") === rowName);
+          }
+
+          if (rowPlan) {
+            candidates = candidates.filter((s) => {
+              const pkgName = s.packageId?.name ? normalizeText(getTextValue(s.packageId.name)) : "";
+              return pkgName === rowPlan;
+            });
+          }
+
+          if (rowTeacher) {
+            candidates = candidates.filter((s) => normalizeText(getTeacherLabel(s) || "") === rowTeacher);
+          }
+
+          if (rowGov) {
+            candidates = candidates.filter((s) => normalizeText(s.governorate || "") === rowGov);
+          }
+
+          if (candidates.length === 0) {
             missingNames.push(row.name || row.phone || "Unknown");
             continue;
           }
+          if (candidates.length > 1) {
+            ambiguousNames.push(row.name || row.phone || "Unknown");
+            continue;
+          }
+
+          const matchedStudent = candidates[0];
+          const matchedId = String(matchedStudent.id || matchedStudent._id || "");
+          if (matchedId && seenStudentIds.has(matchedId)) {
+            duplicateNames.push(row.name || row.phone || "Unknown");
+            continue;
+          }
+          if (matchedId) seenStudentIds.add(matchedId);
 
           const studentId = matchedStudent.id || matchedStudent._id;
           const packageId = matchedStudent.packageId?.id || matchedStudent.packageId?._id;
@@ -376,6 +404,20 @@ export default function CertificatesPage() {
           const msg = isRtl
             ? `لم يتم العثور على ${missingNames.length} طالب من الشيت في النظام: ${missingNames.join("، ")}.`
             : `Could not find ${missingNames.length} sheet students in the system: ${missingNames.join(", ")}.`;
+          toast.error(msg, { duration: 6000 });
+        }
+
+        if (ambiguousNames.length > 0) {
+          const msg = isRtl
+            ? `يوجد ${ambiguousNames.length} طالب لهم أكثر من تطابق. رجاءً أضف الهاتف أو دقة البيانات: ${ambiguousNames.join("، ")}.`
+            : `There are ${ambiguousNames.length} ambiguous matches. Please add phone or refine data: ${ambiguousNames.join(", ")}.`;
+          toast.error(msg, { duration: 6000 });
+        }
+
+        if (duplicateNames.length > 0) {
+          const msg = isRtl
+            ? `تم تجاهل ${duplicateNames.length} صف مكرر: ${duplicateNames.join("، ")}.`
+            : `Skipped ${duplicateNames.length} duplicate rows: ${duplicateNames.join(", ")}.`;
           toast.error(msg, { duration: 6000 });
         }
 
