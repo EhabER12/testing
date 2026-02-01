@@ -101,6 +101,15 @@ export default function CertificatesPage() {
   const [activeTab, setActiveTab] = useState<string>("certificates");
   const [bulkGovernorate, setBulkGovernorate] = useState<string>("all");
   const [bulkTeacher, setBulkTeacher] = useState<string>("all");
+  const [sheetRows, setSheetRows] = useState<Array<{
+    name: string;
+    phone: string;
+    governorate: string;
+    plan: string;
+    teacher: string;
+    startDate: string;
+    billingDay: string;
+  }>>([]);
   const [issueDialog, setIssueDialog] = useState({
     open: false,
     userId: "",
@@ -266,35 +275,52 @@ export default function CertificatesPage() {
   };
 
   const handleGenerateCertificates = async () => {
-    const filteredStudents = studentMembers
-      .filter((s) => s.status === "active")
-      .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
-      .filter((s) => {
-        if (bulkTeacher === "all") return true;
-        const teacherName = s.assignedTeacherId?.fullName
-          ? getTextValue(s.assignedTeacherId.fullName)
-          : s.assignedTeacherName;
-        return teacherName === bulkTeacher;
-      });
+    const filteredRows = sheetRows
+      .filter((r) => bulkGovernorate === "all" || r.governorate === bulkGovernorate)
+      .filter((r) => bulkTeacher === "all" || r.teacher === bulkTeacher);
 
-    if (filteredStudents.length === 0) {
-      toast.error(isRtl ? "لا يوجد طلاب مطابقين للفلاتر" : "No students match the selected filters");
+    if (filteredRows.length === 0) {
+      toast.error(isRtl ? "لا يوجد طلاب من الشيت مطابقين للفلاتر" : "No sheet students match the selected filters");
       return;
     }
 
-    if (confirm(isRtl ? "هل أنت متأكد من استخراج شهادات لجميع الطلاب النشطين حسب الفلاتر؟" : "Are you sure you want to generate certificates for all active students in these filters?")) {
+    if (confirm(isRtl ? "هل أنت متأكد من استخراج شهادات لجميع الطلاب حسب الفلاتر؟" : "Are you sure you want to generate certificates for all students in these filters?")) {
       setGenerateLoading(true);
       try {
         let successCount = 0;
         let failedCount = 0;
         const failedNames: string[] = [];
+        const missingNames: string[] = [];
 
-        for (const student of filteredStudents) {
-          const studentId = student.id || student._id;
-          const packageId = student.packageId?.id || student.packageId?._id;
+        const normalizePhone = (value: string) => value.replace(/\\D+/g, "");
+        const normalizeName = (value: string) => value.trim().toLowerCase();
+
+        const studentByPhone = new Map<string, any>();
+        const studentByName = new Map<string, any>();
+        for (const s of studentMembers) {
+          const phone = normalizePhone(s.phone || s.whatsappNumber || "");
+          if (phone) studentByPhone.set(phone, s);
+          const name = normalizeName(getTextValue(s.studentName || s.name) || "");
+          if (name) studentByName.set(name, s);
+        }
+
+        for (const row of filteredRows) {
+          const rowPhone = normalizePhone(row.phone || "");
+          const rowName = normalizeName(row.name || "");
+          const matchedStudent = rowPhone
+            ? studentByPhone.get(rowPhone)
+            : (rowName ? studentByName.get(rowName) : null);
+
+          if (!matchedStudent) {
+            missingNames.push(row.name || row.phone || "Unknown");
+            continue;
+          }
+
+          const studentId = matchedStudent.id || matchedStudent._id;
+          const packageId = matchedStudent.packageId?.id || matchedStudent.packageId?._id;
           if (!studentId || !packageId) {
             failedCount += 1;
-            failedNames.push(getTextValue(student.studentName || student.name) || "Unknown");
+            failedNames.push(getTextValue(matchedStudent.studentName || matchedStudent.name) || "Unknown");
             continue;
           }
 
@@ -303,7 +329,7 @@ export default function CertificatesPage() {
           );
           if (!packageTemplate) {
             failedCount += 1;
-            failedNames.push(getTextValue(student.studentName || student.name) || "Unknown");
+            failedNames.push(getTextValue(matchedStudent.studentName || matchedStudent.name) || "Unknown");
             continue;
           }
 
@@ -322,7 +348,7 @@ export default function CertificatesPage() {
               const url = window.URL.createObjectURL(blob);
               const link = document.createElement("a");
               link.href = url;
-              const studentName = getTextValue(student.studentName || student.name) || "student";
+              const studentName = getTextValue(matchedStudent.studentName || matchedStudent.name) || "student";
               link.download = `certificate-${studentName.replace(/\\s+/g, "_")}.pdf`;
               link.click();
               window.URL.revokeObjectURL(url);
@@ -330,7 +356,7 @@ export default function CertificatesPage() {
             successCount += 1;
           } catch (err) {
             failedCount += 1;
-            failedNames.push(getTextValue(student.studentName || student.name) || "Unknown");
+            failedNames.push(getTextValue(matchedStudent.studentName || matchedStudent.name) || "Unknown");
             console.error("Failed to issue certificate for student:", studentId, err);
           }
         }
@@ -341,6 +367,13 @@ export default function CertificatesPage() {
               ? `تم إصدار ${successCount} شهادة بنجاح` : `Successfully issued ${successCount} certificates`
           );
           await dispatch(getCertificates()).unwrap();
+        }
+
+        if (missingNames.length > 0) {
+          const msg = isRtl
+            ? `لم يتم العثور على ${missingNames.length} طالب من الشيت في النظام: ${missingNames.join("، ")}.`
+            : `Could not find ${missingNames.length} sheet students in the system: ${missingNames.join(", ")}.`;
+          toast.error(msg, { duration: 6000 });
         }
 
         if (failedCount > 0) {
@@ -423,6 +456,88 @@ export default function CertificatesPage() {
     if (!value) return "";
     if (typeof value === "string") return value;
     return (isRtl ? value.ar : value.en) || value.en || value.ar || "";
+  };
+
+  const parseCsv = (csvText: string) => {
+    const rows: string[][] = [];
+    let current = "";
+    let inQuotes = false;
+    let row: string[] = [];
+
+    for (let i = 0; i < csvText.length; i += 1) {
+      const char = csvText[i];
+      const next = csvText[i + 1];
+
+      if (char === "\"") {
+        if (inQuotes && next === "\"") {
+          current += "\"";
+          i += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === "," && !inQuotes) {
+        row.push(current.trim());
+        current = "";
+      } else if ((char === "\n" || char === "\r") && !inQuotes) {
+        if (current !== "" || row.length > 0) {
+          row.push(current.trim());
+          rows.push(row);
+          row = [];
+          current = "";
+        }
+      } else {
+        current += char;
+      }
+    }
+
+    if (current !== "" || row.length > 0) {
+      row.push(current.trim());
+      rows.push(row);
+    }
+
+    return rows;
+  };
+
+  const handleSheetFileChange = async (file: File | null) => {
+    setImportFile(file);
+    if (!file) {
+      setSheetRows([]);
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const rows = parseCsv(text);
+      if (rows.length === 0) {
+        setSheetRows([]);
+        return;
+      }
+
+      const header = rows[0].map((h) => h.toLowerCase());
+      const getIndex = (key: string) => header.findIndex((h) => h.includes(key));
+      const idxName = getIndex("name");
+      const idxPhone = getIndex("phone");
+      const idxGovernorate = getIndex("governorate");
+      const idxPlan = getIndex("plan");
+      const idxTeacher = getIndex("teacher");
+      const idxStartDate = getIndex("start");
+      const idxBilling = getIndex("billing");
+
+      const parsed = rows.slice(1).map((r) => ({
+        name: idxName >= 0 ? (r[idxName] || "") : "",
+        phone: idxPhone >= 0 ? (r[idxPhone] || "") : "",
+        governorate: idxGovernorate >= 0 ? (r[idxGovernorate] || "") : "",
+        plan: idxPlan >= 0 ? (r[idxPlan] || "") : "",
+        teacher: idxTeacher >= 0 ? (r[idxTeacher] || "") : "",
+        startDate: idxStartDate >= 0 ? (r[idxStartDate] || "") : "",
+        billingDay: idxBilling >= 0 ? (r[idxBilling] || "") : "",
+      })).filter((r) => r.name || r.phone);
+
+      setSheetRows(parsed);
+    } catch (err) {
+      console.error("Failed to parse CSV:", err);
+      setSheetRows([]);
+    }
   };
 
   const getTeacherLabel = (student: any): string => {
@@ -743,8 +858,8 @@ export default function CertificatesPage() {
               </CardTitle>
               <CardDescription className="text-purple-700">
                 {isRtl
-                  ? "ارفع شيت الطلاب ثم فلتر بالمعلم أو المحافظة لإصدار الشهادات"
-                  : "Upload students CSV then filter by teacher or governorate to issue certificates"}
+                  ? "ارفع الشيت ثم استورد الطلاب، وبعدها فلتر بالمعلم أو المحافظة لإصدار الشهادات"
+                  : "Upload the sheet, import students, then filter by teacher or governorate to issue certificates"}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
@@ -758,7 +873,7 @@ export default function CertificatesPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">{isRtl ? "جميع المعلمين" : "All Teachers"}</SelectItem>
-                        {Array.from(new Set(studentMembers.map((s) => getTeacherLabel(s)).filter(Boolean))).sort().map((teacher) => (
+                        {Array.from(new Set(sheetRows.map((r) => r.teacher).filter(Boolean))).sort().map((teacher) => (
                           <SelectItem key={teacher} value={teacher!}>{teacher}</SelectItem>
                         ))}
                       </SelectContent>
@@ -772,7 +887,7 @@ export default function CertificatesPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">{isRtl ? "جميع المحافظات" : "All Governorates"}</SelectItem>
-                        {Array.from(new Set(studentMembers.map(s => s.governorate).filter(Boolean))).sort().map((gov) => (
+                        {Array.from(new Set(sheetRows.map(r => r.governorate).filter(Boolean))).sort().map((gov) => (
                           <SelectItem key={gov} value={gov!}>{gov}</SelectItem>
                         ))}
                       </SelectContent>
@@ -786,7 +901,7 @@ export default function CertificatesPage() {
                   </Button>
                   <Button
                     onClick={handleGenerateCertificates}
-                    disabled={generateLoading}
+                    disabled={generateLoading || sheetRows.length === 0}
                     className="bg-purple-600 hover:bg-purple-700 text-white"
                   >
                     <Award className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
@@ -798,14 +913,12 @@ export default function CertificatesPage() {
               </div>
               <p className="text-xs text-purple-700">
                 {isRtl
-                  ? `عدد الطلاب النشطين بعد الفلتر: ${studentMembers
-                      .filter((s) => s.status === "active")
-                      .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
-                      .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher).length}`
-                  : `Active students after filters: ${studentMembers
-                      .filter((s) => s.status === "active")
-                      .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
-                      .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher).length}`}
+                  ? `عدد طلاب الشيت بعد الفلتر: ${sheetRows
+                      .filter((r) => bulkGovernorate === "all" || r.governorate === bulkGovernorate)
+                      .filter((r) => bulkTeacher === "all" || r.teacher === bulkTeacher).length}`
+                  : `Sheet students after filters: ${sheetRows
+                      .filter((r) => bulkGovernorate === "all" || r.governorate === bulkGovernorate)
+                      .filter((r) => bulkTeacher === "all" || r.teacher === bulkTeacher).length}`}
               </p>
             </CardContent>
           </Card>
@@ -1053,7 +1166,7 @@ export default function CertificatesPage() {
 
             <div className="grid w-full max-w-sm items-center gap-1.5">
               <Label htmlFor="csv-file">{isRtl ? "ملف CSV" : "CSV File"}</Label>
-              <Input id="csv-file" type="file" accept=".csv" onChange={(e) => setImportFile(e.target.files?.[0] || null)} />
+              <Input id="csv-file" type="file" accept=".csv" onChange={(e) => handleSheetFileChange(e.target.files?.[0] || null)} />
             </div>
 
             {importResult && (
