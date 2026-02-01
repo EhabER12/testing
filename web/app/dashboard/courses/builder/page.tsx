@@ -47,6 +47,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Plus,
   Edit,
@@ -67,8 +68,7 @@ function CourseBuilderContent() {
   const dispatch = useAppDispatch();
   const { t, isRtl } = useAdminLocale();
   const courseId = searchParams.get("courseId");
-
-  console.log("courseId from searchParams:", courseId);
+  const { toast } = useToast();
 
   const { currentCourse, isLoading: courseLoading } = useAppSelector(
     (state) => state.courses
@@ -106,7 +106,9 @@ function CourseBuilderContent() {
           ? (currentCourse.instructorId as any)._id || (currentCourse.instructorId as any).id
           : currentCourse.instructorId;
 
-        if (courseInstructorId !== user._id) {
+        const userId = (user as any)._id || (user as any).id;
+
+        if (userId && courseInstructorId !== userId) {
           router.push("/dashboard/courses");
         }
       }
@@ -121,50 +123,44 @@ function CourseBuilderContent() {
 
   const handleSectionSubmit = async () => {
     if (!courseId) return;
-    if (sectionDialog.mode === "create") {
-      await dispatch(
-        createSection({
-          courseId,
-          title: sectionDialog.data.title,
-          description: sectionDialog.data.description,
-        })
-      ).unwrap();
-    } else {
-      await dispatch(
-        updateSection({
-          id: sectionDialog.data.id || sectionDialog.data._id,
-          data: {
+    try {
+      if (sectionDialog.mode === "create") {
+        await dispatch(
+          createSection({
+            courseId,
             title: sectionDialog.data.title,
             description: sectionDialog.data.description,
-          },
-        })
-      ).unwrap();
+          })
+        ).unwrap();
+      } else {
+        await dispatch(
+          updateSection({
+            id: sectionDialog.data.id || sectionDialog.data._id,
+            data: {
+              title: sectionDialog.data.title,
+              description: sectionDialog.data.description,
+            },
+          })
+        ).unwrap();
+      }
+      setSectionDialog({ open: false, mode: "create", data: null });
+    } catch (error: any) {
+      toast({
+        title: isRtl ? "خطأ" : "Error",
+        description: error?.message || (isRtl ? "فشل حفظ القسم" : "Failed to save section"),
+        variant: "destructive",
+      });
     }
-    setSectionDialog({ open: false, mode: "create", data: null });
   };
 
   const handleLessonSubmit = async () => {
     if (!courseId) return;
-    if (lessonDialog.mode === "create") {
-      await dispatch(
-        createLesson({
-          sectionId: lessonDialog.sectionId!,
-          courseId: courseId,
-          title: lessonDialog.data.title,
-          description: lessonDialog.data.description,
-          videoSource: lessonDialog.data.videoSource,
-          videoUrl: lessonDialog.data.videoUrl,
-          duration: lessonDialog.data.duration
-            ? parseInt(lessonDialog.data.duration)
-            : undefined,
-          materials: lessonDialog.data.materials,
-        })
-      ).unwrap();
-    } else {
-      await dispatch(
-        updateLesson({
-          id: lessonDialog.data.id || lessonDialog.data._id,
-          data: {
+    try {
+      if (lessonDialog.mode === "create") {
+        await dispatch(
+          createLesson({
+            sectionId: lessonDialog.sectionId!,
+            courseId: courseId,
             title: lessonDialog.data.title,
             description: lessonDialog.data.description,
             videoSource: lessonDialog.data.videoSource,
@@ -173,16 +169,38 @@ function CourseBuilderContent() {
               ? parseInt(lessonDialog.data.duration)
               : undefined,
             materials: lessonDialog.data.materials,
-          },
-        })
-      ).unwrap();
+          })
+        ).unwrap();
+      } else {
+        await dispatch(
+          updateLesson({
+            id: lessonDialog.data.id || lessonDialog.data._id,
+            data: {
+              title: lessonDialog.data.title,
+              description: lessonDialog.data.description,
+              videoSource: lessonDialog.data.videoSource,
+              videoUrl: lessonDialog.data.videoUrl,
+              duration: lessonDialog.data.duration
+                ? parseInt(lessonDialog.data.duration)
+                : undefined,
+              materials: lessonDialog.data.materials,
+            },
+          })
+        ).unwrap();
+      }
+      setLessonDialog({
+        open: false,
+        mode: "create",
+        sectionId: null,
+        data: null,
+      });
+    } catch (error: any) {
+      toast({
+        title: isRtl ? "خطأ" : "Error",
+        description: error?.message || (isRtl ? "فشل حفظ الدرس" : "Failed to save lesson"),
+        variant: "destructive",
+      });
     }
-    setLessonDialog({
-      open: false,
-      mode: "create",
-      sectionId: null,
-      data: null,
-    });
   };
 
   const handleDeleteSection = async (id: string) => {
@@ -193,13 +211,29 @@ function CourseBuilderContent() {
           : "Are you sure you want to delete this section and all its lessons?"
       )
     ) {
-      await dispatch(deleteSection(id));
+      try {
+        await dispatch(deleteSection(id)).unwrap();
+      } catch (error: any) {
+        toast({
+          title: isRtl ? "خطأ" : "Error",
+          description: error?.message || (isRtl ? "فشل حذف القسم" : "Failed to delete section"),
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const handleDeleteLesson = async (id: string) => {
     if (confirm(isRtl ? "هل أنت متأكد من حذف هذا الدرس؟" : "Are you sure?")) {
-      await dispatch(deleteLesson(id));
+      try {
+        await dispatch(deleteLesson(id)).unwrap();
+      } catch (error: any) {
+        toast({
+          title: isRtl ? "خطأ" : "Error",
+          description: error?.message || (isRtl ? "فشل حذف الدرس" : "Failed to delete lesson"),
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -739,7 +773,8 @@ function CourseBuilderContent() {
             </div>
 
             {/* Video Upload Section */}
-            {lessonDialog.data?.videoSource === "upload" && lessonDialog.data?.id && (
+            {lessonDialog.data?.videoSource === "upload" &&
+              (lessonDialog.data?.id || lessonDialog.data?._id) && (
               <div className="space-y-2">
                 <Label>{isRtl ? "الفيديو" : "Video File"}</Label>
                 <VideoUploader
