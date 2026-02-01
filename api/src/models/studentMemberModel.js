@@ -23,6 +23,10 @@ const studentMemberSchema = new mongoose.Schema(
       type: String,
       index: true,
     },
+    sheetName: {
+      type: String,
+      index: true,
+    },
     age: {
       type: Number,
       min: 3,

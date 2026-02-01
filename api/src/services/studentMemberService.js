@@ -13,7 +13,7 @@ export class StudentMemberService {
   }
 
   // Import members from CSV
-  async importMembers(fileBuffer, createdBy) {
+  async importMembers(fileBuffer, createdBy, sheetName = "") {
     const records = parse(fileBuffer, {
       columns: true,
       skip_empty_lines: true,
@@ -142,6 +142,10 @@ export class StudentMemberService {
           startDate: startDate,
           billingDay: billingDay,
         };
+
+        if (sheetName) {
+          memberData.sheetName = sheetName;
+        }
 
         if (pkg) {
           memberData.packageId = pkg._id;

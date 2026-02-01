@@ -14,6 +14,7 @@ export interface StudentMember {
   name: BilingualText;
   phone: string;
   governorate?: string;
+  sheetName?: string;
   startDate: string;
   billingDay: number;
   nextDueDate: string;
@@ -170,10 +171,14 @@ export const renewSubscription = createAsyncThunk(
 // Import student members from CSV
 export const importStudentMembers = createAsyncThunk(
   "studentMembers/import",
-  async (file: File, { rejectWithValue }) => {
+  async (
+    { file, sheetName }: { file: File; sheetName: string },
+    { rejectWithValue }
+  ) => {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("sheetName", sheetName);
 
       const response = await axios.post("/student-members/import", formData, {
         headers: {

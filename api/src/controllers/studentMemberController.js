@@ -277,9 +277,15 @@ export const importMembers = async (req, res, next) => {
       throw new Error('No file uploaded');
     }
 
+    const sheetName = req.body?.sheetName?.trim();
+    if (!sheetName) {
+      throw new Error('Sheet name is required');
+    }
+
     const result = await studentMemberService.importMembers(
       req.file.buffer,
-      req.user._id
+      req.user._id,
+      sheetName
     );
 
     res.status(200).json({

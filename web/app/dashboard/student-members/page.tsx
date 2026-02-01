@@ -104,6 +104,7 @@ export default function StudentMembersPage() {
   const [generateLoading, setGenerateLoading] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [importSheetName, setImportSheetName] = useState("");
   const [importResult, setImportResult] = useState<any>(null);
   const [selectedPackageId, setSelectedPackageId] = useState<string>("all");
   const [selectedGovernorate, setSelectedGovernorate] = useState<string>("all");
@@ -261,11 +262,12 @@ export default function StudentMembersPage() {
   };
 
   const handleImport = async () => {
-    if (!importFile) return;
+    if (!importFile || !importSheetName.trim()) return;
 
     setImportLoading(true);
     try {
-      const result = await dispatch(importStudentMembers(importFile)).unwrap();
+      const sheetName = importSheetName.trim();
+      const result = await dispatch(importStudentMembers({ file: importFile, sheetName })).unwrap();
       setImportResult(result.data); // Assuming backend returns { data: { success: n, failed: n, errors: [] } }
       dispatch(getStudentMembers());
       toast.success(isRtl ? "تم استيراد الملف" : "File imported");
@@ -605,6 +607,7 @@ export default function StudentMembersPage() {
             setImportDialogOpen(true);
             setImportResult(null);
             setImportFile(null);
+            setImportSheetName("");
           }} className="bg-blue-600 hover:bg-blue-700">
             <Upload className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
             {isRtl ? "استيراد CSV" : "Import CSV"}
@@ -928,7 +931,7 @@ export default function StudentMembersPage() {
           <DialogHeader>
             <DialogTitle>{isRtl ? "استيراد طلاب (CSV)" : "Import Students (CSV)"}</DialogTitle>
             <DialogDescription>
-              {isRtl ? "قم برفع ملف CSV. (اسم الباقة يقبل بالعربي أو الإنجليزي)" : "Upload a CSV file. (Plan accepts Arabic or English names)"}
+              {isRtl ? "قم برفع ملف CSV. (اسم الباقة يقبل بالعربي أو الإنجليزي)" : "Upload a CSV file. Sheet name is required. (Plan accepts Arabic or English names)"}
             </DialogDescription>
           </DialogHeader>
 
@@ -957,9 +960,20 @@ export default function StudentMembersPage() {
             </div>
 
             <div className="grid w-full max-w-sm items-center gap-1.5">
-              <Label htmlFor="csv-file">{isRtl ? "ملف CSV" : "CSV File"}</Label>
+              <Label htmlFor="sheet-name">{isRtl ? "Sheet Name" : "Sheet Name"}</Label>
+              <Input
+                id="sheet-name"
+                value={importSheetName}
+                onChange={(e) => setImportSheetName(e.target.value)}
+                placeholder={isRtl ? "e.g. Sheet X" : "e.g. Sheet X"}
+              />
+            </div>
+
+            <div className="grid w-full max-w-sm items-center gap-1.5">
+              <Label htmlFor="csv-file">{isRtl ? "CSV File" : "CSV File"}</Label>
               <Input id="csv-file" type="file" accept=".csv" onChange={(e) => setImportFile(e.target.files?.[0] || null)} />
             </div>
+
 
             {importResult && (
               <div className={`p-4 rounded-md text-sm ${importResult.failed > 0 ? "bg-red-50" : "bg-green-50"}`}>
@@ -991,7 +1005,7 @@ export default function StudentMembersPage() {
             </Button>
             <Button
               onClick={handleImport}
-              disabled={!importFile || importLoading}
+              disabled={!importFile || !importSheetName.trim() || importLoading}
               className="bg-genoun-green hover:bg-genoun-green/90"
             >
               {importLoading ? (isRtl ? "جاري الرفع..." : "Uploading...") : (isRtl ? "استيراد" : "Import")}

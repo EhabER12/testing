@@ -97,10 +97,12 @@ export default function CertificatesPage() {
   const [importLoading, setImportLoading] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [importSheetName, setImportSheetName] = useState("");
   const [importResult, setImportResult] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("certificates");
   const [bulkGovernorate, setBulkGovernorate] = useState<string>("all");
   const [bulkTeacher, setBulkTeacher] = useState<string>("all");
+  const [bulkSheet, setBulkSheet] = useState<string>("all");
   const [issueDialog, setIssueDialog] = useState({
     open: false,
     userId: "",
@@ -267,6 +269,7 @@ export default function CertificatesPage() {
 
   const handleGenerateCertificates = async () => {
     const filteredStudents = studentMembers
+      .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
       .filter((s) => s.status === "active")
       .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
       .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher);
@@ -363,13 +366,15 @@ export default function CertificatesPage() {
   };
 
   const handleImport = async () => {
-    if (!importFile) return;
+    if (!importFile || !importSheetName.trim()) return;
 
     setImportLoading(true);
     try {
-      const result = await dispatch(importStudentMembers(importFile)).unwrap();
+      const sheetName = importSheetName.trim();
+      const result = await dispatch(importStudentMembers({ file: importFile, sheetName })).unwrap();
       setImportResult(result.data);
       dispatch(getStudentMembers());
+      setBulkSheet(sheetName);
       toast.success(isRtl ? "تم استيراد الملف" : "File imported");
     } catch (err: any) {
       console.error("Import failed:", err);
@@ -435,6 +440,15 @@ export default function CertificatesPage() {
     }
     return student?.assignedTeacherName || "";
   };
+
+  const sheetStats = Array.from(
+    studentMembers.reduce((acc, student) => {
+      const name = student.sheetName?.trim();
+      if (!name) return acc;
+      acc.set(name, (acc.get(name) || 0) + 1);
+      return acc;
+    }, new Map<string, number>())
+  ).sort((a, b) => a[0].localeCompare(b[0]));
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -519,7 +533,7 @@ export default function CertificatesPage() {
             {isRtl ? "الشهادات" : "Certificates"}
           </TabsTrigger>
           <TabsTrigger value="bulk" className="px-4 py-2">
-            {isRtl ? "إصدار بالجملة من الشيت" : "Bulk From Sheet"}
+            {isRtl ? "شهادات الشيت" : "Sheet Certificates"}
           </TabsTrigger>
         </TabsList>
 
@@ -740,6 +754,35 @@ export default function CertificatesPage() {
         </TabsContent>
 
         <TabsContent value="bulk" className="space-y-4">
+          {sheetStats.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{isRtl ? "الشيتات" : "Sheets"}</CardTitle>
+                <CardDescription>
+                  {isRtl
+                    ? "اختار شيت علشان تشتغل عليه لوحده"
+                    : "Pick a sheet to work with separately"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-2">
+                <Button
+                  variant={bulkSheet === "all" ? "default" : "outline"}
+                  onClick={() => setBulkSheet("all")}
+                >
+                  {isRtl ? "كل الشيتات" : "All Sheets"}
+                </Button>
+                {sheetStats.map(([name, count]) => (
+                  <Button
+                    key={name}
+                    variant={bulkSheet === name ? "default" : "outline"}
+                    onClick={() => setBulkSheet(name)}
+                  >
+                    {name} ({count})
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -780,6 +823,7 @@ export default function CertificatesPage() {
                     </TableHeader>
                     <TableBody>
                       {studentMembers
+                        .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
                         .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
                         .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher)
                         .map((student, index) => (
@@ -794,6 +838,7 @@ export default function CertificatesPage() {
                           </TableRow>
                         ))}
                       {studentMembers
+                        .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
                         .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
                         .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher).length === 0 && (
                         <TableRow>
@@ -824,6 +869,22 @@ export default function CertificatesPage() {
               <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div className="flex flex-wrap gap-2">
                   <div className="grid gap-2">
+                    <Label>{isRtl ? "الشيت" : "Sheet"}</Label>
+                    <Select value={bulkSheet} onValueChange={setBulkSheet}>
+                      <SelectTrigger className="w-[220px]">
+                        <SelectValue placeholder={isRtl ? "اختر الشيت" : "Select Sheet"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{isRtl ? "كل الشيتات" : "All Sheets"}</SelectItem>
+                        {Array.from(new Set(studentMembers.map((s) => s.sheetName).filter(Boolean)))
+                          .sort()
+                          .map((sheet) => (
+                            <SelectItem key={sheet} value={sheet!}>{sheet}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
                     <Label>{isRtl ? "المعلم" : "Teacher"}</Label>
                     <Select value={bulkTeacher} onValueChange={setBulkTeacher}>
                       <SelectTrigger className="w-[220px]">
@@ -853,7 +914,15 @@ export default function CertificatesPage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setImportDialogOpen(true);
+                      setImportResult(null);
+                      setImportFile(null);
+                      setImportSheetName("");
+                    }}
+                  >
                     <Upload className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
                     {isRtl ? "رفع شيت الطلاب (CSV)" : "Upload Students CSV"}
                   </Button>
@@ -872,9 +941,11 @@ export default function CertificatesPage() {
               <p className="text-xs text-purple-700">
                 {isRtl
                   ? `عدد الطلاب بعد الفلتر: ${studentMembers
+                      .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
                       .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
                       .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher).length}`
                   : `Students after filters: ${studentMembers
+                      .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
                       .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
                       .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher).length}`}
               </p>
@@ -1096,8 +1167,8 @@ export default function CertificatesPage() {
             <DialogTitle>{isRtl ? "استيراد طلاب (CSV)" : "Import Students (CSV)"}</DialogTitle>
             <DialogDescription>
               {isRtl
-                ? "قم برفع ملف CSV. الاسم فقط مطلوب والباقي اختياري. (اسم الباقة يقبل بالعربي أو الإنجليزي)"
-                : "Upload a CSV file. Only the name is required; the rest are optional. (Plan accepts Arabic or English names)"}
+                ? "قم برفع ملف CSV. الاسم فقط مطلوب والباقي اختياري. اسم الشيت مطلوب. (اسم الباقة يقبل بالعربي أو الإنجليزي)"
+                : "Upload a CSV file. Only the name is required; the rest are optional. Sheet name is required. (Plan accepts Arabic or English names)"}
             </DialogDescription>
           </DialogHeader>
 
@@ -1122,6 +1193,16 @@ export default function CertificatesPage() {
                 <Download className="h-4 w-4 mr-2" />
                 {isRtl ? "تحميل نموذج CSV" : "Download Template"}
               </Button>
+            </div>
+
+            <div className="grid w-full max-w-sm items-center gap-1.5">
+              <Label htmlFor="sheet-name">{isRtl ? "اسم الشيت" : "Sheet Name"}</Label>
+              <Input
+                id="sheet-name"
+                value={importSheetName}
+                onChange={(e) => setImportSheetName(e.target.value)}
+                placeholder={isRtl ? "مثال: شيت x" : "e.g. Sheet X"}
+              />
             </div>
 
             <div className="grid w-full max-w-sm items-center gap-1.5">
@@ -1159,7 +1240,7 @@ export default function CertificatesPage() {
             </Button>
             <Button
               onClick={handleImport}
-              disabled={!importFile || importLoading}
+              disabled={!importFile || !importSheetName.trim() || importLoading}
               className="bg-genoun-green hover:bg-genoun-green/90"
             >
               {importLoading ? (isRtl ? "جاري الرفع..." : "Uploading...") : (isRtl ? "استيراد" : "Import")}
