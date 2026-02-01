@@ -662,32 +662,32 @@ export default function CertificatesPage() {
                       .filter(c => selectedGovernorate === "all" || c.governorate === selectedGovernorate)
                       .map((certificate, index) => (
                       <TableRow key={certificate.id || certificate._id || `cert-${index}`}>
-                        <TableCell className="py-2 align-middle font-mono font-medium">
+                        <TableCell className="py-2 align-middle text-start font-mono font-medium">
                           {certificate.certificateNumber}
                         </TableCell>
-                        <TableCell className="py-2 align-middle">
-                          <div className="flex items-center gap-2">
+                        <TableCell className="py-2 align-middle text-start">
+                          <div className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}>
                             <User className="h-4 w-4 text-muted-foreground" />
                             {certificate.userId
                               ? getTextValue(certificate.userId.fullName)
                               : (certificate.studentName ? getTextValue(certificate.studentName) : "-")}
                           </div>
                         </TableCell>
-                        <TableCell className="py-2 align-middle">
+                        <TableCell className="py-2 align-middle text-start">
                           <span className="text-sm text-muted-foreground">{certificate.governorate || "-"}</span>
                         </TableCell>
-                        <TableCell className="py-2 align-middle">
+                        <TableCell className="py-2 align-middle text-start">
                           {certificate.courseId
                             ? getTextValue(certificate.courseId.title)
                             : (certificate.packageId ? (isRtl ? `باقة: ${getTextValue(certificate.packageId.name)}` : `Package: ${getTextValue(certificate.packageId.name)}`) : "-")}
                         </TableCell>
-                        <TableCell className="py-2 align-middle">
-                          <div className="flex items-center gap-2">
+                        <TableCell className="py-2 align-middle text-start">
+                          <div className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}>
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             {certificate.issuedAt ? format(new Date(certificate.issuedAt), "yyyy-MM-dd") : "-"}
                           </div>
                         </TableCell>
-                        <TableCell className="py-2 align-middle">{getStatusBadge(certificate.status)}</TableCell>
+                        <TableCell className="py-2 align-middle text-start">{getStatusBadge(certificate.status)}</TableCell>
                         <TableCell className="py-2 align-middle text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
