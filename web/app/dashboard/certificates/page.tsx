@@ -838,14 +838,28 @@ export default function CertificatesPage() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>{isRtl ? "الاسم" : "Name"}</TableHead>
-                        <TableHead>{isRtl ? "رقم الهاتف" : "Phone"}</TableHead>
-                        <TableHead>{isRtl ? "المحافظة" : "Governorate"}</TableHead>
-                        <TableHead>{isRtl ? "الباقة" : "Plan"}</TableHead>
-                        <TableHead>{isRtl ? "المعلم" : "Teacher"}</TableHead>
-                        <TableHead>{isRtl ? "تاريخ البدء" : "Start Date"}</TableHead>
-                        <TableHead>{isRtl ? "يوم التجديد" : "Billing Day"}</TableHead>
+                      <TableRow className="h-10">
+                        <TableHead className="py-2 align-middle text-start whitespace-nowrap">
+                          {isRtl ? "الاسم" : "Name"}
+                        </TableHead>
+                        <TableHead className="py-2 align-middle text-start whitespace-nowrap">
+                          {isRtl ? "رقم الهاتف" : "Phone"}
+                        </TableHead>
+                        <TableHead className="py-2 align-middle text-start whitespace-nowrap">
+                          {isRtl ? "المحافظة" : "Governorate"}
+                        </TableHead>
+                        <TableHead className="py-2 align-middle text-start whitespace-nowrap">
+                          {isRtl ? "الباقة" : "Plan"}
+                        </TableHead>
+                        <TableHead className="py-2 align-middle text-start whitespace-nowrap">
+                          {isRtl ? "المعلم" : "Teacher"}
+                        </TableHead>
+                        <TableHead className="py-2 align-middle text-start whitespace-nowrap">
+                          {isRtl ? "تاريخ البدء" : "Start Date"}
+                        </TableHead>
+                        <TableHead className="py-2 align-middle text-start whitespace-nowrap">
+                          {isRtl ? "يوم التجديد" : "Billing Day"}
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -855,13 +869,27 @@ export default function CertificatesPage() {
                         .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher)
                         .map((student, index) => (
                           <TableRow key={student.id || student._id || `student-${index}`}>
-                            <TableCell className="font-medium">{getTextValue(student.studentName || student.name) || "-"}</TableCell>
-                            <TableCell dir="ltr">{student.phone || student.whatsappNumber || "-"}</TableCell>
-                            <TableCell>{student.governorate || "-"}</TableCell>
-                            <TableCell>{student.packageId ? getTextValue(student.packageId.name) : "-"}</TableCell>
-                            <TableCell>{getTeacherLabel(student) || "-"}</TableCell>
-                            <TableCell>{student.startDate ? format(new Date(student.startDate), "yyyy-MM-dd") : "-"}</TableCell>
-                            <TableCell>{student.billingDay || "-"}</TableCell>
+                            <TableCell className="py-2 align-middle text-start font-medium">
+                              {getTextValue(student.studentName || student.name) || "-"}
+                            </TableCell>
+                            <TableCell className="py-2 align-middle text-start" dir="ltr">
+                              {student.phone || student.whatsappNumber || "-"}
+                            </TableCell>
+                            <TableCell className="py-2 align-middle text-start">
+                              {student.governorate || "-"}
+                            </TableCell>
+                            <TableCell className="py-2 align-middle text-start">
+                              {student.packageId ? getTextValue(student.packageId.name) : "-"}
+                            </TableCell>
+                            <TableCell className="py-2 align-middle text-start">
+                              {getTeacherLabel(student) || "-"}
+                            </TableCell>
+                            <TableCell className="py-2 align-middle text-start">
+                              {student.startDate ? format(new Date(student.startDate), "yyyy-MM-dd") : "-"}
+                            </TableCell>
+                            <TableCell className="py-2 align-middle text-start">
+                              {student.billingDay || "-"}
+                            </TableCell>
                           </TableRow>
                         ))}
                       {studentMembers
