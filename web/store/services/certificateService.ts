@@ -94,7 +94,7 @@ export interface CertificateTemplate {
 // Issue certificate
 export const issueCertificate = createAsyncThunk(
   "certificates/issue",
-  async (data: { userId?: string; studentMemberId?: string; courseId?: string; packageId?: string; templateId?: string }, { rejectWithValue }) => {
+  async (data: { userId?: string; studentMemberId?: string; courseId?: string; packageId?: string; templateId?: string; studentName?: { ar?: string; en?: string } | string }, { rejectWithValue }) => {
     try {
       console.log('Issuing certificate with data:', data);
       const response = await axios.post("/certificates/issue", data);

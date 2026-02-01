@@ -339,6 +339,7 @@ export default function CertificatesPage() {
                 studentMemberId: studentId,
                 packageId: packageId,
                 templateId: packageTemplate.id || packageTemplate._id,
+                studentName: row.name ? { ar: row.name, en: row.name } : undefined,
               })
             ).unwrap();
 
@@ -348,7 +349,9 @@ export default function CertificatesPage() {
               const url = window.URL.createObjectURL(blob);
               const link = document.createElement("a");
               link.href = url;
-              const studentName = getTextValue(matchedStudent.studentName || matchedStudent.name) || "student";
+              const sheetName = row.name?.trim();
+              const fallbackName = getTextValue(matchedStudent.studentName || matchedStudent.name) || "student";
+              const studentName = sheetName || fallbackName;
               link.download = `certificate-${studentName.replace(/\\s+/g, "_")}.pdf`;
               link.click();
               window.URL.revokeObjectURL(url);

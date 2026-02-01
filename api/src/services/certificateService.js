@@ -25,7 +25,7 @@ class CertificateService {
   }
 
   // Issue certificate to a single user (Course or Package)
-  async issueCertificate(userId, courseId, issuerUserId, overrideEligibility = false, manualTemplateId = null, packageId = null, studentMemberId = null) {
+  async issueCertificate(userId, courseId, issuerUserId, overrideEligibility = false, manualTemplateId = null, packageId = null, studentMemberId = null, studentNameOverride = null) {
     console.log('=== ISSUE CERTIFICATE REQUEST ===');
     console.log('userId:', userId);
     console.log('courseId:', courseId);
@@ -155,11 +155,19 @@ class CertificateService {
       throw new Error("Recipient (User/Student) or Source (Course/Package) not found");
     }
 
-    // Determine Names
+    // Determine Names (allow override)
     let studentNameAr = "الطالب";
     let studentNameEn = "Student";
 
-    if (studentMember) {
+    if (studentNameOverride) {
+      if (typeof studentNameOverride === "string") {
+        studentNameAr = studentNameOverride || studentNameAr;
+        studentNameEn = studentNameOverride || studentNameEn;
+      } else {
+        studentNameAr = studentNameOverride.ar || studentNameOverride.en || studentNameAr;
+        studentNameEn = studentNameOverride.en || studentNameOverride.ar || studentNameEn;
+      }
+    } else if (studentMember) {
       // Handle both name and studentName properties
       const nameObj = studentMember.name || studentMember.studentName;
       if (nameObj) {
