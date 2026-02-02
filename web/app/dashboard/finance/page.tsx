@@ -832,7 +832,7 @@ export default function FinanceDashboardPage() {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>{isRtl ? "النوع" : "Type"}</Label>
+                  <Label>{isRtl ? "?????" : "Type"}</Label>
                   <Select
                     value={newTransaction.type}
                     onValueChange={(v: any) =>
@@ -955,7 +955,7 @@ export default function FinanceDashboardPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{isRtl ? "التاريخ" : "Date"}</Label>
+                  <Label>{isRtl ? "???????" : "Date"}</Label>
                   <Input
                     type="date"
                     value={newTransaction.transactionDate}
@@ -1129,18 +1129,18 @@ export default function FinanceDashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            {isRtl ? "??????? ????? ????????" : "Teacher Payouts"}
+            {isRtl ? "مدفوعات أرباح المدرسين" : "Teacher Payouts"}
           </CardTitle>
           <CardDescription>
             {isRtl
-              ? "????? ???? ??????? ?????? ????? ???????"
+              ? "تحويل نسبة الأرباح وإرفاق إثبات التحويل"
               : "Send profit share payouts and attach transfer proof"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4 items-end mb-4">
             <div className="min-w-[160px]">
-              <Label className="mb-2 block">{isRtl ? "??????" : "Status"}</Label>
+              <Label className="mb-2 block">{isRtl ? "الحالة" : "Status"}</Label>
               <Select
                 value={payoutFilters.status}
                 onValueChange={(v) => handlePayoutFilterChange("status", v)}
@@ -1149,15 +1149,19 @@ export default function FinanceDashboardPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{isRtl ? "????" : "All"}</SelectItem>
-                  <SelectItem value="pending">{isRtl ? "??? ????????" : "Pending"}</SelectItem>
-                  <SelectItem value="paid">{isRtl ? "?????" : "Paid"}</SelectItem>
-                  <SelectItem value="cancelled">{isRtl ? "????" : "Cancelled"}</SelectItem>
+                  <SelectItem value="all">{isRtl ? "الكل" : "All"}</SelectItem>
+                  <SelectItem value="pending">
+                    {isRtl ? "قيد الانتظار" : "Pending"}
+                  </SelectItem>
+                  <SelectItem value="paid">{isRtl ? "مدفوع" : "Paid"}</SelectItem>
+                  <SelectItem value="cancelled">
+                    {isRtl ? "ملغي" : "Cancelled"}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="min-w-[160px]">
-              <Label className="mb-2 block">{isRtl ? "?????" : "Type"}</Label>
+              <Label className="mb-2 block">{isRtl ? "النوع" : "Type"}</Label>
               <Select
                 value={payoutFilters.revenueType}
                 onValueChange={(v) => handlePayoutFilterChange("revenueType", v)}
@@ -1166,21 +1170,30 @@ export default function FinanceDashboardPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{isRtl ? "????" : "All"}</SelectItem>
-                  <SelectItem value="course_sale">{isRtl ? "??? ????" : "Course Sale"}</SelectItem>
-                  <SelectItem value="subscription">{isRtl ? "??????" : "Subscription"}</SelectItem>
+                  <SelectItem value="all">{isRtl ? "الكل" : "All"}</SelectItem>
+                  <SelectItem value="course_sale">
+                    {isRtl ? "بيع دورة" : "Course Sale"}
+                  </SelectItem>
+                  <SelectItem value="subscription">
+                    {isRtl ? "اشتراك" : "Subscription"}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex-1 min-w-[200px]">
-              <Label className="mb-2 block">{isRtl ? "???" : "Search"}</Label>
+              <Label className="mb-2 block">{isRtl ? "بحث" : "Search"}</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder={isRtl ? "??? ??????? ?? ??????" : "Search by teacher or email"}
+                  placeholder={
+                    isRtl ? "بحث بالمدرس أو البريد" : "Search by teacher or email"
+                  }
                   value={payoutFilters.search}
                   onChange={(e) =>
-                    setPayoutFilters((prev) => ({ ...prev, search: e.target.value }))
+                    setPayoutFilters((prev) => ({
+                      ...prev,
+                      search: e.target.value,
+                    }))
                   }
                   className="pl-10"
                 />
@@ -1192,33 +1205,47 @@ export default function FinanceDashboardPage() {
               disabled={isPayoutsLoading}
               className="gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${isPayoutsLoading ? "animate-spin" : ""}`} />
-              {isRtl ? "?????" : "Refresh"}
+              <RefreshCw
+                className={`h-4 w-4 ${isPayoutsLoading ? "animate-spin" : ""}`}
+              />
+              {isRtl ? "تحديث" : "Refresh"}
             </Button>
           </div>
 
           {isPayoutsLoading ? (
             <div className="py-8 text-center text-muted-foreground">
-              {isRtl ? "???? ???????..." : "Loading..."}
+              {isRtl ? "جاري التحميل..." : "Loading..."}
             </div>
           ) : filteredPayouts.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
-              {isRtl ? "?? ???? ?????? ???" : "No payouts found"}
+              {isRtl ? "لا توجد عمليات دفع" : "No payouts found"}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-start">{isRtl ? "???????" : "Date"}</TableHead>
-                    <TableHead className="text-start">{isRtl ? "??????" : "Teacher"}</TableHead>
-                    <TableHead className="text-start">{isRtl ? "?????" : "Type"}</TableHead>
-                    <TableHead className={isRtl ? "text-left" : "text-right"}>
-                      {isRtl ? "??????" : "Profit"}
+                    <TableHead className="text-start">
+                      {isRtl ? "التاريخ" : "Date"}
                     </TableHead>
-                    <TableHead className="text-center">{isRtl ? "??????" : "Status"}</TableHead>
-                    <TableHead className="text-center">{isRtl ? "???????" : "Proof"}</TableHead>
-                    <TableHead className="text-center">{isRtl ? "???????" : "Action"}</TableHead>
+                    <TableHead className="text-start">
+                      {isRtl ? "المدرس" : "Teacher"}
+                    </TableHead>
+                    <TableHead className="text-start">
+                      {isRtl ? "النوع" : "Type"}
+                    </TableHead>
+                    <TableHead className={isRtl ? "text-left" : "text-right"}>
+                      {isRtl ? "المبلغ" : "Profit"}
+                    </TableHead>
+                    <TableHead className="text-center">
+                      {isRtl ? "الحالة" : "Status"}
+                    </TableHead>
+                    <TableHead className="text-center">
+                      {isRtl ? "الإثبات" : "Proof"}
+                    </TableHead>
+                    <TableHead className="text-center">
+                      {isRtl ? "الإجراء" : "Action"}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1244,14 +1271,16 @@ export default function FinanceDashboardPage() {
                       <TableCell>
                         {payout.revenueType === "course_sale"
                           ? isRtl
-                            ? "??? ????"
+                            ? "بيع دورة"
                             : "Course Sale"
                           : isRtl
-                          ? "??????"
+                          ? "اشتراك"
                           : "Subscription"}
                       </TableCell>
                       <TableCell
-                        className={`${isRtl ? "text-left" : "text-right"} font-medium`}
+                        className={`${
+                          isRtl ? "text-left" : "text-right"
+                        } font-medium`}
                       >
                         <div>
                           {formatCurrency(
@@ -1286,14 +1315,14 @@ export default function FinanceDashboardPage() {
                         >
                           {payout.status === "paid"
                             ? isRtl
-                              ? "?????"
+                              ? "مدفوع"
                               : "Paid"
                             : payout.status === "pending"
                             ? isRtl
-                              ? "??? ????????"
+                              ? "قيد الانتظار"
                               : "Pending"
                             : isRtl
-                            ? "????"
+                            ? "ملغي"
                             : "Cancelled"}
                         </Badge>
                       </TableCell>
@@ -1306,7 +1335,7 @@ export default function FinanceDashboardPage() {
                             onClick={() => openPayoutProof(payout.payoutProofUrl!)}
                           >
                             <Eye className="h-4 w-4" />
-                            {isRtl ? "???" : "View"}
+                            {isRtl ? "عرض" : "View"}
                           </Button>
                         ) : (
                           <span className="text-muted-foreground text-xs">-</span>
@@ -1320,7 +1349,7 @@ export default function FinanceDashboardPage() {
                             onClick={() => openMarkPaidDialog(payout)}
                           >
                             <CheckCircle className="h-4 w-4" />
-                            {isRtl ? "?? ?????" : "Mark Paid"}
+                            {isRtl ? "تم الدفع" : "Mark Paid"}
                           </Button>
                         ) : (
                           <span className="text-xs text-muted-foreground">
@@ -1352,7 +1381,7 @@ export default function FinanceDashboardPage() {
                   })
                 }
               >
-                {isRtl ? "??????" : "Previous"}
+                {isRtl ? "السابق" : "Previous"}
               </Button>
               <span className="flex items-center px-4 text-sm text-muted-foreground">
                 {payoutPagination.page} / {payoutPagination.pages}
@@ -1368,7 +1397,7 @@ export default function FinanceDashboardPage() {
                   })
                 }
               >
-                {isRtl ? "??????" : "Next"}
+                {isRtl ? "التالي" : "Next"}
               </Button>
             </div>
           )}
@@ -1380,7 +1409,7 @@ export default function FinanceDashboardPage() {
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
-              <Label className="mb-2 block">{isRtl ? "بحث" : "Search"}</Label>
+              <Label className="mb-2 block">{isRtl ? "???" : "Search"}</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -1393,13 +1422,13 @@ export default function FinanceDashboardPage() {
             </div>
 
             <div className="min-w-[130px]">
-              <Label className="mb-2 block">{isRtl ? "النوع" : "Type"}</Label>
+              <Label className="mb-2 block">{isRtl ? "?????" : "Type"}</Label>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{isRtl ? "الكل" : "All"}</SelectItem>
+                  <SelectItem value="all">{isRtl ? "????" : "All"}</SelectItem>
                   <SelectItem value="income">
                     {isRtl ? "إيراد" : "Income"}
                   </SelectItem>
@@ -1422,7 +1451,7 @@ export default function FinanceDashboardPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{isRtl ? "الكل" : "All"}</SelectItem>
+                  <SelectItem value="all">{isRtl ? "????" : "All"}</SelectItem>
                   {allCategories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {translateCategory(cat)}
@@ -1441,7 +1470,7 @@ export default function FinanceDashboardPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{isRtl ? "الكل" : "All"}</SelectItem>
+                  <SelectItem value="all">{isRtl ? "????" : "All"}</SelectItem>
                   <SelectItem value="manual">
                     {isRtl ? "يدوي" : "Manual"}
                   </SelectItem>
@@ -1582,7 +1611,7 @@ export default function FinanceDashboardPage() {
                       onClick={() => handleSort("transactionDate")}
                     >
                       <div className="flex items-center">
-                        {isRtl ? "التاريخ" : "Date"}
+                        {isRtl ? "???????" : "Date"}
                         {getSortIcon("transactionDate")}
                       </div>
                     </TableHead>
@@ -1591,7 +1620,7 @@ export default function FinanceDashboardPage() {
                       onClick={() => handleSort("type")}
                     >
                       <div className="flex items-center">
-                        {isRtl ? "النوع" : "Type"}
+                        {isRtl ? "?????" : "Type"}
                         {getSortIcon("type")}
                       </div>
                     </TableHead>
@@ -1695,7 +1724,7 @@ export default function FinanceDashboardPage() {
                   setPagination({ ...pagination, page: pagination.page - 1 })
                 }
               >
-                {isRtl ? "السابق" : "Previous"}
+                {isRtl ? "??????" : "Previous"}
               </Button>
               <span className="flex items-center px-4 text-sm text-muted-foreground">
                 {pagination.page} / {pagination.pages}
@@ -1708,7 +1737,7 @@ export default function FinanceDashboardPage() {
                   setPagination({ ...pagination, page: pagination.page + 1 })
                 }
               >
-                {isRtl ? "التالي" : "Next"}
+                {isRtl ? "??????" : "Next"}
               </Button>
             </div>
           )}
@@ -1718,22 +1747,22 @@ export default function FinanceDashboardPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {isRtl ? "????? ????? ???????" : "Confirm Payout"}
+              {isRtl ? "تأكيد تحويل الأرباح" : "Confirm Payout"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="mb-2 block">{isRtl ? "???????" : "Notes"}</Label>
+              <Label className="mb-2 block">{isRtl ? "ملاحظات" : "Notes"}</Label>
               <Textarea
                 value={payoutNotes}
                 onChange={(e) => setPayoutNotes(e.target.value)}
-                placeholder={isRtl ? "???? ?????? ??????" : "Add a note for the teacher"}
+                placeholder={isRtl ? "اكتب ملاحظة للمدرس" : "Add a note for the teacher"}
                 rows={3}
               />
             </div>
             <div>
               <Label className="mb-2 block">
-                {isRtl ? "???? ????? ???????" : "Transfer Proof"}
+                {isRtl ? "صورة إثبات التحويل" : "Transfer Proof"}
               </Label>
               <Input
                 type="file"
@@ -1745,16 +1774,16 @@ export default function FinanceDashboardPage() {
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowMarkPaidDialog(false)}>
-                {isRtl ? "?????" : "Cancel"}
+                {isRtl ? "إلغاء" : "Cancel"}
               </Button>
               <Button onClick={handleMarkPaid} disabled={isMarkingPaid} className="gap-2">
                 <CheckCircle className="h-4 w-4" />
                 {isMarkingPaid
                   ? isRtl
-                    ? "???? ?????..."
+                    ? "جارٍ الحفظ..."
                     : "Saving..."
                   : isRtl
-                  ? "????? ?????"
+                  ? "تأكيد الدفع"
                   : "Confirm Paid"}
               </Button>
             </div>
@@ -1769,18 +1798,18 @@ export default function FinanceDashboardPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {isRtl ? "???? ????? ???????" : "Payout Proof"}
+              {isRtl ? "صورة إثبات التحويل" : "Payout Proof"}
             </DialogTitle>
           </DialogHeader>
           {payoutProofPreviewUrl ? (
             <img
               src={payoutProofPreviewUrl}
-              alt={isRtl ? "????? ???????" : "Payout proof"}
+              alt={isRtl ? "إثبات التحويل" : "Payout proof"}
               className="w-full rounded-md border"
             />
           ) : (
             <p className="text-sm text-muted-foreground">
-              {isRtl ? "?? ???? ????" : "No proof available"}
+              {isRtl ? "لا توجد صورة" : "No proof available"}
             </p>
           )}
         </DialogContent>
