@@ -62,6 +62,9 @@ const teacherProfitSchema = new mongoose.Schema(
     paidAt: {
       type: Date,
     },
+    payoutProofUrl: {
+      type: String,
+    },
     notes: {
       type: String,
     },

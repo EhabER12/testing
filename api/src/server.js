@@ -359,7 +359,7 @@ app.use("/api/packages", packageRoutes);
 app.use("/api/teacher-groups", teacherGroupRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/payment-methods", paymentMethodRoutes);
-app.use("/api/teacher-profit", teacherProfitRoutes);
+app.use("/api/teacher-profit", imagePathMiddleware, teacherProfitRoutes);
 
 // Health check route (enhanced)
 app.get("/health", async (req, res) => {

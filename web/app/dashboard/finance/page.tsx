@@ -56,6 +56,8 @@ import {
   ArrowUp,
   ArrowDown,
   X,
+  CheckCircle,
+  Eye,
 } from "lucide-react";
 import axiosInstance from "@/lib/axios";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
@@ -97,6 +99,47 @@ export default function FinanceDashboardPage() {
   type SortOrder = "asc" | "desc";
   const [sortField, setSortField] = useState<SortField>("transactionDate");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  type AdminProfitTransaction = {
+    id: string;
+    teacherId?: {
+      id?: string;
+      _id?: string;
+      fullName?: any;
+      email?: string;
+      profilePic?: string;
+    };
+    revenueType: "course_sale" | "subscription";
+    totalAmount: number;
+    profitPercentage: number;
+    profitAmount: number;
+    currency: string;
+    transactionDate: string;
+    status: "pending" | "paid" | "cancelled";
+    paidAt?: string;
+    notes?: string;
+    payoutProofUrl?: string;
+  };
+
+  const [payouts, setPayouts] = useState<AdminProfitTransaction[]>([]);
+  const [payoutPagination, setPayoutPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0,
+  });
+  const [payoutFilters, setPayoutFilters] = useState({
+    status: "pending",
+    revenueType: "all",
+    search: "",
+  });
+  const [isPayoutsLoading, setIsPayoutsLoading] = useState(false);
+  const [isMarkingPaid, setIsMarkingPaid] = useState(false);
+  const [showMarkPaidDialog, setShowMarkPaidDialog] = useState(false);
+  const [selectedPayout, setSelectedPayout] = useState<AdminProfitTransaction | null>(null);
+  const [payoutNotes, setPayoutNotes] = useState("");
+  const [payoutProofFile, setPayoutProofFile] = useState<File | null>(null);
+  const [showPayoutProofDialog, setShowPayoutProofDialog] = useState(false);
+  const [payoutProofPreviewUrl, setPayoutProofPreviewUrl] = useState<string | null>(null);
 
   // Display currency for all amounts
   const [displayCurrency, setDisplayCurrency] = useState<"SAR" | "EGP" | "USD">(
@@ -168,6 +211,46 @@ export default function FinanceDashboardPage() {
     toast,
     isRtl,
   ]);
+  const fetchTeacherPayouts = useCallback(async () => {
+    setIsPayoutsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("page", payoutPagination.page.toString());
+      params.append("limit", payoutPagination.limit.toString());
+      if (payoutFilters.status && payoutFilters.status !== "all") {
+        params.append("status", payoutFilters.status);
+      }
+      if (payoutFilters.revenueType && payoutFilters.revenueType !== "all") {
+        params.append("revenueType", payoutFilters.revenueType);
+      }
+
+      const res = await axiosInstance.get(
+        `/teacher-profit/transactions?${params.toString()}`
+      );
+      setPayouts(res.data.data.results || []);
+      setPayoutPagination((prev) => ({
+        ...prev,
+        total: res.data.data.pagination?.total || 0,
+        pages: res.data.data.pagination?.pages || 1,
+      }));
+    } catch (error: any) {
+      toast({
+        title: isRtl ? "خطأ" : "Error",
+        description: error.message || "Failed to load teacher payouts",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPayoutsLoading(false);
+    }
+  }, [
+    payoutPagination.page,
+    payoutPagination.limit,
+    payoutFilters.status,
+    payoutFilters.revenueType,
+    toast,
+    isRtl,
+  ]);
+
 
   // Fetch settings on mount
   useEffect(() => {
@@ -217,6 +300,10 @@ export default function FinanceDashboardPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+  useEffect(() => {
+    fetchTeacherPayouts();
+  }, [fetchTeacherPayouts]);
+
 
   const handleAddTransaction = async () => {
     if (!newTransaction.amount || parseFloat(newTransaction.amount) <= 0) {
@@ -270,6 +357,60 @@ export default function FinanceDashboardPage() {
       setIsSubmitting(false);
     }
   };
+  const handlePayoutFilterChange = (key: string, value: string) => {
+    setPayoutFilters((prev) => ({ ...prev, [key]: value }));
+    setPayoutPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const openMarkPaidDialog = (payout: AdminProfitTransaction) => {
+    setSelectedPayout(payout);
+    setPayoutNotes("");
+    setPayoutProofFile(null);
+    setShowMarkPaidDialog(true);
+  };
+
+  const openPayoutProof = (url: string) => {
+    setPayoutProofPreviewUrl(url);
+    setShowPayoutProofDialog(true);
+  };
+
+  const handleMarkPaid = async () => {
+    if (!selectedPayout) return;
+    setIsMarkingPaid(true);
+    try {
+      const formData = new FormData();
+      if (payoutNotes) formData.append("notes", payoutNotes);
+      if (payoutProofFile) formData.append("payoutProof", payoutProofFile);
+
+      await axiosInstance.put(
+        `/teacher-profit/profit/${selectedPayout.id}/mark-paid`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      toast({
+        title: isRtl ? "تم بنجاح" : "Success",
+        description: isRtl
+          ? "تم تحديث حالة الدفع"
+          : "Payout marked as paid",
+      });
+
+      setShowMarkPaidDialog(false);
+      setSelectedPayout(null);
+      setPayoutProofFile(null);
+      setPayoutNotes("");
+      fetchTeacherPayouts();
+    } catch (error: any) {
+      toast({
+        title: isRtl ? "خطأ" : "Error",
+        description: error.message || "Failed to mark payout as paid",
+        variant: "destructive",
+      });
+    } finally {
+      setIsMarkingPaid(false);
+    }
+  };
+
 
   const handleExport = async () => {
     try {
@@ -400,6 +541,15 @@ export default function FinanceDashboardPage() {
     // Return the category as-is if no translation (for custom categories)
     return category.replace(/_/g, " ");
   };
+  const getTeacherLabel = (teacher: any): string => {
+    if (!teacher) return "-";
+    if (typeof teacher.fullName === "string") return teacher.fullName;
+    const name = isRtl
+      ? teacher.fullName?.ar || teacher.fullName?.en
+      : teacher.fullName?.en || teacher.fullName?.ar;
+    return name || teacher.email || "-";
+  };
+
 
   // Get all unique categories from transactions for the filter
   const allCategories = Array.from(
@@ -478,6 +628,18 @@ export default function FinanceDashboardPage() {
   };
 
   const filteredTransactions = getFilteredAndSortedTransactions();
+  const filteredPayouts = payoutFilters.search
+    ? payouts.filter((payout) => {
+        const searchValue = payoutFilters.search.toLowerCase().trim();
+        const teacherLabel = getTeacherLabel(payout.teacherId).toLowerCase();
+        const teacherEmail = (payout.teacherId?.email || "").toLowerCase();
+        return (
+          teacherLabel.includes(searchValue) ||
+          teacherEmail.includes(searchValue)
+        );
+      })
+    : payouts;
+
 
   // Check if any filter is active
   const hasActiveFilters =
@@ -963,6 +1125,256 @@ export default function FinanceDashboardPage() {
         </div>
       )}
 
+      {/* Teacher Payouts */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {isRtl ? "??????? ????? ????????" : "Teacher Payouts"}
+          </CardTitle>
+          <CardDescription>
+            {isRtl
+              ? "????? ???? ??????? ?????? ????? ???????"
+              : "Send profit share payouts and attach transfer proof"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-4 items-end mb-4">
+            <div className="min-w-[160px]">
+              <Label className="mb-2 block">{isRtl ? "??????" : "Status"}</Label>
+              <Select
+                value={payoutFilters.status}
+                onValueChange={(v) => handlePayoutFilterChange("status", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isRtl ? "????" : "All"}</SelectItem>
+                  <SelectItem value="pending">{isRtl ? "??? ????????" : "Pending"}</SelectItem>
+                  <SelectItem value="paid">{isRtl ? "?????" : "Paid"}</SelectItem>
+                  <SelectItem value="cancelled">{isRtl ? "????" : "Cancelled"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="min-w-[160px]">
+              <Label className="mb-2 block">{isRtl ? "?????" : "Type"}</Label>
+              <Select
+                value={payoutFilters.revenueType}
+                onValueChange={(v) => handlePayoutFilterChange("revenueType", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isRtl ? "????" : "All"}</SelectItem>
+                  <SelectItem value="course_sale">{isRtl ? "??? ????" : "Course Sale"}</SelectItem>
+                  <SelectItem value="subscription">{isRtl ? "??????" : "Subscription"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <Label className="mb-2 block">{isRtl ? "???" : "Search"}</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={isRtl ? "??? ??????? ?? ??????" : "Search by teacher or email"}
+                  value={payoutFilters.search}
+                  onChange={(e) =>
+                    setPayoutFilters((prev) => ({ ...prev, search: e.target.value }))
+                  }
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={fetchTeacherPayouts}
+              disabled={isPayoutsLoading}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isPayoutsLoading ? "animate-spin" : ""}`} />
+              {isRtl ? "?????" : "Refresh"}
+            </Button>
+          </div>
+
+          {isPayoutsLoading ? (
+            <div className="py-8 text-center text-muted-foreground">
+              {isRtl ? "???? ???????..." : "Loading..."}
+            </div>
+          ) : filteredPayouts.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">
+              {isRtl ? "?? ???? ?????? ???" : "No payouts found"}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-start">{isRtl ? "???????" : "Date"}</TableHead>
+                    <TableHead className="text-start">{isRtl ? "??????" : "Teacher"}</TableHead>
+                    <TableHead className="text-start">{isRtl ? "?????" : "Type"}</TableHead>
+                    <TableHead className={isRtl ? "text-left" : "text-right"}>
+                      {isRtl ? "??????" : "Profit"}
+                    </TableHead>
+                    <TableHead className="text-center">{isRtl ? "??????" : "Status"}</TableHead>
+                    <TableHead className="text-center">{isRtl ? "???????" : "Proof"}</TableHead>
+                    <TableHead className="text-center">{isRtl ? "???????" : "Action"}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPayouts.map((payout) => (
+                    <TableRow key={payout.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {new Date(payout.transactionDate).toLocaleDateString(
+                          isRtl ? "ar-SA" : "en-US"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {getTeacherLabel(payout.teacherId)}
+                          </span>
+                          {payout.teacherId?.email && (
+                            <span className="text-xs text-muted-foreground">
+                              {payout.teacherId.email}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {payout.revenueType === "course_sale"
+                          ? isRtl
+                            ? "??? ????"
+                            : "Course Sale"
+                          : isRtl
+                          ? "??????"
+                          : "Subscription"}
+                      </TableCell>
+                      <TableCell
+                        className={`${isRtl ? "text-left" : "text-right"} font-medium`}
+                      >
+                        <div>
+                          {formatCurrency(
+                            convertCurrency(
+                              payout.profitAmount,
+                              payout.currency,
+                              displayCurrency
+                            ),
+                            displayCurrency
+                          )}
+                        </div>
+                        {payout.currency !== displayCurrency && (
+                          <div className="text-xs text-muted-foreground">
+                            ({formatCurrency(payout.profitAmount, payout.currency)})
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant={
+                            payout.status === "paid"
+                              ? "default"
+                              : payout.status === "pending"
+                              ? "secondary"
+                              : "destructive"
+                          }
+                          className={
+                            payout.status === "paid"
+                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                              : ""
+                          }
+                        >
+                          {payout.status === "paid"
+                            ? isRtl
+                              ? "?????"
+                              : "Paid"
+                            : payout.status === "pending"
+                            ? isRtl
+                              ? "??? ????????"
+                              : "Pending"
+                            : isRtl
+                            ? "????"
+                            : "Cancelled"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {payout.payoutProofUrl ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => openPayoutProof(payout.payoutProofUrl!)}
+                          >
+                            <Eye className="h-4 w-4" />
+                            {isRtl ? "???" : "View"}
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {payout.status === "pending" ? (
+                          <Button
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => openMarkPaidDialog(payout)}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                            {isRtl ? "?? ?????" : "Mark Paid"}
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {payout.paidAt
+                              ? new Date(payout.paidAt).toLocaleDateString(
+                                  isRtl ? "ar-SA" : "en-US"
+                                )
+                              : "-"}
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {payoutPagination.pages > 1 && (
+            <div className="flex justify-center gap-2 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={payoutPagination.page === 1}
+                onClick={() =>
+                  setPayoutPagination({
+                    ...payoutPagination,
+                    page: payoutPagination.page - 1,
+                  })
+                }
+              >
+                {isRtl ? "??????" : "Previous"}
+              </Button>
+              <span className="flex items-center px-4 text-sm text-muted-foreground">
+                {payoutPagination.page} / {payoutPagination.pages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={payoutPagination.page === payoutPagination.pages}
+                onClick={() =>
+                  setPayoutPagination({
+                    ...payoutPagination,
+                    page: payoutPagination.page + 1,
+                  })
+                }
+              >
+                {isRtl ? "??????" : "Next"}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
@@ -1302,6 +1714,78 @@ export default function FinanceDashboardPage() {
           )}
         </CardContent>
       </Card>
+      <Dialog open={showMarkPaidDialog} onOpenChange={setShowMarkPaidDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {isRtl ? "????? ????? ???????" : "Confirm Payout"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="mb-2 block">{isRtl ? "???????" : "Notes"}</Label>
+              <Textarea
+                value={payoutNotes}
+                onChange={(e) => setPayoutNotes(e.target.value)}
+                placeholder={isRtl ? "???? ?????? ??????" : "Add a note for the teacher"}
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label className="mb-2 block">
+                {isRtl ? "???? ????? ???????" : "Transfer Proof"}
+              </Label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  setPayoutProofFile(e.target.files ? e.target.files[0] : null)
+                }
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowMarkPaidDialog(false)}>
+                {isRtl ? "?????" : "Cancel"}
+              </Button>
+              <Button onClick={handleMarkPaid} disabled={isMarkingPaid} className="gap-2">
+                <CheckCircle className="h-4 w-4" />
+                {isMarkingPaid
+                  ? isRtl
+                    ? "???? ?????..."
+                    : "Saving..."
+                  : isRtl
+                  ? "????? ?????"
+                  : "Confirm Paid"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showPayoutProofDialog}
+        onOpenChange={setShowPayoutProofDialog}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {isRtl ? "???? ????? ???????" : "Payout Proof"}
+            </DialogTitle>
+          </DialogHeader>
+          {payoutProofPreviewUrl ? (
+            <img
+              src={payoutProofPreviewUrl}
+              alt={isRtl ? "????? ???????" : "Payout proof"}
+              className="w-full rounded-md border"
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {isRtl ? "?? ???? ????" : "No proof available"}
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

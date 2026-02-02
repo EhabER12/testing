@@ -233,8 +233,57 @@ export class TeacherProfitService {
     return teacherStats;
   }
 
+  // Get profit transactions (admin view)
+  async getProfitTransactions(filters = {}, options = {}) {
+    const { teacherId, startDate, endDate, revenueType, status } = filters;
+    const { page = 1, limit = 10 } = options;
+
+    const matchQuery = {};
+
+    if (teacherId) {
+      matchQuery.teacherId = teacherId;
+    }
+
+    if (startDate || endDate) {
+      matchQuery.transactionDate = {};
+      if (startDate) matchQuery.transactionDate.$gte = new Date(startDate);
+      if (endDate) matchQuery.transactionDate.$lte = new Date(endDate);
+    }
+
+    if (revenueType) {
+      matchQuery.revenueType = revenueType;
+    }
+
+    if (status) {
+      matchQuery.status = status;
+    }
+
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+    const [results, total] = await Promise.all([
+      TeacherProfit.find(matchQuery)
+        .populate("teacherId", "fullName email profilePic")
+        .populate("sourceId")
+        .sort({ transactionDate: -1 })
+        .skip(skip)
+        .limit(parseInt(limit, 10)),
+      TeacherProfit.countDocuments(matchQuery),
+    ]);
+
+    return {
+      results,
+      pagination: {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+        total,
+        pages: Math.ceil(total / parseInt(limit, 10)) || 1,
+      },
+    };
+  }
+
   // Update profit status (for payout tracking)
-  async updateProfitStatus(profitId, status, notes = null) {
+  async updateProfitStatus(profitId, status, options = {}) {
+    const { notes = null, payoutProofUrl = null } = options;
     const profit = await TeacherProfit.findById(profitId);
     if (!profit) {
       throw new ApiError(404, "Profit record not found");
@@ -246,6 +295,9 @@ export class TeacherProfitService {
     }
     if (notes) {
       profit.notes = notes;
+    }
+    if (payoutProofUrl) {
+      profit.payoutProofUrl = payoutProofUrl;
     }
 
     await profit.save();

@@ -14,6 +14,12 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -54,6 +60,8 @@ export default function TeacherProfitsPage() {
     endDate: "",
     revenueType: "all",
   });
+  const [proofDialogOpen, setProofDialogOpen] = useState(false);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -83,6 +91,11 @@ export default function TeacherProfitsPage() {
       revenueType: "all",
     });
     dispatch(getMyProfitStatsThunk());
+  };
+
+  const handleOpenProof = (url: string) => {
+    setProofUrl(url);
+    setProofDialogOpen(true);
   };
 
   return (
@@ -271,12 +284,15 @@ export default function TeacherProfitsPage() {
                   <TableHead className="text-center">
                     {isRtl ? "الحالة" : "Status"}
                   </TableHead>
+                  <TableHead className="text-center">
+                    {isRtl ? "الإثبات" : "Proof"}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       {t("common.loading")}
                     </TableCell>
                   </TableRow>
@@ -342,12 +358,25 @@ export default function TeacherProfitsPage() {
                             : "Cancelled"}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-center">
+                        {tx.payoutProofUrl ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenProof(tx.payoutProofUrl!)}
+                          >
+                            {isRtl ? "عرض" : "View"}
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">-</span>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="text-center py-8 text-muted-foreground"
                     >
                       {isRtl ? "لا توجد معاملات" : "No transactions found"}
@@ -359,6 +388,26 @@ export default function TeacherProfitsPage() {
           </div>
         </CardContent>
       </Card>
+      <Dialog open={proofDialogOpen} onOpenChange={setProofDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {isRtl ? "صورة إثبات التحويل" : "Payout Proof"}
+            </DialogTitle>
+          </DialogHeader>
+          {proofUrl ? (
+            <img
+              src={proofUrl}
+              alt={isRtl ? "إثبات التحويل" : "Payout proof"}
+              className="w-full rounded-md border"
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {isRtl ? "لا توجد صورة" : "No proof available"}
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

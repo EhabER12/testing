@@ -92,13 +92,39 @@ export const updateCourseProfitPercentage = async (req, res, next) => {
   }
 };
 
+// Admin: Get profit transactions
+export const getProfitTransactions = async (req, res, next) => {
+  try {
+    const { teacherId, startDate, endDate, revenueType, status, page, limit } = req.query;
+
+    const data = await profitService.getProfitTransactions(
+      {
+        teacherId,
+        startDate,
+        endDate,
+        revenueType,
+        status,
+      },
+      { page, limit }
+    );
+
+    return ApiResponse.success(res, data, "Profit transactions retrieved");
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Admin: Mark profit as paid
 export const markProfitAsPaid = async (req, res, next) => {
   try {
     const { profitId } = req.params;
     const { notes } = req.body;
+    const payoutProofUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-    const profit = await profitService.updateProfitStatus(profitId, "paid", notes);
+    const profit = await profitService.updateProfitStatus(profitId, "paid", {
+      notes,
+      payoutProofUrl,
+    });
 
     return ApiResponse.success(res, profit, "Profit marked as paid");
   } catch (error) {

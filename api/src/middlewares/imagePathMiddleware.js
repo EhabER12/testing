@@ -73,6 +73,20 @@ const processImagePaths = (data, visited = new WeakSet()) => {
       }
     }
 
+    if (data.payoutProofUrl && typeof data.payoutProofUrl === "string") {
+      if (data.payoutProofUrl.startsWith("/uploads")) {
+        data.payoutProofUrl = `${baseUrl}${data.payoutProofUrl}`;
+      } else if (data.payoutProofUrl.startsWith("uploads/")) {
+        data.payoutProofUrl = `${baseUrl}/${data.payoutProofUrl}`;
+      } else if (
+        data.payoutProofUrl.includes(":\\") ||
+        data.payoutProofUrl.includes("/")
+      ) {
+        const filename = path.basename(data.payoutProofUrl);
+        data.payoutProofUrl = `${baseUrl}/uploads/${filename}`;
+      }
+    }
+
     if (data.logo && typeof data.logo === "string") {
       if (data.logo.startsWith("/uploads")) {
         data.logo = `${baseUrl}${data.logo}`;

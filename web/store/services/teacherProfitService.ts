@@ -28,6 +28,9 @@ export interface TeacherProfitTransaction {
   transactionDate: string;
   status: "pending" | "paid" | "cancelled";
   sourceId: any;
+  paidAt?: string;
+  notes?: string;
+  payoutProofUrl?: string;
 }
 
 export interface UpdateProfitPercentagesPayload {
