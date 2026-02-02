@@ -156,6 +156,12 @@ export default function FinanceDashboardPage() {
   // Settings loading state
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
 
+  const formatLocalDate = (date: Date) => {
+    const tzOffsetMs = date.getTimezoneOffset() * 60 * 1000;
+    const localDate = new Date(date.getTime() - tzOffsetMs);
+    return localDate.toISOString().split("T")[0];
+  };
+
   // Add transaction dialog
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -167,7 +173,7 @@ export default function FinanceDashboardPage() {
     category: "",
     customCategory: "",
     description: "",
-    transactionDate: new Date().toISOString().split("T")[0],
+    transactionDate: formatLocalDate(new Date()),
   });
 
   const fetchData = useCallback(async () => {
@@ -314,6 +320,16 @@ export default function FinanceDashboardPage() {
       });
       return;
     }
+    if (useCustomCategory && !newTransaction.customCategory.trim()) {
+      toast({
+        title: isRtl ? "خطأ" : "Error",
+        description: isRtl
+          ? "من فضلك ادخل تصنيفًا مخصصًا"
+          : "Please enter a custom category",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -340,11 +356,11 @@ export default function FinanceDashboardPage() {
       setNewTransaction({
         type: "income",
         amount: "",
-        currency: "SAR",
+        currency: displayCurrency,
         category: "",
         customCategory: "",
         description: "",
-        transactionDate: new Date().toISOString().split("T")[0],
+        transactionDate: formatLocalDate(new Date()),
       });
       fetchData();
     } catch (error: any) {
@@ -653,6 +669,10 @@ export default function FinanceDashboardPage() {
     amountRange.min ||
     amountRange.max;
 
+  const resetPaginationPage = () => {
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
   // Clear all filters
   const clearFilters = () => {
     setTypeFilter("all");
@@ -664,6 +684,7 @@ export default function FinanceDashboardPage() {
     setAmountRange({ min: "", max: "" });
     setSortField("transactionDate");
     setSortOrder("desc");
+    resetPaginationPage();
   };
 
   // Apply date preset
@@ -671,7 +692,7 @@ export default function FinanceDashboardPage() {
     setDatePreset(preset);
     const now = new Date();
     let startDate = "";
-    let endDate = now.toISOString().split("T")[0];
+    let endDate = formatLocalDate(now);
 
     switch (preset) {
       case "today":
@@ -680,31 +701,25 @@ export default function FinanceDashboardPage() {
       case "week":
         const weekStart = new Date(now);
         weekStart.setDate(now.getDate() - now.getDay());
-        startDate = weekStart.toISOString().split("T")[0];
+        startDate = formatLocalDate(weekStart);
         break;
       case "month":
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-          .toISOString()
-          .split("T")[0];
+        startDate = formatLocalDate(new Date(now.getFullYear(), now.getMonth(), 1));
         break;
       case "lastMonth":
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-          .toISOString()
-          .split("T")[0];
-        endDate = new Date(now.getFullYear(), now.getMonth(), 0)
-          .toISOString()
-          .split("T")[0];
+        startDate = formatLocalDate(
+          new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        );
+        endDate = formatLocalDate(new Date(now.getFullYear(), now.getMonth(), 0));
         break;
       case "quarter":
         const quarterMonth = Math.floor(now.getMonth() / 3) * 3;
-        startDate = new Date(now.getFullYear(), quarterMonth, 1)
-          .toISOString()
-          .split("T")[0];
+        startDate = formatLocalDate(
+          new Date(now.getFullYear(), quarterMonth, 1)
+        );
         break;
       case "year":
-        startDate = new Date(now.getFullYear(), 0, 1)
-          .toISOString()
-          .split("T")[0];
+        startDate = formatLocalDate(new Date(now.getFullYear(), 0, 1));
         break;
       default:
         startDate = "";
@@ -712,6 +727,7 @@ export default function FinanceDashboardPage() {
     }
 
     setDateRange({ startDate, endDate });
+    resetPaginationPage();
   };
 
   // Calculate this month's stats
@@ -832,7 +848,7 @@ export default function FinanceDashboardPage() {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>{isRtl ? "?????" : "Type"}</Label>
+                  <Label>{isRtl ? "النوع" : "Type"}</Label>
                   <Select
                     value={newTransaction.type}
                     onValueChange={(v: any) =>
@@ -955,7 +971,7 @@ export default function FinanceDashboardPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{isRtl ? "???????" : "Date"}</Label>
+                  <Label>{isRtl ? "التاريخ" : "Date"}</Label>
                   <Input
                     type="date"
                     value={newTransaction.transactionDate}
@@ -1409,26 +1425,35 @@ export default function FinanceDashboardPage() {
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
-              <Label className="mb-2 block">{isRtl ? "???" : "Search"}</Label>
+              <Label className="mb-2 block">{isRtl ? "بحث" : "Search"}</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={isRtl ? "بحث..." : "Search..."}
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    resetPaginationPage();
+                  }}
                   className="pl-10"
                 />
               </div>
             </div>
 
             <div className="min-w-[130px]">
-              <Label className="mb-2 block">{isRtl ? "?????" : "Type"}</Label>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <Label className="mb-2 block">{isRtl ? "النوع" : "Type"}</Label>
+              <Select
+                value={typeFilter}
+                onValueChange={(value) => {
+                  setTypeFilter(value);
+                  resetPaginationPage();
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{isRtl ? "????" : "All"}</SelectItem>
+                  <SelectItem value="all">{isRtl ? "الكل" : "All"}</SelectItem>
                   <SelectItem value="income">
                     {isRtl ? "إيراد" : "Income"}
                   </SelectItem>
@@ -1446,12 +1471,18 @@ export default function FinanceDashboardPage() {
               <Label className="mb-2 block">
                 {isRtl ? "التصنيف" : "Category"}
               </Label>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <Select
+                value={categoryFilter}
+                onValueChange={(value) => {
+                  setCategoryFilter(value);
+                  resetPaginationPage();
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{isRtl ? "????" : "All"}</SelectItem>
+                  <SelectItem value="all">{isRtl ? "الكل" : "All"}</SelectItem>
                   {allCategories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {translateCategory(cat)}
@@ -1465,12 +1496,18 @@ export default function FinanceDashboardPage() {
               <Label className="mb-2 block">
                 {isRtl ? "المصدر" : "Source"}
               </Label>
-              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <Select
+                value={sourceFilter}
+                onValueChange={(value) => {
+                  setSourceFilter(value);
+                  resetPaginationPage();
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{isRtl ? "????" : "All"}</SelectItem>
+                  <SelectItem value="all">{isRtl ? "الكل" : "All"}</SelectItem>
                   <SelectItem value="manual">
                     {isRtl ? "يدوي" : "Manual"}
                   </SelectItem>
@@ -1520,27 +1557,29 @@ export default function FinanceDashboardPage() {
 
             <div className="min-w-[140px]">
               <Label className="mb-2 block">{isRtl ? "من" : "From"}</Label>
-              <Input
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => {
-                  setDatePreset("all");
-                  setDateRange({ ...dateRange, startDate: e.target.value });
-                }}
-              />
-            </div>
+                <Input
+                  type="date"
+                  value={dateRange.startDate}
+                  onChange={(e) => {
+                    setDatePreset("all");
+                    setDateRange({ ...dateRange, startDate: e.target.value });
+                    resetPaginationPage();
+                  }}
+                />
+              </div>
 
             <div className="min-w-[140px]">
               <Label className="mb-2 block">{isRtl ? "إلى" : "To"}</Label>
-              <Input
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => {
-                  setDatePreset("all");
-                  setDateRange({ ...dateRange, endDate: e.target.value });
-                }}
-              />
-            </div>
+                <Input
+                  type="date"
+                  value={dateRange.endDate}
+                  onChange={(e) => {
+                    setDatePreset("all");
+                    setDateRange({ ...dateRange, endDate: e.target.value });
+                    resetPaginationPage();
+                  }}
+                />
+              </div>
 
             <div className="min-w-[240px]">
               <Label className="mb-2 block">
@@ -1552,9 +1591,10 @@ export default function FinanceDashboardPage() {
                   min="0"
                   placeholder={isRtl ? "الأدنى" : "Min"}
                   value={amountRange.min}
-                  onChange={(e) =>
-                    setAmountRange({ ...amountRange, min: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setAmountRange({ ...amountRange, min: e.target.value });
+                    resetPaginationPage();
+                  }}
                   className="w-20"
                 />
                 <span className="text-muted-foreground">-</span>
@@ -1563,9 +1603,10 @@ export default function FinanceDashboardPage() {
                   min="0"
                   placeholder={isRtl ? "الأقصى" : "Max"}
                   value={amountRange.max}
-                  onChange={(e) =>
-                    setAmountRange({ ...amountRange, max: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setAmountRange({ ...amountRange, max: e.target.value });
+                    resetPaginationPage();
+                  }}
                   className="w-20"
                 />
               </div>
@@ -1611,7 +1652,7 @@ export default function FinanceDashboardPage() {
                       onClick={() => handleSort("transactionDate")}
                     >
                       <div className="flex items-center">
-                        {isRtl ? "???????" : "Date"}
+                        {isRtl ? "التاريخ" : "Date"}
                         {getSortIcon("transactionDate")}
                       </div>
                     </TableHead>
@@ -1620,7 +1661,7 @@ export default function FinanceDashboardPage() {
                       onClick={() => handleSort("type")}
                     >
                       <div className="flex items-center">
-                        {isRtl ? "?????" : "Type"}
+                        {isRtl ? "النوع" : "Type"}
                         {getSortIcon("type")}
                       </div>
                     </TableHead>
@@ -1655,8 +1696,10 @@ export default function FinanceDashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTransactions.map((tx) => (
-                    <TableRow key={tx.id}>
+                  {filteredTransactions.map((tx) => {
+                    const amountForDisplay = Math.abs(tx.amount);
+                    return (
+                      <TableRow key={tx.id}>
                       <TableCell className="whitespace-nowrap">
                         {new Date(tx.transactionDate).toLocaleDateString(
                           isRtl ? "ar-SA" : "en-US"
@@ -1682,7 +1725,7 @@ export default function FinanceDashboardPage() {
                           {tx.type === "expense" ? "-" : ""}
                           {formatCurrency(
                             convertCurrency(
-                              tx.amount,
+                              amountForDisplay,
                               tx.currency,
                               displayCurrency
                             ),
@@ -1691,7 +1734,7 @@ export default function FinanceDashboardPage() {
                         </div>
                         {tx.currency !== displayCurrency && (
                           <div className="text-xs text-muted-foreground">
-                            ({formatCurrency(tx.amount, tx.currency)})
+                            ({formatCurrency(amountForDisplay, tx.currency)})
                           </div>
                         )}
                       </TableCell>
@@ -1706,8 +1749,9 @@ export default function FinanceDashboardPage() {
                               : "Manual"}
                         </Badge>
                       </TableCell>
-                    </TableRow>
-                  ))}
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -1724,7 +1768,7 @@ export default function FinanceDashboardPage() {
                   setPagination({ ...pagination, page: pagination.page - 1 })
                 }
               >
-                {isRtl ? "??????" : "Previous"}
+                {isRtl ? "السابق" : "Previous"}
               </Button>
               <span className="flex items-center px-4 text-sm text-muted-foreground">
                 {pagination.page} / {pagination.pages}
@@ -1737,7 +1781,7 @@ export default function FinanceDashboardPage() {
                   setPagination({ ...pagination, page: pagination.page + 1 })
                 }
               >
-                {isRtl ? "??????" : "Next"}
+                {isRtl ? "التالي" : "Next"}
               </Button>
             </div>
           )}
