@@ -77,15 +77,17 @@ export class StudentMemberService {
 
         // Helper to parse date
         const parseDateValue = (dateStr) => {
-          if (!dateStr) return new Date();
+          if (!dateStr) return null;
+          const raw = String(dateStr).trim();
+          if (!raw) return null;
 
           // Try standard Date constructor first (YYYY-MM-DD)
-          let date = new Date(dateStr);
+          let date = new Date(raw);
           if (isValid(date)) return date;
 
           // Try DD/MM/YYYY or DD-MM-YYYY
           // Split by / or -
-          const parts = dateStr.split(/[/-]/);
+          const parts = raw.split(/[/-]/);
           if (parts.length === 3) {
             // Assume Day Month Year where Year is 4 digits
             let day, month, year;
@@ -104,7 +106,7 @@ export class StudentMemberService {
             if (isValid(date)) return date;
           }
 
-          return new Date(); // Fallback to now
+          return null;
         };
 
         const startDateInput =
@@ -115,23 +117,40 @@ export class StudentMemberService {
           record.start_date ||
           "";
         const startDate = parseDateValue(startDateInput);
+        const startDateRaw = String(startDateInput || "").trim();
+        if (startDateRaw && !startDate) {
+          throw new Error(`Invalid start date: ${startDateInput}`);
+        }
 
         // Handle billingDay: usually 1-28. If they provided a date, extract the day.
-        let billingDay = 1;
-        if (record.billingDay) {
-          const parsedBilling = parseInt(record.billingDay);
+        let billingDay;
+        if (record.billingDay !== undefined && record.billingDay !== null) {
+          const rawBilling = String(record.billingDay).trim();
+          if (!rawBilling) {
+            if (startDate) {
+              billingDay = Math.min(startDate.getDate(), 28);
+            } else {
+              billingDay = 1;
+            }
+          } else {
+            const parsedBilling = parseInt(rawBilling);
           // If it's a simple number like "5"
           if (!isNaN(parsedBilling) && parsedBilling >= 1 && parsedBilling <= 31) {
             billingDay = Math.min(parsedBilling, 28); // Cap at 28 for safety
           } else {
             // Maybe it's a date string
-            const bDate = parseDateValue(record.billingDay);
+            const bDate = parseDateValue(rawBilling);
             if (isValid(bDate)) {
               billingDay = Math.min(bDate.getDate(), 28);
+            } else {
+              throw new Error(`Invalid billing day: ${record.billingDay}`);
             }
           }
-        } else {
+          }
+        } else if (startDate) {
           billingDay = Math.min(startDate.getDate(), 28);
+        } else {
+          billingDay = 1;
         }
 
         // Prepare data
@@ -139,9 +158,11 @@ export class StudentMemberService {
           name: { ar: nameValue, en: nameValue },
           phone: record.phone || "",
           governorate: record.governorate || record.province || "", // Support both column names
-          startDate: startDate,
           billingDay: billingDay,
         };
+        if (startDate) {
+          memberData.startDate = startDate;
+        }
 
         if (sheetName) {
           memberData.sheetName = sheetName;

@@ -931,7 +931,9 @@ export default function StudentMembersPage() {
           <DialogHeader>
             <DialogTitle>{isRtl ? "استيراد طلاب (CSV)" : "Import Students (CSV)"}</DialogTitle>
             <DialogDescription>
-              {isRtl ? "قم برفع ملف CSV. (اسم الباقة يقبل بالعربي أو الإنجليزي)" : "Upload a CSV file. Sheet name is required. (Plan accepts Arabic or English names)"}
+              {isRtl
+                ? "قم برفع ملف CSV. (اسم الباقة يقبل بالعربي أو الإنجليزي). ميعاد التجديد ويوم الفاتورة اختياريين ويمكن تركهم فارغين."
+                : "Upload a CSV file. (Plan accepts Arabic or English names). Start date and billing day are optional and can be left empty."}
             </DialogDescription>
           </DialogHeader>
 
