@@ -453,6 +453,34 @@ export default function SettingsDashboardPage() {
     setSocialLinks(newLinks);
   };
 
+  const getSocialUrl = (platform: string) => {
+    const match = socialLinks.find(
+      (link) => link.platform.toLowerCase() === platform.toLowerCase()
+    );
+    return match?.url || "";
+  };
+
+  const setSocialUrl = (platform: string, url: string) => {
+    const normalized = platform.toLowerCase();
+    const index = socialLinks.findIndex(
+      (link) => link.platform.toLowerCase() === normalized
+    );
+
+    if (index >= 0) {
+      const newLinks = [...socialLinks];
+      newLinks[index] = { ...newLinks[index], url, platform: normalized };
+      setSocialLinks(newLinks);
+      return;
+    }
+
+    if (!url) return;
+
+    setSocialLinks((prev) => [
+      ...prev,
+      { platform: normalized, url, _id: `temp-${Date.now()}` },
+    ]);
+  };
+
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     type: "logo" | "logo_ar" | "favicon" | "heroBackground"
@@ -1504,6 +1532,46 @@ export default function SettingsDashboardPage() {
 
           {/* Homepage Settings Tab */}
           <TabsContent value="homepage" className="space-y-6">
+            {/* Homepage Social Links */}
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {isRtl ? "روابط السوشيال في الصفحة الرئيسية" : "Homepage Social Links"}
+                </CardTitle>
+                <CardDescription>
+                  {isRtl
+                    ? "تحديث روابط فيسبوك وإنستجرام الظاهرة في الصفحة الرئيسية"
+                    : "Update Facebook and Instagram links shown on the homepage"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="homepage-facebook">
+                    {isRtl ? "رابط فيسبوك" : "Facebook URL"}
+                  </Label>
+                  <Input
+                    id="homepage-facebook"
+                    type="url"
+                    value={getSocialUrl("facebook")}
+                    onChange={(e) => setSocialUrl("facebook", e.target.value)}
+                    placeholder="https://facebook.com/..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="homepage-instagram">
+                    {isRtl ? "رابط إنستجرام" : "Instagram URL"}
+                  </Label>
+                  <Input
+                    id="homepage-instagram"
+                    type="url"
+                    value={getSocialUrl("instagram")}
+                    onChange={(e) => setSocialUrl("instagram", e.target.value)}
+                    placeholder="https://instagram.com/..."
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Banner Settings */}
             <Card>
               <CardHeader>
