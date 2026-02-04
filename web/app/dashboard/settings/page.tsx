@@ -545,6 +545,12 @@ export default function SettingsDashboardPage() {
       },
     };
 
+    const hasFiles =
+      !!formData.logoFile ||
+      !!formData.logoArFile ||
+      !!formData.faviconFile ||
+      !!formData.heroBackgroundFile;
+
     delete updateData.logoFile;
     delete updateData.logoArFile;
     delete updateData.faviconFile;
@@ -555,6 +561,11 @@ export default function SettingsDashboardPage() {
         const { _id, ...linkWithoutId } = link;
         return linkWithoutId;
       });
+    }
+
+    if (!hasFiles) {
+      dispatch(updateWebsiteSettingsThunk(updateData as any));
+      return;
     }
 
     const submitFormData = new FormData();
