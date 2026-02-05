@@ -229,6 +229,12 @@ export default function SettingsDashboardPage() {
     subscriptionPercentage: 35,
     lastUpdated: new Date(),
   });
+  const [subscriptionStudentProfitSettings, setSubscriptionStudentProfitSettings] =
+    useState({
+      enabled: true,
+      defaultPercentage: 35,
+      lastUpdated: new Date(),
+    });
 
   // All available platforms
   const allPlatforms = [
@@ -394,6 +400,15 @@ export default function SettingsDashboardPage() {
           subscriptionPercentage: settings.teacherProfitSettings.subscriptionPercentage ?? 35,
           lastUpdated: settings.teacherProfitSettings.lastUpdated
             ? new Date(settings.teacherProfitSettings.lastUpdated)
+            : new Date(),
+        });
+      }
+      if (settings.subscriptionStudentProfitSettings) {
+        setSubscriptionStudentProfitSettings({
+          enabled: settings.subscriptionStudentProfitSettings.enabled ?? true,
+          defaultPercentage: settings.subscriptionStudentProfitSettings.defaultPercentage ?? 35,
+          lastUpdated: settings.subscriptionStudentProfitSettings.lastUpdated
+            ? new Date(settings.subscriptionStudentProfitSettings.lastUpdated)
             : new Date(),
         });
       }
@@ -565,13 +580,18 @@ export default function SettingsDashboardPage() {
         googleCloudCredentials: apiKeys.googleCloudCredentials,
         // lastUpdated will be set by backend automatically
       },
-      teacherProfitSettings: {
-        enabled: teacherProfitSettings.enabled,
-        courseSalesPercentage: teacherProfitSettings.courseSalesPercentage,
-        subscriptionPercentage: teacherProfitSettings.subscriptionPercentage,
-        // lastUpdated will be set by backend automatically
-      },
-    };
+        teacherProfitSettings: {
+          enabled: teacherProfitSettings.enabled,
+          courseSalesPercentage: teacherProfitSettings.courseSalesPercentage,
+          subscriptionPercentage: teacherProfitSettings.subscriptionPercentage,
+          // lastUpdated will be set by backend automatically
+        },
+        subscriptionStudentProfitSettings: {
+          enabled: subscriptionStudentProfitSettings.enabled,
+          defaultPercentage: subscriptionStudentProfitSettings.defaultPercentage,
+          // lastUpdated will be set by backend automatically
+        },
+      };
 
     const hasFiles =
       !!formData.logoFile ||
@@ -1203,8 +1223,82 @@ export default function SettingsDashboardPage() {
                   </Button>
                 </div>
               </CardContent>
-            </Card>
-          </TabsContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {isRtl ? "إعدادات أرباح طلاب الاشتراكات" : "Subscription Students Profit Settings"}
+                  </CardTitle>
+                  <CardDescription>
+                    {isRtl
+                      ? "اضبط نسبة الربح الافتراضية لمدرسين الاشتراكات لكل طالب"
+                      : "Configure default profit percentage for subscription students (per student)"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-medium">
+                        {isRtl ? "تفعيل أرباح طلاب الاشتراكات" : "Enable Subscription Students Profit"}
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {isRtl
+                          ? "تفعيل أو تعطيل حساب أرباح مدرسين الاشتراكات"
+                          : "Enable or disable profit calculation for subscription teachers"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={subscriptionStudentProfitSettings.enabled}
+                      onCheckedChange={(checked) =>
+                        setSubscriptionStudentProfitSettings((prev) => ({ ...prev, enabled: checked }))
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="subscriptionStudentProfitPercentage" className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-amber-600" />
+                      {isRtl ? "نسبة الربح للطالب (%)" : "Profit Percentage per Student (%)"}
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        id="subscriptionStudentProfitPercentage"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={subscriptionStudentProfitSettings.defaultPercentage}
+                        onChange={(e) =>
+                          setSubscriptionStudentProfitSettings((prev) => ({
+                            ...prev,
+                            defaultPercentage: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                        disabled={!subscriptionStudentProfitSettings.enabled}
+                        className="max-w-[200px]"
+                      />
+                      <span className="text-lg font-semibold text-amber-600">
+                        {subscriptionStudentProfitSettings.defaultPercentage}%
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {isRtl
+                        ? `عند اشتراك طالب بـ 100 ريال، يحصل مدرس الاشتراكات على ${subscriptionStudentProfitSettings.defaultPercentage} ريال`
+                        : `For a subscription of 100 SAR, subscription teacher receives ${subscriptionStudentProfitSettings.defaultPercentage} SAR`}
+                    </p>
+                  </div>
+
+                  {subscriptionStudentProfitSettings.lastUpdated && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      {isRtl ? "آخر تحديث: " : "Last updated: "}
+                      {new Date(subscriptionStudentProfitSettings.lastUpdated).toLocaleString(
+                        isRtl ? "ar-SA" : "en-US"
+                      )}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
           <TabsContent value="contact" className="space-y-6">
             {/* Contact Information Card */}

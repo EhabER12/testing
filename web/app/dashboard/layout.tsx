@@ -192,6 +192,27 @@ const menuItems: MenuItem[] = [
         roles: ["admin", "moderator", "teacher"],
       },
       {
+        titleKey: "admin.sidebar.teachers",
+        title: "Teachers",
+        icon: <Users className="h-4 w-4" />,
+        href: "/dashboard/teachers",
+        roles: ["admin", "teacher"],
+      },
+      {
+        titleKey: "admin.sidebar.myStudents",
+        title: "My Students",
+        icon: <Users className="h-4 w-4" />,
+        href: "/dashboard/my-students",
+        roles: ["teacher"],
+      },
+      {
+        titleKey: "admin.sidebar.profits",
+        title: "Profits",
+        icon: <Wallet className="h-4 w-4" />,
+        href: "/dashboard/profits",
+        roles: ["teacher"],
+      },
+      {
         titleKey: "admin.sidebar.quizzes",
         title: "Quizzes",
         icon: <FileQuestion className="h-4 w-4" />,
@@ -211,7 +232,7 @@ const menuItems: MenuItem[] = [
     titleKey: "admin.sidebar.subscriptions",
     title: "Subscriptions",
     icon: <UserCheck className="h-4 w-4" />,
-    roles: ["admin", "moderator", "teacher"],
+    roles: ["admin", "moderator"],
     children: [
       {
         titleKey: "admin.sidebar.studentMembers",
@@ -228,18 +249,11 @@ const menuItems: MenuItem[] = [
         roles: ["admin", "moderator"],
       },
       {
-        titleKey: "admin.sidebar.teachers",
-        title: "Teachers",
+        titleKey: "admin.sidebar.subscriptionTeachers",
+        title: "Subscription Teachers",
         icon: <Users className="h-4 w-4" />,
-        href: "/dashboard/teachers",
-        roles: ["admin", "teacher"],
-      },
-      {
-        titleKey: "admin.sidebar.profits",
-        title: "Profits",
-        icon: <Wallet className="h-4 w-4" />,
-        href: "/dashboard/profits",
-        roles: ["teacher"],
+        href: "/dashboard/subscription-teachers",
+        roles: ["admin", "moderator"],
       },
       {
         titleKey: "admin.sidebar.teacherDetails",
@@ -247,13 +261,6 @@ const menuItems: MenuItem[] = [
         icon: <UserSquare2 className="h-4 w-4" />,
         href: "/dashboard/teacher-details",
         roles: ["admin", "moderator"],
-      },
-      {
-        titleKey: "admin.sidebar.myStudents",
-        title: "My Students",
-        icon: <Users className="h-4 w-4" />,
-        href: "/dashboard/my-students",
-        roles: ["teacher"],
       },
     ],
   },

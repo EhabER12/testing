@@ -35,7 +35,7 @@ export class SettingsRepository extends BaseRepository {
     const settings = await this.model
       .findOne()
       .select(
-        "-_id -__v -updatedAt -createdAt -whatsappConnected -whatsappQrCode -notifications -updatedBy -paymentGateways"
+        "-_id -__v -updatedAt -createdAt -whatsappConnected -whatsappQrCode -notifications -updatedBy -paymentGateways -subscriptionTeachers -subscriptionStudentProfitSettings"
       );
     if (settings) {
       return settings;

@@ -523,6 +523,58 @@ const teacherProfitSettingsSchema = new mongoose.Schema({
   },
 });
 
+const subscriptionStudentProfitSettingsSchema = new mongoose.Schema({
+  enabled: {
+    type: Boolean,
+    default: true,
+  },
+  defaultPercentage: {
+    type: Number,
+    default: 35,
+    min: 0,
+    max: 100,
+  },
+  lastUpdated: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+const subscriptionTeacherSchema = new mongoose.Schema(
+  {
+    name: {
+      ar: { type: String, required: true },
+      en: { type: String, required: true },
+    },
+    email: {
+      type: String,
+      default: "",
+      trim: true,
+      lowercase: true,
+    },
+    phone: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    profitPercentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+    notes: {
+      type: String,
+      default: "",
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  { _id: true }
+);
+
 const settingsSchema = new mongoose.Schema(
   {
     siteName: {
@@ -682,6 +734,18 @@ const settingsSchema = new mongoose.Schema(
         enabled: true,
         lastUpdated: new Date(),
       }),
+    },
+    subscriptionStudentProfitSettings: {
+      type: subscriptionStudentProfitSettingsSchema,
+      default: () => ({
+        enabled: true,
+        defaultPercentage: 35,
+        lastUpdated: new Date(),
+      }),
+    },
+    subscriptionTeachers: {
+      type: [subscriptionTeacherSchema],
+      default: () => [],
     },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,

@@ -221,6 +221,22 @@ export interface TeacherProfitSettings {
   lastUpdated?: Date | string;
 }
 
+export interface SubscriptionStudentProfitSettings {
+  enabled?: boolean;
+  defaultPercentage?: number;
+  lastUpdated?: Date | string;
+}
+
+export interface SubscriptionTeacher {
+  _id?: string;
+  name: { ar: string; en: string };
+  email?: string;
+  phone?: string;
+  profitPercentage?: number;
+  notes?: string;
+  isActive?: boolean;
+}
+
 export interface PromoModalSettings {
   isEnabled: boolean;
   title: { ar: string; en: string };
@@ -265,6 +281,8 @@ export interface WebsiteSettingsData {
   financeSettings?: FinanceSettings;
   apiKeys?: ApiKeysSettings;
   teacherProfitSettings?: TeacherProfitSettings;
+  subscriptionStudentProfitSettings?: SubscriptionStudentProfitSettings;
+  subscriptionTeachers?: SubscriptionTeacher[];
   updatedBy?: string;
   createdAt: string;
   updatedAt: string;
