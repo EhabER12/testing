@@ -1,14 +1,126 @@
 import { UserRepository } from "../repositories/userRepository.js";
 import { EmployeeTaskRepository } from "../repositories/employeeTaskRepository.js";
 import { EmployeeRecordRepository } from "../repositories/employeeRecordRepository.js";
+import { SettingsRepository } from "../repositories/settingsRepository.js";
 import { ApiError } from "../utils/apiError.js";
 import EmployeeTask from "../models/employeeTaskModel.js";
+import emailTemplateService from "./emailTemplateService.js";
+import logger from "../utils/logger.js";
 
 export class EmployeeService {
   constructor() {
     this.userRepository = new UserRepository();
     this.taskRepository = new EmployeeTaskRepository();
     this.recordRepository = new EmployeeRecordRepository();
+    this.settingsRepository = new SettingsRepository();
+  }
+
+  getDisplayName(user) {
+    if (!user) return "";
+    return (
+      user.fullName?.ar ||
+      user.fullName?.en ||
+      user.name ||
+      user.email ||
+      ""
+    );
+  }
+
+  formatDateValue(dateValue) {
+    if (!dateValue) return "-";
+    try {
+      return new Date(dateValue).toISOString().slice(0, 10);
+    } catch {
+      return "-";
+    }
+  }
+
+  async getAdminRecipients() {
+    try {
+      const settings = await this.settingsRepository.getSettings();
+      const recipients = [
+        ...(settings?.notifications?.email?.recipients || []),
+      ];
+      if (recipients.length > 0) return recipients;
+      if (process.env.EMAIL_USER) return [process.env.EMAIL_USER];
+      return [];
+    } catch (error) {
+      logger.error("Failed to load admin email recipients", {
+        error: error.message,
+      });
+      return [];
+    }
+  }
+
+  async notifyEmployeeTaskAssigned(employee, task, assignedBy) {
+    try {
+      if (!employee?.email) return;
+
+      const assignedByUser = assignedBy
+        ? await this.userRepository.findById(assignedBy, {
+            select: "fullName email",
+          })
+        : null;
+
+      const adminUrl = process.env.ADMIN_URL || "http://localhost:3001";
+      const tasksUrl = `${adminUrl}/dashboard/my-tasks`;
+
+      const variables = {
+        employeeName: this.getDisplayName(employee),
+        taskTitle: task?.title?.ar || task?.title?.en || "-",
+        taskDescription: task?.description?.ar || task?.description?.en || "-",
+        dueDate: this.formatDateValue(task?.dueDate),
+        priority: task?.priority || "-",
+        assignedBy: this.getDisplayName(assignedByUser) || "Admin",
+        tasksUrl,
+        year: new Date().getFullYear(),
+      };
+
+      await emailTemplateService.sendTemplatedEmail(
+        employee.email,
+        "employee_task_assigned",
+        variables
+      );
+    } catch (error) {
+      logger.error("Failed to send task assigned email to employee", {
+        error: error.message,
+        taskId: task?._id || task?.id,
+      });
+    }
+  }
+
+  async notifyAdminTaskCompleted(task) {
+    try {
+      const recipients = await this.getAdminRecipients();
+      if (!recipients.length) return;
+
+      const employee = await this.userRepository.findById(task.employeeId, {
+        select: "fullName email",
+      });
+
+      const adminUrl = process.env.ADMIN_URL || "http://localhost:3001";
+      const tasksUrl = `${adminUrl}/dashboard/employees/${task.employeeId}`;
+
+      const variables = {
+        employeeName: this.getDisplayName(employee),
+        taskTitle: task?.title?.ar || task?.title?.en || "-",
+        status: task?.status || "completed",
+        completedAt: this.formatDateValue(task?.completedAt || new Date()),
+        tasksUrl,
+        year: new Date().getFullYear(),
+      };
+
+      await emailTemplateService.sendTemplatedEmail(
+        recipients.join(","),
+        "admin_task_completed",
+        variables
+      );
+    } catch (error) {
+      logger.error("Failed to send task completion email to admin", {
+        error: error.message,
+        taskId: task?._id || task?.id,
+      });
+    }
   }
 
   // Get all employees (users with moderator role)
@@ -100,16 +212,24 @@ export class EmployeeService {
       throw new ApiError(400, "Invalid status");
     }
 
-    // If marking as completed, update metrics
-    if (status === "completed" && task.status !== "completed") {
+    const isCompleting = status === "completed" && task.status !== "completed";
+
+    if (isCompleting) {
       await this.recordRepository.incrementMetric(userId, "tasksCompleted");
-      return this.taskRepository.update(taskId, {
-        status,
-        completedAt: new Date(),
-      });
     }
 
-    return this.taskRepository.update(taskId, { status });
+    const updateData = { status };
+    if (isCompleting) {
+      updateData.completedAt = new Date();
+    }
+
+    const updatedTask = await this.taskRepository.update(taskId, updateData);
+
+    if (isCompleting) {
+      await this.notifyAdminTaskCompleted(updatedTask);
+    }
+
+    return updatedTask;
   }
 
   // Update employee info
@@ -259,6 +379,8 @@ export class EmployeeService {
     // Increment tasks assigned metric
     await this.recordRepository.incrementMetric(employeeId, "tasksAssigned");
 
+    await this.notifyEmployeeTaskAssigned(employee, task, assignedBy);
+
     return task;
   }
 
@@ -270,8 +392,10 @@ export class EmployeeService {
       throw new ApiError(404, "Task not found");
     }
 
-    // If marking as completed, update metrics
-    if (updateData.status === "completed" && task.status !== "completed") {
+    const isCompleting =
+      updateData.status === "completed" && task.status !== "completed";
+
+    if (isCompleting) {
       updateData.completedAt = new Date();
       await this.recordRepository.incrementMetric(
         task.employeeId,
@@ -279,7 +403,13 @@ export class EmployeeService {
       );
     }
 
-    return this.taskRepository.update(taskId, updateData);
+    const updatedTask = await this.taskRepository.update(taskId, updateData);
+
+    if (isCompleting) {
+      await this.notifyAdminTaskCompleted(updatedTask);
+    }
+
+    return updatedTask;
   }
 
   // Delete task

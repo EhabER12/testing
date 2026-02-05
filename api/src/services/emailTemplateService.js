@@ -12,7 +12,16 @@ class EmailTemplateService {
   async getAllTemplates() {
     try {
       // Ensure system templates exist
-      const systemTemplates = ['email_verification', 'user_invitation', 'order_confirmation', 'password_reset', 'password_reset_confirmation'];
+      const systemTemplates = [
+        "email_verification",
+        "user_invitation",
+        "order_confirmation",
+        "password_reset",
+        "password_reset_confirmation",
+        "employee_task_assigned",
+        "admin_task_completed",
+        "admin_new_request",
+      ];
 
       for (const name of systemTemplates) {
         const exists = await EmailTemplate.exists({ name });
@@ -378,6 +387,226 @@ class EmailTemplateService {
         },
         variables: [
           { name: "name", description: "User full name" },
+          { name: "year", description: "Current year" },
+        ],
+      });
+    }
+
+    if (name === "employee_task_assigned") {
+      return await this.saveTemplate({
+        name: "employee_task_assigned",
+        type: "custom",
+        subject: {
+          ar: "تم تعيين مهمة جديدة لك: {{taskTitle}}",
+          en: "New task assigned: {{taskTitle}}",
+        },
+        content: {
+          ar: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; direction: rtl; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 24px 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">منصة جنون</h1>
+            </div>
+            <div style="padding: 24px 20px;">
+              <h2 style="color: #1a472a; margin: 0 0 12px; font-size: 20px;">مرحباً {{employeeName}}</h2>
+              <p style="color: #4a5568; line-height: 1.6; font-size: 15px; margin: 0 0 16px;">
+                تم إضافة مهمة جديدة لك. تفاصيل المهمة بالأسفل.
+              </p>
+              <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; text-align: right;">
+                <p style="margin: 0 0 8px;"><strong>المهمة:</strong> {{taskTitle}}</p>
+                <p style="margin: 0 0 8px;"><strong>الوصف:</strong> {{taskDescription}}</p>
+                <p style="margin: 0 0 8px;"><strong>تاريخ الاستحقاق:</strong> {{dueDate}}</p>
+                <p style="margin: 0 0 8px;"><strong>الأولوية:</strong> {{priority}}</p>
+                <p style="margin: 0;"><strong>تم تعيينها بواسطة:</strong> {{assignedBy}}</p>
+              </div>
+              <div style="margin: 24px 0; text-align: center;">
+                <a href="{{tasksUrl}}" 
+                   style="background-color: #d4af37; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                  عرض مهامي
+                </a>
+              </div>
+            </div>
+            <div style="background-color: #f7fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. جميع الحقوق محفوظة.</p>
+            </div>
+          </div>`,
+          en: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 24px 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Genoun</h1>
+            </div>
+            <div style="padding: 24px 20px;">
+              <h2 style="color: #1a472a; margin: 0 0 12px; font-size: 20px;">Hello {{employeeName}}</h2>
+              <p style="color: #4a5568; line-height: 1.6; font-size: 15px; margin: 0 0 16px;">
+                A new task has been assigned to you. Details are below.
+              </p>
+              <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; text-align: left;">
+                <p style="margin: 0 0 8px;"><strong>Task:</strong> {{taskTitle}}</p>
+                <p style="margin: 0 0 8px;"><strong>Description:</strong> {{taskDescription}}</p>
+                <p style="margin: 0 0 8px;"><strong>Due date:</strong> {{dueDate}}</p>
+                <p style="margin: 0 0 8px;"><strong>Priority:</strong> {{priority}}</p>
+                <p style="margin: 0;"><strong>Assigned by:</strong> {{assignedBy}}</p>
+              </div>
+              <div style="margin: 24px 0; text-align: center;">
+                <a href="{{tasksUrl}}" 
+                   style="background-color: #d4af37; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                  View My Tasks
+                </a>
+              </div>
+            </div>
+            <div style="background-color: #f7fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. All rights reserved.</p>
+            </div>
+          </div>`,
+        },
+        variables: [
+          { name: "employeeName", description: "Employee full name" },
+          { name: "taskTitle", description: "Task title" },
+          { name: "taskDescription", description: "Task description" },
+          { name: "dueDate", description: "Task due date" },
+          { name: "priority", description: "Task priority" },
+          { name: "assignedBy", description: "Task assigned by" },
+          { name: "tasksUrl", description: "Link to employee tasks page" },
+          { name: "year", description: "Current year" },
+        ],
+      });
+    }
+
+    if (name === "admin_task_completed") {
+      return await this.saveTemplate({
+        name: "admin_task_completed",
+        type: "custom",
+        subject: {
+          ar: "تم إنهاء مهمة: {{taskTitle}}",
+          en: "Task completed: {{taskTitle}}",
+        },
+        content: {
+          ar: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; direction: rtl; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 24px 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">منصة جنون</h1>
+            </div>
+            <div style="padding: 24px 20px;">
+              <h2 style="color: #1a472a; margin: 0 0 12px; font-size: 20px;">اكتملت مهمة موظف</h2>
+              <p style="color: #4a5568; line-height: 1.6; font-size: 15px; margin: 0 0 16px;">
+                قام الموظف {{employeeName}} بإنهاء المهمة التالية:
+              </p>
+              <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; text-align: right;">
+                <p style="margin: 0 0 8px;"><strong>المهمة:</strong> {{taskTitle}}</p>
+                <p style="margin: 0 0 8px;"><strong>الحالة:</strong> {{status}}</p>
+                <p style="margin: 0;"><strong>تاريخ الإنهاء:</strong> {{completedAt}}</p>
+              </div>
+              <div style="margin: 24px 0; text-align: center;">
+                <a href="{{tasksUrl}}" 
+                   style="background-color: #d4af37; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                  عرض تفاصيل الموظف
+                </a>
+              </div>
+            </div>
+            <div style="background-color: #f7fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. جميع الحقوق محفوظة.</p>
+            </div>
+          </div>`,
+          en: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 24px 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Genoun</h1>
+            </div>
+            <div style="padding: 24px 20px;">
+              <h2 style="color: #1a472a; margin: 0 0 12px; font-size: 20px;">Task completed by employee</h2>
+              <p style="color: #4a5568; line-height: 1.6; font-size: 15px; margin: 0 0 16px;">
+                {{employeeName}} has completed the following task:
+              </p>
+              <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; text-align: left;">
+                <p style="margin: 0 0 8px;"><strong>Task:</strong> {{taskTitle}}</p>
+                <p style="margin: 0 0 8px;"><strong>Status:</strong> {{status}}</p>
+                <p style="margin: 0;"><strong>Completed at:</strong> {{completedAt}}</p>
+              </div>
+              <div style="margin: 24px 0; text-align: center;">
+                <a href="{{tasksUrl}}" 
+                   style="background-color: #d4af37; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                  View Employee Details
+                </a>
+              </div>
+            </div>
+            <div style="background-color: #f7fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. All rights reserved.</p>
+            </div>
+          </div>`,
+        },
+        variables: [
+          { name: "employeeName", description: "Employee full name" },
+          { name: "taskTitle", description: "Task title" },
+          { name: "status", description: "Task status" },
+          { name: "completedAt", description: "Completion date" },
+          { name: "tasksUrl", description: "Link to employee tasks page" },
+          { name: "year", description: "Current year" },
+        ],
+      });
+    }
+
+    if (name === "admin_new_request") {
+      return await this.saveTemplate({
+        name: "admin_new_request",
+        type: "custom",
+        subject: {
+          ar: "طلب جديد: {{formTitle}}",
+          en: "New request: {{formTitle}}",
+        },
+        content: {
+          ar: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; direction: rtl; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 24px 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">منصة جنون</h1>
+            </div>
+            <div style="padding: 24px 20px;">
+              <h2 style="color: #1a472a; margin: 0 0 12px; font-size: 20px;">تم استلام طلب جديد</h2>
+              <p style="color: #4a5568; line-height: 1.6; font-size: 15px; margin: 0 0 8px;">
+                <strong>النموذج:</strong> {{formTitle}}
+              </p>
+              <p style="color: #4a5568; line-height: 1.6; font-size: 15px; margin: 0 0 16px;">
+                <strong>تاريخ الإرسال:</strong> {{submittedAt}}
+              </p>
+              <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; text-align: right;">
+                {{submissionSummary}}
+              </div>
+              <div style="margin: 24px 0; text-align: center;">
+                <a href="{{submissionsUrl}}" 
+                   style="background-color: #d4af37; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                  عرض الطلبات
+                </a>
+              </div>
+            </div>
+            <div style="background-color: #f7fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. جميع الحقوق محفوظة.</p>
+            </div>
+          </div>`,
+          en: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 24px 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Genoun</h1>
+            </div>
+            <div style="padding: 24px 20px;">
+              <h2 style="color: #1a472a; margin: 0 0 12px; font-size: 20px;">New request received</h2>
+              <p style="color: #4a5568; line-height: 1.6; font-size: 15px; margin: 0 0 8px;">
+                <strong>Form:</strong> {{formTitle}}
+              </p>
+              <p style="color: #4a5568; line-height: 1.6; font-size: 15px; margin: 0 0 16px;">
+                <strong>Submitted at:</strong> {{submittedAt}}
+              </p>
+              <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; text-align: left;">
+                {{submissionSummary}}
+              </div>
+              <div style="margin: 24px 0; text-align: center;">
+                <a href="{{submissionsUrl}}" 
+                   style="background-color: #d4af37; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                  View Submissions
+                </a>
+              </div>
+            </div>
+            <div style="background-color: #f7fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. All rights reserved.</p>
+            </div>
+          </div>`,
+        },
+        variables: [
+          { name: "formTitle", description: "Form title" },
+          { name: "submittedAt", description: "Submission date" },
+          { name: "submissionSummary", description: "Submission summary HTML" },
+          { name: "submissionsUrl", description: "Link to submissions page" },
           { name: "year", description: "Current year" },
         ],
       });

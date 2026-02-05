@@ -3,11 +3,75 @@ import { ApiError } from "../utils/apiError.js";
 import { v4 as uuidv4 } from "uuid";
 import slugify from "../utils/slugify.js";
 import { SettingsRepository } from "../repositories/settingsRepository.js";
+import emailTemplateService from "./emailTemplateService.js";
+import logger from "../utils/logger.js";
 
 export class FormService {
   constructor() {
     this.formRepository = new FormRepository();
     this.settingsRepository = new SettingsRepository();
+  }
+
+  escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  buildSubmissionSummaryHtml(summary = {}) {
+    let html = "<ul>";
+
+    Object.entries(summary).forEach(([label, value]) => {
+      if (value === undefined || value === null) return;
+      if (typeof value === "object") return;
+      html += `<li><strong>${this.escapeHtml(label)}:</strong> ${this.escapeHtml(
+        value
+      )}</li>`;
+    });
+
+    html += "</ul>";
+    return html;
+  }
+
+  async sendAdminNewRequestEmail(form, submissionSummary, submittedAt) {
+    try {
+      const settings = await this.settingsRepository.getSettings();
+      const recipients = [
+        ...(settings?.notifications?.email?.recipients || []),
+      ];
+      if (!recipients.length && process.env.EMAIL_USER) {
+        recipients.push(process.env.EMAIL_USER);
+      }
+
+      if (!recipients.length) return;
+
+      const adminUrl = process.env.ADMIN_URL || "http://localhost:3001";
+      const submissionsUrl = `${adminUrl}/dashboard/submissions`;
+      const submittedDate = submittedAt
+        ? new Date(submittedAt).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10);
+
+      const variables = {
+        formTitle: form?.title || "New Request",
+        submittedAt: submittedDate,
+        submissionSummary: this.buildSubmissionSummaryHtml(submissionSummary),
+        submissionsUrl,
+        year: new Date().getFullYear(),
+      };
+
+      await emailTemplateService.sendTemplatedEmail(
+        recipients.join(","),
+        "admin_new_request",
+        variables
+      );
+    } catch (error) {
+      logger.error("Failed to send new request email to admin", {
+        error: error.message,
+      });
+    }
   }
 
   ensureValidSlug(formData) {
@@ -166,6 +230,13 @@ export class FormService {
       enhancedSubmissionData.summary
     ).catch((error) => {});
 
+    // Send admin email notification (non-blocking)
+    this.sendAdminNewRequestEmail(
+      form,
+      enhancedSubmissionData.summary,
+      submission?.submittedAt
+    ).catch((error) => {});
+
     return submission;
   }
 
@@ -225,6 +296,13 @@ export class FormService {
     this.sendWhatsAppNotification(
       form.title,
       enhancedSubmissionData.summary
+    ).catch((error) => {});
+
+    // Send admin email notification (non-blocking)
+    this.sendAdminNewRequestEmail(
+      form,
+      enhancedSubmissionData.summary,
+      submission?.submittedAt
     ).catch((error) => {});
 
     return submission;
