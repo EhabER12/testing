@@ -350,8 +350,8 @@ export default function CertificatesPage() {
 
         if (missingTemplateNames.length > 0) {
           const msg = isRtl
-            ? `لا يوجد قالب شهادة لهؤلاء الطلاب: ${missingTemplateNames.join("، ")}.`
-            : `No certificate template for: ${missingTemplateNames.join(", ")}.`;
+            ? `يجب إنشاء قالب شهادة وربطه بالشيت أو الباقة. الطلاب المتأثرون: ${missingTemplateNames.join("، ")}.`
+            : `You must create and link a certificate template to the sheet or package. Affected students: ${missingTemplateNames.join(", ")}.`;
           toast.error(msg, { duration: 6000 });
         }
 
