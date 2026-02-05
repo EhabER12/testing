@@ -1418,6 +1418,8 @@
       "teacher": "Teacher",
       "nextDue": "Next Due",
       "daysLeft": "Days Left",
+      "daysOverdue": "Overdue by {days} days",
+      "daysLeftValue": "{days} days left",
       "status": "Status",
       "dueSoon": "Due Soon",
       "overdue": "Overdue",

@@ -295,12 +295,12 @@ export default function OverdueSubscriptionsPage() {
                           {daysLeft === null
                             ? "-"
                             : daysLeft < 0
-                              ? isRtl
-                                ? `????? ${Math.abs(daysLeft)} ???`
-                                : `Overdue by ${Math.abs(daysLeft)} days`
-                              : isRtl
-                                ? `????? ${daysLeft} ???`
-                                : `${daysLeft} days left`}
+                              ? t("admin.overdueSubscriptions.daysOverdue", {
+                                  days: Math.abs(daysLeft),
+                                })
+                              : t("admin.overdueSubscriptions.daysLeftValue", {
+                                  days: daysLeft,
+                                })}
                         </TableCell>
                         <TableCell>
                           {isOverdue ? (
