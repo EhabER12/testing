@@ -1,10 +1,11 @@
 import StudentMember from "../models/studentMemberModel.js";
-import User from "../models/userModel.js";
 import { ApiError } from "../utils/apiError.js";
 import { WhatsappNotificationService } from "./whatsappNotificationService.js";
 import logger from "../utils/logger.js";
 import { differenceInDays, addDays, parse as parseDate, isValid } from "date-fns";
 import Package from "../models/packageModel.js";
+import TeacherGroup from "../models/teacherGroupModel.js";
+import teacherGroupService from "./teacherGroupService.js";
 import { parse } from 'csv-parse/sync';
 
 export class StudentMemberService {
@@ -28,9 +29,9 @@ export class StudentMemberService {
     };
 
     const packages = await Package.find({});
-    // Fetch all teachers for matching
-    const teachers = await User.find({ role: 'teacher' });
-
+    const teacherGroups = await TeacherGroup.find({ groupType: "group", isActive: true })
+      .populate("teacherId", "fullName email");
+    const affectedTeacherIds = new Set();
     for (const [index, record] of records.entries()) {
       try {
         // Validation
@@ -39,10 +40,90 @@ export class StudentMemberService {
           throw new Error('Missing required field: name');
         }
 
-        // Find package (Case insensitive and trimmed)
+        // Find package or group (case insensitive and trimmed)
         const normalize = (str) => str?.trim().toLowerCase() || "";
+        const groupValue =
+          record.group ||
+          record.groupName ||
+          record["group name"] ||
+          record.group_name ||
+          "";
+        const groupIdValue =
+          record.groupId ||
+          record.group_id ||
+          record["group id"] ||
+          record["groupId"] ||
+          "";
+        const teacherValue =
+          record.teacher ||
+          record.teacherName ||
+          record["teacher name"] ||
+          record.teacher_name ||
+          "";
+
+        const groupQuery = normalize(groupValue);
+        const groupIdQuery = String(groupIdValue || "").trim();
+        const teacherQuery = normalize(teacherValue);
+
+        let selectedGroup = null;
+        const matchesTeacher = (group) => {
+          const teacher = group.teacherId;
+          const nameAr = normalize(teacher?.fullName?.ar);
+          const nameEn = normalize(teacher?.fullName?.en);
+          const email = normalize(teacher?.email);
+          return nameAr === teacherQuery || nameEn === teacherQuery || email === teacherQuery;
+        };
+
+        if (groupIdQuery) {
+          selectedGroup = teacherGroups.find((g) => {
+            const groupId = String(g._id || g.id || "");
+            return groupId === groupIdQuery;
+          });
+          if (!selectedGroup) {
+            throw new Error(`Group not found: ${groupIdValue}`);
+          }
+          if (teacherQuery && !matchesTeacher(selectedGroup)) {
+            throw new Error(`Teacher does not match group: ${teacherValue}`);
+          }
+          if (groupQuery) {
+            const nameAr = normalize(selectedGroup.groupName?.ar);
+            const nameEn = normalize(selectedGroup.groupName?.en);
+            if (nameAr !== groupQuery && nameEn !== groupQuery) {
+              throw new Error(`Group name does not match groupId: ${groupValue}`);
+            }
+          }
+        } else if (groupQuery) {
+          let matchingGroups = teacherGroups.filter((g) => {
+            const nameAr = normalize(g.groupName?.ar);
+            const nameEn = normalize(g.groupName?.en);
+            return nameAr === groupQuery || nameEn === groupQuery;
+          });
+
+          if (teacherQuery) {
+            matchingGroups = matchingGroups.filter(matchesTeacher);
+          }
+
+          if (matchingGroups.length === 0) {
+            throw new Error(`Group not found: ${groupValue}`);
+          }
+          if (matchingGroups.length > 1) {
+            throw new Error(`Multiple groups found for "${groupValue}". Please provide the teacher name.`);
+          }
+
+          selectedGroup = matchingGroups[0];
+        } else if (teacherQuery) {
+          const matchingGroups = teacherGroups.filter(matchesTeacher);
+          if (matchingGroups.length === 0) {
+            throw new Error(`Teacher not found: ${teacherValue}`);
+          }
+          if (matchingGroups.length > 1) {
+            throw new Error(`Multiple groups found for "${teacherValue}". Please provide the group name or groupId.`);
+          }
+          selectedGroup = matchingGroups[0];
+        }
+
         let pkg = null;
-        if (record.plan) {
+        if (!selectedGroup && record.plan) {
           const recordPlan = normalize(record.plan);
           pkg = packages.find(p =>
             normalize(p.name?.ar) === recordPlan ||
@@ -51,27 +132,6 @@ export class StudentMemberService {
 
           if (!pkg) {
             throw new Error(`Package not found: ${record.plan}`);
-          }
-        }
-
-        // Find teacher if provided
-        let assignedTeacherId = null;
-        let assignedTeacherName = null;
-        
-        if (record.teacher) {
-          const teacherQuery = normalize(record.teacher);
-          const teacher = teachers.find(t => {
-            const nameAr = normalize(t.fullName?.ar);
-            const nameEn = normalize(t.fullName?.en);
-            const email = normalize(t.email);
-            return nameAr === teacherQuery || nameEn === teacherQuery || email === teacherQuery;
-          });
-          
-          if (teacher) {
-            assignedTeacherId = teacher._id;
-          } else {
-            // Store as text if teacher not found in system
-            assignedTeacherName = record.teacher;
           }
         }
 
@@ -172,17 +232,32 @@ export class StudentMemberService {
           memberData.packageId = pkg._id;
           memberData.packagePrice = pkg.price;
         }
-        
-        // Add teacher information if available
-        if (assignedTeacherId) {
-          memberData.assignedTeacherId = assignedTeacherId;
-        }
-        if (assignedTeacherName) {
-          memberData.assignedTeacherName = assignedTeacherName;
-        }
 
         // Create member
-        await this.createMember(memberData, createdBy);
+        if (selectedGroup?.teacherId?._id || selectedGroup?.teacherId?.id) {
+          memberData.assignedTeacherId = selectedGroup.teacherId._id || selectedGroup.teacherId.id;
+        }
+
+        const createdMember = await this.createMember(memberData, createdBy);
+
+        if (selectedGroup && createdMember?._id) {
+          const alreadyInGroup = selectedGroup.students?.some(
+            (s) => s.studentId?.toString() === createdMember._id.toString()
+          );
+          if (!alreadyInGroup) {
+            selectedGroup.students.push({
+              studentId: createdMember._id,
+              assignedDate: new Date(),
+              status: "active",
+            });
+            selectedGroup.updatedBy = createdBy;
+            await selectedGroup.save();
+            const teacherId = selectedGroup.teacherId?._id || selectedGroup.teacherId?.id || selectedGroup.teacherId;
+            if (teacherId) {
+              affectedTeacherIds.add(String(teacherId));
+            }
+          }
+        }
         results.success++;
 
       } catch (error) {
@@ -192,6 +267,16 @@ export class StudentMemberService {
           name: record.name,
           error: error.message
         });
+      }
+    }
+
+    if (affectedTeacherIds.size > 0) {
+      try {
+        await Promise.all(
+          Array.from(affectedTeacherIds).map((id) => teacherGroupService.updateTeacherInfo(id))
+        );
+      } catch (err) {
+        logger.error("Failed to update teacher info after import", { error: err.message });
       }
     }
 

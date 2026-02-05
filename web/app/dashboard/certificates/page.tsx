@@ -390,7 +390,7 @@ export default function CertificatesPage() {
   };
 
   const downloadTemplate = () => {
-    const headers = ["name", "phone", "governorate", "plan", "teacher", "start time (YYYY-MM-DD)", "billingDay"];
+    const headers = ["name", "phone", "governorate", "plan", "group", "group_id", "teacher", "start time (YYYY-MM-DD)", "billingDay"];
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -915,9 +915,7 @@ export default function CertificatesPage() {
                 {isRtl ? "إدارة الشهادات من الشيت" : "Bulk Certificates From Sheet"}
               </CardTitle>
               <CardDescription className="text-purple-700">
-                {isRtl
-                  ? "ارفع الشيت ثم استورد الطلاب، وبعدها فلتر بالمعلم أو المحافظة لإصدار الشهادات"
-                  : "Upload the sheet, import students, then filter by teacher or governorate to issue certificates"}
+                {isRtl ? "ارفع الشيت ثم استورد الطلاب، وبعدها فلتر بالشيت أو المعلم أو المحافظة لإصدار الشهادات" : "Upload the sheet, import students, then filter by sheet, teacher, or governorate to issue certificates"}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
@@ -1222,8 +1220,8 @@ export default function CertificatesPage() {
             <DialogTitle>{isRtl ? "استيراد طلاب (CSV)" : "Import Students (CSV)"}</DialogTitle>
             <DialogDescription>
               {isRtl
-                ? "قم برفع ملف CSV. الاسم فقط مطلوب والباقي اختياري. اسم الشيت مطلوب. (اسم الباقة يقبل بالعربي أو الإنجليزي)"
-                : "Upload a CSV file. Only the name is required; the rest are optional. Sheet name is required. (Plan accepts Arabic or English names)"}
+                ? "قم برفع ملف CSV. الاسم فقط مطلوب والباقي اختياري. اسم الشيت مطلوب. للباقات اكتب اسم الباقة في plan، وللجروبات اكتب اسم الجروب في group واسم المعلم في teacher، أو استخدم group_id."
+                : "Upload a CSV file. Only the name is required; the rest are optional. Sheet name is required. Use plan for packages, or group + teacher, or group_id for groups."}
             </DialogDescription>
           </DialogHeader>
 
@@ -1233,11 +1231,11 @@ export default function CertificatesPage() {
               <AlertDescription className="text-blue-800 text-sm">
                 {isRtl ? (
                   <>
-                    <strong>ملاحظة مهمة للمعلمين:</strong> عند رفع ملف CSV، يجب إدخال اسم المعلم بالضبط كما هو مسجل في النظام (بالعربي أو الإنجليزي). هذا يضمن ربط كل معلم بطلاب الباقة الخاصة به بشكل صحيح.
+                    <strong>ملاحظة:</strong> لو الطالب جروب، اكتب اسم الجروب واسم المعلم بالضبط كما هو في النظام، أو استخدم group_id لو موجود.
                   </>
                 ) : (
                   <>
-                    <strong>Important Notice for Teachers:</strong> When uploading a CSV file, you must enter the teacher's name exactly as it is registered in the system (in Arabic or English). This ensures proper linking between each teacher and their package students.
+                    <strong>Note:</strong> For group students, use exact group + teacher names, or provide group_id if you have it.
                   </>
                 )}
               </AlertDescription>

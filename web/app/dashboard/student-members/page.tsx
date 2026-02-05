@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -12,7 +12,11 @@ import {
   StudentMember,
 } from "@/store/services/studentMemberService";
 import { getPackages } from "@/store/services/packageService";
-import { getAllTeachersWithStats } from "@/store/services/teacherGroupService";
+import {
+  addStudentToGroup,
+  getAllTeachersWithStats,
+  getTeacherGroups,
+} from "@/store/services/teacherGroupService";
 import {
   bulkIssuePackageCertificates,
   issueCertificate,
@@ -120,8 +124,9 @@ export default function StudentMembersPage() {
     name: "",
     phone: "",
     governorate: "",
+    planType: "package",
     packageId: "",
-    teacherName: "",
+    groupId: "",
     startDate: format(new Date(), "yyyy-MM-dd"),
     billingDay: new Date().getDate().toString(),
   });
@@ -130,7 +135,7 @@ export default function StudentMembersPage() {
   const { packages } = useAppSelector((state) => state.packages);
   const { templates, certificates } = useAppSelector((state) => state.certificates);
   const { user } = useAppSelector((state) => state.auth);
-  const { teachersWithStats } = useAppSelector((state) => state.teacherGroups);
+  const { teachersWithStats, teacherGroups } = useAppSelector((state) => state.teacherGroups);
 
   useEffect(() => {
     if (!isAuthenticated() || !user) {
@@ -147,6 +152,7 @@ export default function StudentMembersPage() {
     dispatch(getPackages());
     dispatch(getCertificates());
     dispatch(getAllTeachersWithStats());
+    dispatch(getTeacherGroups({ groupType: "group", isActive: true }));
     // Try to get templates, but don't fail if it errors
     dispatch(getAllTemplates()).catch((err) => {
       console.warn("Failed to load templates:", err);
@@ -280,8 +286,18 @@ export default function StudentMembersPage() {
   };
 
   const handleAddStudent = async () => {
-    if (!newStudent.name || !newStudent.phone || !newStudent.packageId) {
-      toast.error(isRtl ? "يرجى ملء جميع الحقول المطلوبة" : "Please fill all required fields");
+    if (!newStudent.name || !newStudent.phone) {
+      toast.error(isRtl ? "???? ??? ???? ?????? ????????" : "Please fill all required fields");
+      return;
+    }
+
+    if (newStudent.planType === "package" && !newStudent.packageId) {
+      toast.error(isRtl ? "???? ???? ??????" : "Please select a package");
+      return;
+    }
+
+    if (newStudent.planType === "group" && !newStudent.groupId) {
+      toast.error(isRtl ? "???? ???? ??????" : "Please select a group");
       return;
     }
 
@@ -291,38 +307,65 @@ export default function StudentMembersPage() {
         name: { ar: newStudent.name, en: newStudent.name },
         phone: newStudent.phone,
         governorate: newStudent.governorate,
-        packageId: newStudent.packageId,
         startDate: newStudent.startDate,
         billingDay: parseInt(newStudent.billingDay) || 1,
       };
 
-      if (newStudent.teacherName) {
-        studentData.assignedTeacherName = newStudent.teacherName;
+      if (newStudent.planType === "package") {
+        studentData.packageId = newStudent.packageId;
+        const selectedPackage = packages.find(
+          (pkg) => (pkg.id || pkg._id) === newStudent.packageId
+        );
+        if (selectedPackage) {
+          studentData.packagePrice = selectedPackage.price;
+        }
+      } else if (newStudent.planType === "group") {
+        const selectedGroup = teacherGroups.find(
+          (group) => (group.id || group._id) === newStudent.groupId
+        );
+        if (selectedGroup?.teacherId?.id || selectedGroup?.teacherId?._id) {
+          studentData.assignedTeacherId =
+            selectedGroup.teacherId.id || selectedGroup.teacherId._id;
+        }
       }
 
-      await dispatch(createStudentMember(studentData)).unwrap();
-      toast.success(isRtl ? "تم إضافة الطالب بنجاح" : "Student added successfully");
+      const createdStudent = await dispatch(createStudentMember(studentData)).unwrap();
+      const createdStudentId = createdStudent?.id || createdStudent?._id;
+
+      if (newStudent.planType === "group" && createdStudentId) {
+        try {
+          await dispatch(
+            addStudentToGroup({ groupId: newStudent.groupId, studentId: createdStudentId })
+          ).unwrap();
+        } catch (groupErr) {
+          console.error("Failed to add student to group:", groupErr);
+          toast.error(isRtl ? "??? ??? ?????? ???????" : "Failed to link student to group");
+        }
+      }
+
+      toast.success(isRtl ? "?? ????? ?????? ?????" : "Student added successfully");
       setAddDialogOpen(false);
       setNewStudent({
         name: "",
         phone: "",
         governorate: "",
+        planType: "package",
         packageId: "",
-        teacherName: "",
+        groupId: "",
         startDate: format(new Date(), "yyyy-MM-dd"),
         billingDay: new Date().getDate().toString(),
       });
       dispatch(getStudentMembers());
     } catch (err: any) {
       console.error("Failed to add student:", err);
-      toast.error(typeof err === 'string' ? err : (isRtl ? "فشل إضافة الطالب" : "Failed to add student"));
+      toast.error(typeof err === 'string' ? err : (isRtl ? "??? ????? ??????" : "Failed to add student"));
     } finally {
       setAddLoading(false);
     }
   };
 
   const downloadTemplate = () => {
-    const headers = ["name", "phone", "governorate", "plan", "teacher", "start time (YYYY-MM-DD)", "billingDay"];
+    const headers = ["name", "phone", "governorate", "plan", "group", "group_id", "teacher", "start time (YYYY-MM-DD)", "billingDay"];
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -548,6 +591,20 @@ export default function StudentMembersPage() {
     return (isRtl ? value.ar : value.en) || value.en || value.ar || "";
   };
 
+  const groupByStudentId = useMemo(() => {
+    const map = new Map<string, any>();
+    teacherGroups.forEach((group) => {
+      (group.students || []).forEach((student) => {
+        const studentId =
+          student.studentId?.id || student.studentId?._id || student.studentId;
+        if (studentId) {
+          map.set(String(studentId), group);
+        }
+      });
+    });
+    return map;
+  }, [teacherGroups]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -579,12 +636,12 @@ export default function StudentMembersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {isRtl ? "طلاب الباقات" : "Package Students"}
+            {isRtl ? "???? ??????????" : "Subscription Students"}
           </h2>
           <p className="text-muted-foreground">
             {isRtl
               ? "إدارة الطلاب المشتركين في الباقات بنظام منفصل"
-              : "Manage package-based students"}
+              : "Manage subscription students"}
           </p>
         </div>
         <div className="flex gap-2">
@@ -778,7 +835,7 @@ export default function StudentMembersPage() {
               <div className="text-center py-12">
                 <Users className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-semibold text-gray-900">
-                  {isRtl ? "لا يوجد طلاب باقات" : "No package students found"}
+                  {isRtl ? "لا يوجد طلاب اشتراكات" : "No subscription students found"}
                 </h3>
                 <p className="mt-1 text-sm text-gray-500">
                   {isRtl ? "قم باستيراد ملف لملء القائمة" : "Import a file to populate the list"}
@@ -792,7 +849,7 @@ export default function StudentMembersPage() {
                       <TableHead>{isRtl ? "الاسم" : "Name"}</TableHead>
                       <TableHead>{isRtl ? "رقم الهاتف" : "Phone"}</TableHead>
                       <TableHead>{isRtl ? "المحافظة" : "Governorate"}</TableHead>
-                      <TableHead>{isRtl ? "الباقة" : "Plan"}</TableHead>
+                      <TableHead>{isRtl ? "الباقة / الجروب" : "Package / Group"}</TableHead>
                       <TableHead>{isRtl ? "المعلم" : "Teacher"}</TableHead>
                       <TableHead>{isRtl ? "تاريخ البداية" : "Start Date"}</TableHead>
                       <TableHead>{isRtl ? "التجديد القادم" : "Next Due"}</TableHead>
@@ -832,10 +889,27 @@ export default function StudentMembersPage() {
                             <span className="text-sm text-muted-foreground">{student.governorate || "-"}</span>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              {student.packageId ? getTextValue(student.packageId.name) : (isRtl ? "غير محدد" : "N/A")}
-                            </Badge>
-                          </TableCell>
+                              {(() => {
+                                const studentKey = String(student.id || student._id || "");
+                                const group = groupByStudentId.get(studentKey);
+                                const groupName = group
+                                  ? getTextValue(group.groupName) || (isRtl ? "جروب" : "Group")
+                                  : "";
+                                const label = student.packageId
+                                  ? getTextValue(student.packageId.name)
+                                  : groupName || (isRtl ? "??? ????" : "N/A");
+                                const badgeClass = student.packageId
+                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  : group
+                                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                                    : "bg-gray-50 text-gray-600 border-gray-200";
+                                return (
+                                  <Badge variant="outline" className={badgeClass}>
+                                    {label}
+                                  </Badge>
+                                );
+                              })()}
+                            </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <UserCircle className="h-4 w-4 text-muted-foreground" />
@@ -932,23 +1006,23 @@ export default function StudentMembersPage() {
             <DialogTitle>{isRtl ? "استيراد طلاب (CSV)" : "Import Students (CSV)"}</DialogTitle>
             <DialogDescription>
               {isRtl
-                ? "قم برفع ملف CSV. (اسم الباقة يقبل بالعربي أو الإنجليزي). ميعاد التجديد ويوم الفاتورة اختياريين ويمكن تركهم فارغين."
-                : "Upload a CSV file. (Plan accepts Arabic or English names). Start date and billing day are optional and can be left empty."}
+                ? "قم برفع ملف CSV. للباقات اكتب اسم الباقة في plan. للجروبات اكتب اسم الجروب في group واسم المعلم في teacher، أو استخدم group_id مباشرة. ميعاد التجديد ويوم الفاتورة اختياريين ويمكن تركهم فارغين."
+                : "Upload a CSV file. Use plan for packages. For groups, use group + teacher, or provide group_id directly. Start date and billing day are optional and can be left empty."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Important Notice for Teachers */}
+            {/* Import Notice */}
             <Alert className="bg-blue-50 border-blue-200">
               <Info className={`h-4 w-4 text-blue-600 ${isRtl ? "ml-2" : "mr-2"}`} />
               <AlertDescription className="text-blue-800 text-sm">
                 {isRtl ? (
                   <>
-                    <strong>ملاحظة هامة للمعلمين:</strong> عند رفع ملف CSV، يجب إدخال اسم المعلم بالضبط كما هو مسجل في النظام (بالعربي أو الإنجليزي). هذا يضمن ربط كل معلم بطلاب الباقة الخاصة به بشكل صحيح.
+                    <strong>ملاحظة:</strong> لو الطالب جروب، اكتب اسم الجروب واسم المعلم بالضبط كما هو في النظام، أو استخدم group_id لو موجود.
                   </>
                 ) : (
                   <>
-                    <strong>Important Notice for Teachers:</strong> When uploading a CSV file, you must enter the teacher's name exactly as it is registered in the system (in Arabic or English). This ensures proper linking between each teacher and their package students.
+                    <strong>Note:</strong> For group students, use exact group + teacher names, or provide group_id if you have it.
                   </>
                 )}
               </AlertDescription>
@@ -1059,35 +1133,92 @@ export default function StudentMembersPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label>{isRtl ? "الباقة" : "Package"} *</Label>
+              <Label>{isRtl ? "نوع الاشتراك" : "Enrollment Type"} *</Label>
               <Select
-                value={newStudent.packageId}
-                onValueChange={(value) => setNewStudent({ ...newStudent, packageId: value })}
+                value={newStudent.planType}
+                onValueChange={(value) =>
+                  setNewStudent({
+                    ...newStudent,
+                    planType: value,
+                    packageId: "",
+                    groupId: "",
+                  })
+                }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={isRtl ? "اختر الباقة" : "Select package"} />
+                  <SelectValue placeholder={isRtl ? "اختر النوع" : "Select type"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {packages.map((pkg) => (
-                    <SelectItem key={pkg.id || pkg._id} value={pkg.id || pkg._id || ""}>
-                      {isRtl ? pkg.name.ar : pkg.name.en}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="package">
+                    {isRtl ? "باقة فردية" : "Individual Package"}
+                  </SelectItem>
+                  <SelectItem value="group">
+                    {isRtl ? "جروب" : "Group"}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="student-teacher">{isRtl ? "المعلم" : "Teacher"}</Label>
-              <Input
-                id="student-teacher"
-                value={newStudent.teacherName}
-                onChange={(e) => setNewStudent({ ...newStudent, teacherName: e.target.value })}
-                placeholder={isRtl ? "اسم المعلم" : "Teacher name"}
-              />
-            </div>
+            {newStudent.planType === "package" && (
+              <div className="grid gap-2">
+                <Label>{isRtl ? "الباقة" : "Package"} *</Label>
+                <Select
+                  value={newStudent.packageId}
+                  onValueChange={(value) => setNewStudent({ ...newStudent, packageId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={isRtl ? "اختر الباقة" : "Select package"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {packages.map((pkg) => {
+                      const sessions = pkg.limits?.maxSessions;
+                      const sessionsLabel = sessions
+                        ? (isRtl ? `${sessions} حصة` : `${sessions} sessions`)
+                        : "";
+                      const name = isRtl ? pkg.name.ar : pkg.name.en;
+                      const priceLabel = `${pkg.price} ${pkg.currency}`;
+                      const label = `${name}${sessionsLabel ? ` - ${sessionsLabel}` : ""} - ${priceLabel}`;
+                      return (
+                        <SelectItem key={pkg.id || pkg._id} value={pkg.id || pkg._id || ""}>
+                          {label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-            <div className="grid grid-cols-2 gap-4">
+            {newStudent.planType === "group" && (
+              <div className="grid gap-2">
+                <Label>{isRtl ? "جروب" : "Group"} *</Label>
+                <Select
+                  value={newStudent.groupId}
+                  onValueChange={(value) => setNewStudent({ ...newStudent, groupId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={isRtl ? "اختر الجروب" : "Select group"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teacherGroups.map((group) => {
+                      const groupName = getTextValue(group.groupName) || (isRtl ? "جروب" : "Group");
+                      const teacherName = group.teacherId ? getTextValue(group.teacherId.fullName) : "";
+                      const count = typeof group.stats?.totalStudents === "number" ? group.stats.totalStudents : null;
+                      const countLabel = count !== null
+                        ? (isRtl ? `${count} طالب` : `${count} students`)
+                        : "";
+                      const label = `${groupName}${teacherName ? ` - ${teacherName}` : ""}${countLabel ? ` (${countLabel})` : ""}`;
+                      return (
+                        <SelectItem key={group.id || group._id} value={group.id || group._id || ""}>
+                          {label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+              <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="student-start-date">{isRtl ? "تاريخ البداية" : "Start Date"}</Label>
                 <Input
@@ -1098,7 +1229,7 @@ export default function StudentMembersPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="student-billing-day">{isRtl ? "يوم التجديد" : "Billing Day"}</Label>
+                <Label htmlFor="student-billing-day">{isRtl ? "يوم الفاتورة" : "Billing Day"}</Label>
                 <Input
                   id="student-billing-day"
                   type="number"
