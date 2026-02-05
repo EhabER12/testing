@@ -23,8 +23,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Search, Users } from "lucide-react";
+import { AlertCircle, MessageCircle, Search, Users } from "lucide-react";
 import { differenceInCalendarDays, format, startOfDay } from "date-fns";
 
 const getTextValue = (value: any, isRtl: boolean): string => {
@@ -38,6 +39,11 @@ const getDaysLeft = (dateStr?: string) => {
   const due = new Date(dateStr);
   if (Number.isNaN(due.getTime())) return null;
   return differenceInCalendarDays(startOfDay(due), startOfDay(new Date()));
+};
+
+const getWhatsAppLink = (phone?: string | null) => {
+  const cleaned = (phone || "").replace(/\D/g, "");
+  return cleaned ? `https://wa.me/${cleaned}` : "";
 };
 
 export default function OverdueSubscriptionsPage() {
@@ -221,6 +227,7 @@ export default function OverdueSubscriptionsPage() {
                   <TableRow>
                     <TableHead>{t("admin.overdueSubscriptions.studentName")}</TableHead>
                     <TableHead>{t("admin.overdueSubscriptions.phone")}</TableHead>
+                    <TableHead>{t("admin.overdueSubscriptions.whatsapp")}</TableHead>
                     <TableHead>{t("admin.overdueSubscriptions.packageGroup")}</TableHead>
                     <TableHead>{t("admin.overdueSubscriptions.teacher")}</TableHead>
                     <TableHead>{t("admin.overdueSubscriptions.nextDue")}</TableHead>
@@ -235,6 +242,8 @@ export default function OverdueSubscriptionsPage() {
                     const groupName = group ? getTextValue(group.groupName, isRtl) : "";
                     const packageName = student.packageId ? getTextValue(student.packageId.name, isRtl) : "";
                     const label = packageName || groupName || "-";
+                    const phone = student.phone || student.whatsappNumber || "";
+                    const whatsappLink = getWhatsAppLink(phone);
                     const isOverdue = (daysLeft ?? 0) < 0 || student.status === "overdue";
                     const badgeClass = packageName
                       ? "bg-blue-50 text-blue-700 border-blue-200"
@@ -249,7 +258,23 @@ export default function OverdueSubscriptionsPage() {
                       >
                         <TableCell className="font-medium">{studentName}</TableCell>
                         <TableCell dir="ltr">
-                          {student.phone || student.whatsappNumber || "-"}
+                          {phone || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-green-200 text-green-700 hover:bg-green-50"
+                            disabled={!whatsappLink}
+                            onClick={() => {
+                              if (whatsappLink) {
+                                window.open(whatsappLink, "_blank");
+                              }
+                            }}
+                          >
+                            <MessageCircle className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+                            {t("admin.overdueSubscriptions.whatsapp")}
+                          </Button>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={badgeClass}>

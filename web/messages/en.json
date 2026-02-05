@@ -1420,7 +1420,8 @@
       "daysLeft": "Days Left",
       "status": "Status",
       "dueSoon": "Due Soon",
-      "overdue": "Overdue"
+      "overdue": "Overdue",
+      "whatsapp": "WhatsApp"
     }
   },
   "account": {
