@@ -1,0 +1,302 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { getStudentMembers } from "@/store/services/studentMemberService";
+import { getTeacherGroups } from "@/store/services/teacherGroupService";
+import { isAuthenticated, isAdmin, isModerator } from "@/store/services/authService";
+import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { AlertCircle, Search, Users } from "lucide-react";
+import { differenceInCalendarDays, format, startOfDay } from "date-fns";
+
+const getTextValue = (value: any, isRtl: boolean): string => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return (isRtl ? value.ar : value.en) || value.en || value.ar || "";
+};
+
+const getDaysLeft = (dateStr?: string) => {
+  if (!dateStr) return null;
+  const due = new Date(dateStr);
+  if (Number.isNaN(due.getTime())) return null;
+  return differenceInCalendarDays(startOfDay(due), startOfDay(new Date()));
+};
+
+export default function OverdueSubscriptionsPage() {
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const { t, isRtl } = useAdminLocale();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { studentMembers, isLoading } = useAppSelector((state) => state.studentMembers);
+  const { teacherGroups } = useAppSelector((state) => state.teacherGroups);
+  const { user } = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (!isAuthenticated() || !user) {
+      router.push("/login");
+      return;
+    }
+
+    if (!isAdmin() && !isModerator()) {
+      router.push("/");
+      return;
+    }
+
+    dispatch(getStudentMembers());
+    dispatch(getTeacherGroups({ groupType: "group", isActive: true }));
+  }, [dispatch, user, router]);
+
+  const groupByStudentId = useMemo(() => {
+    const map = new Map<string, any>();
+    teacherGroups.forEach((group) => {
+      (group.students || []).forEach((student) => {
+        const studentId =
+          student.studentId?.id || student.studentId?._id || student.studentId;
+        if (studentId) {
+          map.set(String(studentId), group);
+        }
+      });
+    });
+    return map;
+  }, [teacherGroups]);
+
+  const dueStudents = useMemo(() => {
+    return studentMembers
+      .filter((student) => student.status !== "cancelled")
+      .map((student) => {
+        const daysLeft = getDaysLeft(student.nextDueDate);
+        return { student, daysLeft };
+      })
+      .filter((entry) => entry.daysLeft !== null && entry.daysLeft <= 5);
+  }, [studentMembers]);
+
+  const filteredStudents = useMemo(() => {
+    if (!searchQuery.trim()) return dueStudents;
+    const query = searchQuery.trim().toLowerCase();
+    return dueStudents.filter(({ student }) => {
+      const name = getTextValue(student.studentName || student.name, isRtl).toLowerCase();
+      const phone = (student.phone || student.whatsappNumber || "").toLowerCase();
+      const packageName = student.packageId ? getTextValue(student.packageId.name, isRtl).toLowerCase() : "";
+      const teacherName = student.assignedTeacherId
+        ? getTextValue(student.assignedTeacherId.fullName, isRtl).toLowerCase()
+        : (student.assignedTeacherName || "").toLowerCase();
+      const group = groupByStudentId.get(String(student.id || student._id || ""));
+      const groupName = group ? getTextValue(group.groupName, isRtl).toLowerCase() : "";
+
+      return (
+        name.includes(query) ||
+        phone.includes(query) ||
+        packageName.includes(query) ||
+        teacherName.includes(query) ||
+        groupName.includes(query)
+      );
+    });
+  }, [dueStudents, searchQuery, isRtl, groupByStudentId]);
+
+  const overdueCount = dueStudents.filter(({ daysLeft, student }) =>
+    (daysLeft ?? 0) < 0 || student.status === "overdue"
+  ).length;
+
+  const dueSoonCount = dueStudents.length - overdueCount;
+
+  if (isLoading && studentMembers.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center p-8">
+        <div className="h-16 w-16 animate-spin rounded-full border-4 border-genoun-green border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex-1 space-y-4 p-8 pt-6 ${isRtl ? "text-right" : ""}`} dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {t("admin.overdueSubscriptions.title")}
+          </h2>
+          <p className="text-muted-foreground">
+            {t("admin.overdueSubscriptions.description")}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {t("admin.overdueSubscriptions.totalDueSoon")}
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dueSoonCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {t("admin.overdueSubscriptions.totalOverdue")}
+            </CardTitle>
+            <AlertCircle className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{overdueCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {t("admin.overdueSubscriptions.totalStudents")}
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dueStudents.length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("admin.overdueSubscriptions.searchTitle")}</CardTitle>
+          <CardDescription>{t("admin.overdueSubscriptions.searchDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <Search
+              className={`absolute top-2.5 h-4 w-4 text-muted-foreground ${
+                isRtl ? "right-2" : "left-2"
+              }`}
+            />
+            <Input
+              placeholder={t("admin.overdueSubscriptions.searchPlaceholder")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={isRtl ? "pr-8" : "pl-8"}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("admin.overdueSubscriptions.listTitle")}</CardTitle>
+          <CardDescription>
+            {filteredStudents.length === 0
+              ? t("admin.overdueSubscriptions.noStudents")
+              : `${filteredStudents.length} / ${dueStudents.length}`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {filteredStudents.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-semibold text-gray-900">
+                {t("admin.overdueSubscriptions.noStudents")}
+              </h3>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("admin.overdueSubscriptions.studentName")}</TableHead>
+                    <TableHead>{t("admin.overdueSubscriptions.phone")}</TableHead>
+                    <TableHead>{t("admin.overdueSubscriptions.packageGroup")}</TableHead>
+                    <TableHead>{t("admin.overdueSubscriptions.teacher")}</TableHead>
+                    <TableHead>{t("admin.overdueSubscriptions.nextDue")}</TableHead>
+                    <TableHead>{t("admin.overdueSubscriptions.daysLeft")}</TableHead>
+                    <TableHead>{t("admin.overdueSubscriptions.status")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredStudents.map(({ student, daysLeft }, index) => {
+                    const studentName = getTextValue(student.studentName || student.name, isRtl);
+                    const group = groupByStudentId.get(String(student.id || student._id || ""));
+                    const groupName = group ? getTextValue(group.groupName, isRtl) : "";
+                    const packageName = student.packageId ? getTextValue(student.packageId.name, isRtl) : "";
+                    const label = packageName || groupName || "-";
+                    const isOverdue = (daysLeft ?? 0) < 0 || student.status === "overdue";
+                    const badgeClass = packageName
+                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : groupName
+                        ? "bg-purple-50 text-purple-700 border-purple-200"
+                        : "bg-gray-50 text-gray-600 border-gray-200";
+
+                    return (
+                      <TableRow
+                        key={student.id || student._id || index}
+                        className={isOverdue ? "bg-red-50" : "bg-yellow-50"}
+                      >
+                        <TableCell className="font-medium">{studentName}</TableCell>
+                        <TableCell dir="ltr">
+                          {student.phone || student.whatsappNumber || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={badgeClass}>
+                            {label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {student.assignedTeacherId
+                            ? getTextValue(student.assignedTeacherId.fullName, isRtl)
+                            : (student.assignedTeacherName || "-")}
+                        </TableCell>
+                        <TableCell>
+                          {student.nextDueDate
+                            ? format(new Date(student.nextDueDate), "yyyy-MM-dd")
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {daysLeft === null
+                            ? "-"
+                            : daysLeft < 0
+                              ? isRtl
+                                ? `????? ${Math.abs(daysLeft)} ???`
+                                : `Overdue by ${Math.abs(daysLeft)} days`
+                              : isRtl
+                                ? `????? ${daysLeft} ???`
+                                : `${daysLeft} days left`}
+                        </TableCell>
+                        <TableCell>
+                          {isOverdue ? (
+                            <Badge className="bg-red-100 text-red-800">
+                              {t("admin.overdueSubscriptions.overdue")}
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-yellow-100 text-yellow-800">
+                              {t("admin.overdueSubscriptions.dueSoon")}
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

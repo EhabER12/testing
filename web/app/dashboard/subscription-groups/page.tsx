@@ -1,0 +1,811 @@
+"use client";
+
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  addStudentToGroup,
+  createTeacherGroup,
+  deleteTeacherGroup,
+  getAllTeachersWithStats,
+  getTeacherGroups,
+  removeStudentFromGroup,
+  TeacherGroup,
+  updateStudentStatus,
+  updateTeacherGroup,
+} from "@/store/services/teacherGroupService";
+import { getStudentMembers } from "@/store/services/studentMemberService";
+import { isAuthenticated, isAdmin, isModerator } from "@/store/services/authService";
+import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ChevronDown,
+  ChevronUp,
+  MoreHorizontal,
+  Plus,
+  Trash2,
+  UserPlus,
+  Users,
+} from "lucide-react";
+import { toast } from "react-hot-toast";
+
+const getTextValue = (value: any, isRtl: boolean): string => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return (isRtl ? value.ar : value.en) || value.en || value.ar || "";
+};
+
+export default function SubscriptionGroupsPage() {
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const { t, isRtl } = useAdminLocale();
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<TeacherGroup | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTeacherId, setSelectedTeacherId] = useState("all");
+
+  const [formData, setFormData] = useState({
+    teacherId: "",
+    groupName: { ar: "", en: "" },
+    pricing: {
+      individualRate: 0,
+      groupRate: 0,
+      studentsPerIndividual: 12,
+      currency: "EGP" as "EGP" | "SAR" | "USD",
+    },
+    notes: "",
+  });
+
+  const { teacherGroups, teachersWithStats, isLoading } = useAppSelector(
+    (state) => state.teacherGroups
+  );
+  const { studentMembers = [] } = useAppSelector((state) => state.studentMembers);
+  const { user } = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (!isAuthenticated() || !user) {
+      router.push("/login");
+      return;
+    }
+
+    if (!isAdmin() && !isModerator()) {
+      router.push("/");
+      return;
+    }
+
+    dispatch(getTeacherGroups({ groupType: "group" }));
+    dispatch(getAllTeachersWithStats());
+    dispatch(getStudentMembers());
+  }, [dispatch, user, router]);
+
+  const groups = useMemo(
+    () => teacherGroups.filter((group) => group.groupType === "group"),
+    [teacherGroups]
+  );
+
+  const filteredGroups = useMemo(() => {
+    let list = groups;
+    if (selectedTeacherId !== "all") {
+      list = list.filter(
+        (group) =>
+          (group.teacherId?.id || group.teacherId?._id) === selectedTeacherId
+      );
+    }
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      list = list.filter((group) => {
+        const groupName = getTextValue(group.groupName, isRtl).toLowerCase();
+        const teacherName = getTextValue(group.teacherId?.fullName, isRtl).toLowerCase();
+        return groupName.includes(query) || teacherName.includes(query);
+      });
+    }
+    return list;
+  }, [groups, selectedTeacherId, searchQuery, isRtl]);
+
+  const resetForm = () => {
+    setFormData({
+      teacherId: "",
+      groupName: { ar: "", en: "" },
+      pricing: {
+        individualRate: 0,
+        groupRate: 0,
+        studentsPerIndividual: 12,
+        currency: "EGP",
+      },
+      notes: "",
+    });
+  };
+
+  const toggleGroupExpand = (groupId: string) => {
+    setExpandedGroups((prev) =>
+      prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId]
+    );
+  };
+
+  const openEditDialog = (group: TeacherGroup) => {
+    setSelectedGroup(group);
+    setFormData({
+      teacherId: group.teacherId?.id || group.teacherId?._id || "",
+      groupName: group.groupName || { ar: "", en: "" },
+      pricing: {
+        individualRate: group.pricing?.individualRate ?? 0,
+        groupRate: group.pricing?.groupRate ?? 0,
+        studentsPerIndividual: group.pricing?.studentsPerIndividual ?? 12,
+        currency: group.pricing?.currency ?? "EGP",
+      },
+      notes: group.notes || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleCreateGroup = async () => {
+    if (!formData.teacherId) {
+      toast.error(isRtl ? "?????? ?????? ??????" : "Please select a teacher");
+      return;
+    }
+
+    if (!formData.groupName.ar && !formData.groupName.en) {
+      toast.error(isRtl ? "?????? ????? ??? ??????" : "Please enter a group name");
+      return;
+    }
+
+    try {
+      await dispatch(
+        createTeacherGroup({
+          teacherId: formData.teacherId,
+          groupName: formData.groupName,
+          groupType: "group",
+          pricing: formData.pricing,
+          permissions: { canUploadCourses: false, canPublishDirectly: false },
+          notes: formData.notes,
+        })
+      ).unwrap();
+      toast.success(isRtl ? "?? ????? ??????" : "Group created");
+      setIsCreateDialogOpen(false);
+      resetForm();
+      await dispatch(getTeacherGroups({ groupType: "group" }));
+    } catch (err) {
+      console.error("Failed to create group:", err);
+      toast.error(isRtl ? "??? ????? ??????" : "Failed to create group");
+    }
+  };
+
+  const handleUpdateGroup = async () => {
+    if (!selectedGroup) return;
+
+    try {
+      await dispatch(
+        updateTeacherGroup({
+          id: (selectedGroup.id || selectedGroup._id)!,
+          data: {
+            groupName: formData.groupName,
+            pricing: formData.pricing,
+            notes: formData.notes,
+          },
+        })
+      ).unwrap();
+      toast.success(isRtl ? "?? ????? ??????" : "Group updated");
+      setIsEditDialogOpen(false);
+      resetForm();
+      await dispatch(getTeacherGroups({ groupType: "group" }));
+    } catch (err) {
+      console.error("Failed to update group:", err);
+      toast.error(isRtl ? "??? ????? ??????" : "Failed to update group");
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    if (!confirm(t("admin.teachers.confirmDelete"))) return;
+    try {
+      await dispatch(deleteTeacherGroup(groupId)).unwrap();
+      toast.success(isRtl ? "?? ??? ??????" : "Group deleted");
+      await dispatch(getTeacherGroups({ groupType: "group" }));
+    } catch (err) {
+      console.error("Failed to delete group:", err);
+      toast.error(isRtl ? "??? ??? ??????" : "Failed to delete group");
+    }
+  };
+
+  const handleAddStudent = async () => {
+    if (!selectedGroup || !selectedStudentId || selectedStudentId === "no-students") {
+      toast.error(isRtl ? "???? ??????" : "Please select a student");
+      return;
+    }
+    try {
+      await dispatch(
+        addStudentToGroup({
+          groupId: (selectedGroup.id || selectedGroup._id)!,
+          studentId: selectedStudentId,
+        })
+      ).unwrap();
+      toast.success(isRtl ? "?? ????? ??????" : "Student added");
+      setIsAddStudentDialogOpen(false);
+      setSelectedStudentId("");
+      await dispatch(getTeacherGroups({ groupType: "group" }));
+    } catch (err) {
+      console.error("Failed to add student:", err);
+      toast.error(isRtl ? "??? ????? ??????" : "Failed to add student");
+    }
+  };
+
+  const handleRemoveStudent = async (groupId: string, studentId: string) => {
+    if (!confirm(t("admin.teachers.confirmRemoveStudent"))) return;
+    try {
+      await dispatch(removeStudentFromGroup({ groupId, studentId })).unwrap();
+      await dispatch(getTeacherGroups({ groupType: "group" }));
+    } catch (err) {
+      console.error("Failed to remove student:", err);
+      toast.error(isRtl ? "??? ??? ??????" : "Failed to remove student");
+    }
+  };
+
+  const handleStatusChange = async (
+    groupId: string,
+    studentId: string,
+    status: "active" | "inactive" | "completed"
+  ) => {
+    try {
+      await dispatch(updateStudentStatus({ groupId, studentId, status })).unwrap();
+      await dispatch(getTeacherGroups({ groupType: "group" }));
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      toast.error(isRtl ? "??? ????? ??????" : "Failed to update status");
+    }
+  };
+
+  if (isLoading && groups.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center p-8">
+        <div className="h-16 w-16 animate-spin rounded-full border-4 border-genoun-green border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex-1 space-y-4 p-8 pt-6 ${isRtl ? "text-right" : ""}`} dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {t("admin.sidebar.subscriptionGroups")}
+          </h2>
+          <p className="text-muted-foreground">
+            {isRtl ? "????? ?????? ?????????? ?????? ??????" : "Manage subscription groups and add students"}
+          </p>
+        </div>
+        <Button
+          onClick={() => {
+            resetForm();
+            setIsCreateDialogOpen(true);
+          }}
+          className="bg-genoun-green hover:bg-genoun-green/90"
+        >
+          <Plus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+          {t("admin.teachers.createGroup")}
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{isRtl ? "الفلاتر" : "Filters"}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-4 md:flex-row md:items-end">
+            <div className="grid gap-2 flex-1">
+              <Label>{isRtl ? "بحث بالاسم" : "Search"}</Label>
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={isRtl ? "اسم الجروب أو المعلم" : "Group or teacher name"}
+              />
+            </div>
+            <div className="grid gap-2 w-full md:w-[260px]">
+              <Label>{isRtl ? "تصفية بالمعلم" : "Filter by Teacher"}</Label>
+              <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isRtl ? "اختر المعلم" : "Select teacher"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isRtl ? "جميع المعلمين" : "All teachers"}</SelectItem>
+                  {teachersWithStats.map((teacher) => {
+                    const teacherId = teacher.id || teacher._id;
+                    return (
+                      <SelectItem key={teacherId} value={teacherId}>
+                        {getTextValue(teacher.fullName, isRtl)}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("admin.teachers.teacherGroups")}</CardTitle>
+          <CardDescription>
+            {filteredGroups.length === groups.length
+              ? `${groups.length} ${t("admin.teachers.totalGroups")}`
+              : `${filteredGroups.length} / ${groups.length} ${t("admin.teachers.totalGroups")}`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {filteredGroups.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-semibold">
+                {t("admin.teachers.noGroups")}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {t("admin.teachers.createFirst")}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="h-10"></TableHead>
+                    <TableHead className="h-10">{t("admin.teachers.groupName")}</TableHead>
+                    <TableHead className="h-10">{t("admin.teachers.teacher")}</TableHead>
+                    <TableHead className="h-10">{t("admin.teachers.students")}</TableHead>
+                    <TableHead className="text-right h-10">{t("admin.teachers.actions")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredGroups.map((group) => {
+                    const groupId = (group.id || group._id)!;
+                    const isExpanded = expandedGroups.includes(groupId);
+                    const groupName =
+                      getTextValue(group.groupName, isRtl) ||
+                      (isRtl ? "جروب" : "Group");
+                    const studentCount = group.stats?.totalStudents ?? group.students?.length ?? 0;
+                    const activeCount = group.stats?.activeStudents ?? 0;
+
+                    return (
+                      <Fragment key={groupId}>
+                        <TableRow className="cursor-pointer hover:bg-muted/50">
+                          <TableCell onClick={() => toggleGroupExpand(groupId)}>
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">{groupName}</TableCell>
+                          <TableCell>
+                            {group.teacherId?.fullName && getTextValue(group.teacherId.fullName, isRtl)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Users className="h-3 w-3 text-muted-foreground" />
+                              {activeCount} / {studentCount}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedGroup(group);
+                                  setIsAddStudentDialogOpen(true);
+                                }}
+                              >
+                                <UserPlus className="h-4 w-4" />
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>{t("admin.teachers.actions")}</DropdownMenuLabel>
+                                  <DropdownMenuItem onClick={() => openEditDialog(group)}>
+                                    {t("admin.common.edit")}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={() => handleDeleteGroup(groupId)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    {t("admin.common.delete")}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {isExpanded && (
+                          <TableRow className="bg-muted/30">
+                            <TableCell colSpan={5}>
+                              <div className="p-4 space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="text-sm font-bold">{t("admin.teachers.students")}</h4>
+                                  <Badge variant="outline">
+                                    {(group.students || []).length} {t("admin.teachers.totalStudents")}
+                                  </Badge>
+                                </div>
+                                {group.students && group.students.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground text-center py-4">
+                                    {t("admin.teachers.noStudents")}
+                                  </p>
+                                ) : (
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow className="hover:bg-transparent">
+                                        <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">
+                                          {t("admin.teachers.studentName")}
+                                        </TableHead>
+                                        <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">
+                                          {t("admin.teachers.whatsapp")}
+                                        </TableHead>
+                                        <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">
+                                          {t("admin.teachers.studentStatus")}
+                                        </TableHead>
+                                        <TableHead className="h-9 py-2 text-right text-[11px] font-semibold uppercase">
+                                          {t("admin.teachers.actions")}
+                                        </TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {(group.students || []).map((student) => {
+                                        if (!student || !student.studentId) return null;
+                                        const studentId = student.studentId?.id || student.studentId?._id;
+                                        if (!studentId) return null;
+                                        const mappingId = student.id || student._id || studentId;
+                                        return (
+                                          <TableRow key={mappingId}>
+                                            <TableCell className="py-2">
+                                              <div className="flex flex-col">
+                                                <span className="font-medium text-sm">
+                                                  {getTextValue(
+                                                    (student.studentId as any)?.name ||
+                                                      student.studentId?.studentName,
+                                                    isRtl
+                                                  )}
+                                                </span>
+                                                <span className="text-[10px] text-muted-foreground italic">
+                                                  {student.studentId?.whatsappNumber ||
+                                                    (student.studentId as any)?.phone ||
+                                                    "-"}
+                                                </span>
+                                              </div>
+                                            </TableCell>
+                                            <TableCell className="py-2">
+                                              {student.studentId?.whatsappNumber ||
+                                                (student.studentId as any)?.phone ||
+                                                "-"}
+                                            </TableCell>
+                                            <TableCell className="py-2">
+                                              <Select
+                                                value={student.status}
+                                                onValueChange={(val: any) =>
+                                                  handleStatusChange(groupId, studentId, val)
+                                                }
+                                              >
+                                                <SelectTrigger className="h-7 text-xs w-[100px]">
+                                                  <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="active">
+                                                    {t("admin.teachers.statuses.active")}
+                                                  </SelectItem>
+                                                  <SelectItem value="inactive">
+                                                    {t("admin.teachers.statuses.inactive")}
+                                                  </SelectItem>
+                                                  <SelectItem value="completed">
+                                                    {t("admin.teachers.statuses.completed")}
+                                                  </SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                            </TableCell>
+                                            <TableCell className="py-2 text-right">
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                onClick={() => handleRemoveStudent(groupId, studentId)}
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                              </Button>
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-lg" dir={isRtl ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle>{t("admin.teachers.createGroup")}</DialogTitle>
+            <DialogDescription>{t("admin.teachers.description")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid gap-2">
+              <Label>{t("admin.teachers.groupName")} (AR)</Label>
+              <Input
+                value={formData.groupName.ar}
+                onChange={(e) =>
+                  setFormData({ ...formData, groupName: { ...formData.groupName, ar: e.target.value } })
+                }
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>{t("admin.teachers.groupName")} (EN)</Label>
+              <Input
+                value={formData.groupName.en}
+                onChange={(e) =>
+                  setFormData({ ...formData, groupName: { ...formData.groupName, en: e.target.value } })
+                }
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>{t("admin.teachers.teacher")}</Label>
+              <Select value={formData.teacherId} onValueChange={(val) => setFormData({ ...formData, teacherId: val })}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("admin.teachers.teacher")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {teachersWithStats.map((teacher) => {
+                    const teacherId = teacher.id || teacher._id;
+                    return (
+                      <SelectItem key={teacherId} value={teacherId}>
+                        {getTextValue(teacher.fullName, isRtl)}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>{t("admin.teachers.groupRate")}</Label>
+                <Input
+                  type="number"
+                  value={formData.pricing.groupRate}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      pricing: { ...formData.pricing, groupRate: Number(e.target.value) },
+                    })
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>{t("admin.teachers.currency")}</Label>
+                <Select
+                  value={formData.pricing.currency}
+                  onValueChange={(val) =>
+                    setFormData({
+                      ...formData,
+                      pricing: { ...formData.pricing, currency: val as "EGP" | "SAR" | "USD" },
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EGP">EGP</SelectItem>
+                    <SelectItem value="SAR">SAR</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>{t("admin.teachers.notes")}</Label>
+              <Input
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              {t("admin.common.cancel")}
+            </Button>
+            <Button className="bg-genoun-green hover:bg-genoun-green/90" onClick={handleCreateGroup}>
+              {t("admin.common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-lg" dir={isRtl ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle>{t("admin.teachers.editGroup")}</DialogTitle>
+            <DialogDescription>{t("admin.teachers.description")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid gap-2">
+              <Label>{t("admin.teachers.groupName")} (AR)</Label>
+              <Input
+                value={formData.groupName.ar}
+                onChange={(e) =>
+                  setFormData({ ...formData, groupName: { ...formData.groupName, ar: e.target.value } })
+                }
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>{t("admin.teachers.groupName")} (EN)</Label>
+              <Input
+                value={formData.groupName.en}
+                onChange={(e) =>
+                  setFormData({ ...formData, groupName: { ...formData.groupName, en: e.target.value } })
+                }
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>{t("admin.teachers.groupRate")}</Label>
+              <Input
+                type="number"
+                value={formData.pricing.groupRate}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    pricing: { ...formData.pricing, groupRate: Number(e.target.value) },
+                  })
+                }
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>{t("admin.teachers.notes")}</Label>
+              <Input
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              {t("admin.common.cancel")}
+            </Button>
+            <Button className="bg-genoun-green hover:bg-genoun-green/90" onClick={handleUpdateGroup}>
+              {t("admin.common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("admin.teachers.addStudent")}</DialogTitle>
+            <DialogDescription>
+              {t("admin.teachers.selectStudent")} {t("admin.teachers.to")} {getTextValue(selectedGroup?.groupName, isRtl) || t("admin.teachers.group")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+              <SelectTrigger>
+                <SelectValue placeholder={t("admin.teachers.selectStudent")} />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {studentMembers && studentMembers.length > 0 ? (
+                  (() => {
+                    const availableStudents = studentMembers.filter((student) => {
+                      const studentId = (student.id || student._id)!;
+                      const isAlreadyInGroup = selectedGroup?.students?.some((s) => {
+                        const sId = s?.studentId?.id || s?.studentId?._id;
+                        return sId === studentId;
+                      });
+                      return !isAlreadyInGroup;
+                    });
+
+                    if (availableStudents.length === 0) {
+                      return (
+                        <SelectItem value="no-students" disabled>
+                          {isRtl ? "???? ?????? ?????? ??????" : "All students already added"}
+                        </SelectItem>
+                      );
+                    }
+
+                    return availableStudents.map((student) => {
+                      const studentId = (student.id || student._id)!;
+                      const studentName = getTextValue(student.studentName || student.name, isRtl) || (isRtl ? "????" : "Student");
+                      const phoneNumber = student.whatsappNumber || student.phone || "N/A";
+                      return (
+                        <SelectItem key={studentId} value={studentId}>
+                          {studentName} ({phoneNumber})
+                        </SelectItem>
+                      );
+                    });
+                  })()
+                ) : (
+                  <SelectItem value="no-students" disabled>
+                    {t("admin.teachers.noStudents")}
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAddStudentDialogOpen(false);
+                setSelectedStudentId("");
+              }}
+            >
+              {t("admin.common.cancel")}
+            </Button>
+            <Button
+              className="bg-genoun-green hover:bg-genoun-green/90"
+              onClick={handleAddStudent}
+              disabled={!selectedStudentId || selectedStudentId === "no-students"}
+            >
+              {t("admin.teachers.addStudent")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

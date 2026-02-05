@@ -35,6 +35,7 @@ import {
   Award,
   FileQuestion,
   UserCheck,
+  AlertCircle,
   Mail,
   Home,
   UserSquare2,
@@ -242,6 +243,13 @@ const menuItems: MenuItem[] = [
         roles: ["admin", "moderator"],
       },
       {
+        titleKey: "admin.sidebar.overdueSubscriptions",
+        title: "Overdue Subscriptions",
+        icon: <AlertCircle className="h-4 w-4" />,
+        href: "/dashboard/overdue-subscriptions",
+        roles: ["admin", "moderator"],
+      },
+      {
         titleKey: "admin.sidebar.packages",
         title: "Packages",
         icon: <Package className="h-4 w-4" />,
@@ -253,6 +261,13 @@ const menuItems: MenuItem[] = [
         title: "Subscription Teachers",
         icon: <Users className="h-4 w-4" />,
         href: "/dashboard/subscription-teachers",
+        roles: ["admin", "moderator"],
+      },
+      {
+        titleKey: "admin.sidebar.subscriptionGroups",
+        title: "Subscription Groups",
+        icon: <Users className="h-4 w-4" />,
+        href: "/dashboard/subscription-groups",
         roles: ["admin", "moderator"],
       },
       {

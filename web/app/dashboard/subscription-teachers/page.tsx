@@ -13,6 +13,10 @@ import {
   SubscriptionTeacher,
 } from "@/store/services/settingsService";
 import {
+  getTeacherGroups,
+  TeacherGroup,
+} from "@/store/services/teacherGroupService";
+import {
   isAuthenticated,
   isAdmin,
   isModerator,
@@ -78,6 +82,7 @@ interface TeacherWithStats {
   teacher: SubscriptionTeacher;
   students: StudentMember[];
   activeStudents: StudentMember[];
+  groups: TeacherGroup[];
   profitPercentage: number;
   totalProfit: number;
 }
@@ -112,6 +117,7 @@ export default function SubscriptionTeachersPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeacherKey, setSelectedTeacherKey] = useState("all");
+  const [selectedGroupId, setSelectedGroupId] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] =
     useState<SubscriptionTeacher | null>(null);
@@ -129,6 +135,7 @@ export default function SubscriptionTeachersPage() {
   const { studentMembers, isLoading: studentsLoading } = useAppSelector(
     (state) => state.studentMembers
   );
+  const { teacherGroups } = useAppSelector((state) => state.teacherGroups);
   const { settings, isLoading: settingsLoading } = useAppSelector(
     (state) => state.settings
   );
@@ -151,6 +158,7 @@ export default function SubscriptionTeachersPage() {
     }
 
     dispatch(getStudentMembers());
+    dispatch(getTeacherGroups({ groupType: "group" }));
     dispatch(getWebsiteSettingsThunk());
   }, [dispatch, user, router]);
 
@@ -204,6 +212,17 @@ export default function SubscriptionTeachersPage() {
     [subscriptionTeachers, derivedTeachers]
   );
 
+  const groupOptions = useMemo(() => {
+    return teacherGroups
+      .filter((group) => group.groupType === "group")
+      .map((group) => ({
+        id: group.id || group._id || "",
+        name: getTextValue(group.groupName, isRtl) || (isRtl ? "جروب" : "Group"),
+      }))
+      .filter((group) => group.id)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [teacherGroups, isRtl]);
+
   const teachersWithStats = useMemo<TeacherWithStats[]>(() => {
     return allTeachers.map((teacher) => {
       const teacherTokens = new Set(
@@ -218,6 +237,16 @@ export default function SubscriptionTeachersPage() {
       });
 
       const activeStudents = students.filter(isPayingStudent);
+      const groups = teacherGroups.filter((group) => {
+        const groupTeacherTokens = [
+          group.teacherId?.fullName?.ar,
+          group.teacherId?.fullName?.en,
+          group.teacherId?.email,
+        ]
+          .filter(Boolean)
+          .map((value) => normalizeText(value));
+        return groupTeacherTokens.some((token) => teacherTokens.has(token));
+      });
       const profitPercentage = subscriptionProfitEnabled
         ? teacher.profitPercentage ?? defaultProfitPercentage
         : 0;
@@ -232,6 +261,7 @@ export default function SubscriptionTeachersPage() {
         teacher,
         students,
         activeStudents,
+        groups,
         profitPercentage,
         totalProfit,
       };
@@ -239,6 +269,7 @@ export default function SubscriptionTeachersPage() {
   }, [
     allTeachers,
     studentMembers,
+    teacherGroups,
     defaultProfitPercentage,
     subscriptionProfitEnabled,
   ]);
@@ -249,6 +280,13 @@ export default function SubscriptionTeachersPage() {
       return false;
     }
 
+    if (selectedGroupId !== "all") {
+      const hasGroup = entry.groups.some(
+        (group) => (group.id || group._id) === selectedGroupId
+      );
+      if (!hasGroup) return false;
+    }
+
     if (!searchQuery.trim()) return true;
 
     const query = normalizeText(searchQuery);
@@ -256,12 +294,16 @@ export default function SubscriptionTeachersPage() {
     const nameEn = normalizeText(entry.teacher.name?.en);
     const email = normalizeText(entry.teacher.email);
     const phone = normalizeText(entry.teacher.phone);
+    const groupNames = entry.groups.map((group) =>
+      normalizeText(getTextValue(group.groupName, isRtl))
+    );
 
     return (
       nameAr.includes(query) ||
       nameEn.includes(query) ||
       email.includes(query) ||
-      phone.includes(query)
+      phone.includes(query) ||
+      groupNames.some((name) => name.includes(query))
     );
   });
 
@@ -397,6 +439,19 @@ export default function SubscriptionTeachersPage() {
     }
   };
 
+  const getGroupStatusBadge = (status?: string) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-100 text-green-800">{t("admin.teachers.statuses.active")}</Badge>;
+      case "inactive":
+        return <Badge className="bg-gray-100 text-gray-800">{t("admin.teachers.statuses.inactive")}</Badge>;
+      case "completed":
+        return <Badge className="bg-blue-100 text-blue-800">{t("admin.teachers.statuses.completed")}</Badge>;
+      default:
+        return <Badge variant="outline">{status || "-"}</Badge>;
+    }
+  };
+
   if (studentsLoading || settingsLoading) {
     return (
       <div className="flex h-full items-center justify-center p-8">
@@ -528,6 +583,25 @@ export default function SubscriptionTeachersPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="w-full md:w-64">
+              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={t("admin.subscriptionTeachers.filterGroup")}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    {t("admin.subscriptionTeachers.allGroups")}
+                  </SelectItem>
+                  {groupOptions.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -560,6 +634,8 @@ export default function SubscriptionTeachersPage() {
                   entry.teacher.email ||
                   `Teacher ${index + 1}`;
                 const teacherKey = getTeacherKey(entry.teacher, index);
+                const individualStudents = entry.students;
+                const groups = entry.groups;
 
                 return (
                   <AccordionItem key={teacherKey} value={teacherKey}>
@@ -646,98 +722,191 @@ export default function SubscriptionTeachersPage() {
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                      {entry.students.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                          {t("admin.subscriptionTeachers.noStudents")}
+                      <div className="space-y-8 pt-4">
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold">
+                              {isRtl ? "الطلاب الفردي" : "Individual Students"}
+                            </h4>
+                            <Badge variant="outline">
+                              {individualStudents.length}{" "}
+                              {t("admin.subscriptionTeachers.students")}
+                            </Badge>
+                          </div>
+                          {individualStudents.length === 0 ? (
+                            <div className="text-center py-6 text-muted-foreground">
+                              {t("admin.subscriptionTeachers.noStudents")}
+                            </div>
+                          ) : (
+                            <div className="overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>
+                                      {t("admin.subscriptionTeachers.studentName")}
+                                    </TableHead>
+                                    <TableHead>
+                                      {t("admin.subscriptionTeachers.phone")}
+                                    </TableHead>
+                                    <TableHead>
+                                      {t("admin.subscriptionTeachers.package")}
+                                    </TableHead>
+                                    <TableHead>
+                                      {t("admin.subscriptionTeachers.startDate")}
+                                    </TableHead>
+                                    <TableHead>
+                                      {t("admin.subscriptionTeachers.nextDue")}
+                                    </TableHead>
+                                    <TableHead>
+                                      {t("admin.subscriptionTeachers.status")}
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                      {t("admin.subscriptionTeachers.studentProfit")}
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {individualStudents.map((student, studentIndex) => {
+                                    const studentName = getTextValue(
+                                      student.studentName || student.name,
+                                      isRtl
+                                    );
+                                    const profitValue =
+                                      Number(student.packagePrice || 0) *
+                                      (entry.profitPercentage / 100);
+                                    const rowClass =
+                                      student.status === "overdue"
+                                        ? "bg-red-50"
+                                        : student.status === "due_soon"
+                                        ? "bg-yellow-50"
+                                        : student.status === "paused"
+                                        ? "bg-gray-50"
+                                        : "";
+
+                                    return (
+                                      <TableRow
+                                        key={student.id || student._id || studentIndex}
+                                        className={rowClass}
+                                      >
+                                        <TableCell className="font-medium">
+                                          {studentName}
+                                        </TableCell>
+                                        <TableCell>
+                                          <div className="flex items-center gap-2">
+                                            <Phone className="h-4 w-4 text-muted-foreground" />
+                                            <span dir="ltr">
+                                              {student.phone || student.whatsappNumber || "-"}
+                                            </span>
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge
+                                            variant="outline"
+                                            className="bg-purple-50 text-purple-700 border-purple-200"
+                                          >
+                                            <PackageIcon className="h-3 w-3 mr-1" />
+                                            {student.packageId
+                                              ? getTextValue(student.packageId.name, isRtl)
+                                              : "-"}
+                                          </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                          <div className="flex items-center gap-2">
+                                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                                            {student.startDate
+                                              ? format(new Date(student.startDate), "yyyy-MM-dd")
+                                              : "-"}
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>
+                                          {student.nextDueDate
+                                            ? format(new Date(student.nextDueDate), "yyyy-MM-dd")
+                                            : "-"}
+                                        </TableCell>
+                                        <TableCell>{getStatusBadge(student.status)}</TableCell>
+                                        <TableCell className="text-right">
+                                          {formatMoney(profitValue, baseCurrency)}
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="overflow-x-auto pt-4">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>
-                                  {t("admin.subscriptionTeachers.studentName")}
-                                </TableHead>
-                                <TableHead>
-                                  {t("admin.subscriptionTeachers.phone")}
-                                </TableHead>
-                                <TableHead>
-                                  {t("admin.subscriptionTeachers.package")}
-                                </TableHead>
-                                <TableHead>
-                                  {t("admin.subscriptionTeachers.startDate")}
-                                </TableHead>
-                                <TableHead>
-                                  {t("admin.subscriptionTeachers.nextDue")}
-                                </TableHead>
-                                <TableHead>
-                                  {t("admin.subscriptionTeachers.status")}
-                                </TableHead>
-                                <TableHead className="text-right">
-                                  {t("admin.subscriptionTeachers.studentProfit")}
-                                </TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {entry.students.map((student, studentIndex) => {
-                                const studentName = getTextValue(
-                                  student.studentName || student.name,
-                                  isRtl
-                                );
-                                const profitValue =
-                                  Number(student.packagePrice || 0) *
-                                  (entry.profitPercentage / 100);
+
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold">
+                              {isRtl ? "الجروبات" : "Groups"}
+                            </h4>
+                            <Badge variant="outline">{groups.length}</Badge>
+                          </div>
+                          {groups.length === 0 ? (
+                            <div className="text-center py-6 text-muted-foreground">
+                              {isRtl ? "لا توجد جروبات" : "No groups"}
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              {groups.map((group) => {
+                                const groupId = group.id || group._id;
+                                const groupName =
+                                  getTextValue(group.groupName, isRtl) ||
+                                  (isRtl ? "جروب" : "Group");
+                                const members = group.students || [];
+                                const membersCount =
+                                  group.stats?.totalStudents ?? members.length;
 
                                 return (
-                                  <TableRow
-                                    key={student.id || student._id || studentIndex}
-                                  >
-                                    <TableCell className="font-medium">
-                                      {studentName}
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="flex items-center gap-2">
-                                        <Phone className="h-4 w-4 text-muted-foreground" />
-                                        <span dir="ltr">
-                                          {student.phone || student.whatsappNumber || "-"}
-                                        </span>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge
-                                        variant="outline"
-                                        className="bg-purple-50 text-purple-700 border-purple-200"
-                                      >
-                                        <PackageIcon className="h-3 w-3 mr-1" />
-                                        {student.packageId
-                                          ? getTextValue(student.packageId.name, isRtl)
-                                          : "-"}
+                                  <div key={groupId} className="rounded-lg border p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div className="font-medium">{groupName}</div>
+                                      <Badge variant="outline">
+                                        {membersCount} {isRtl ? "طالب" : "students"}
                                       </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                                        {student.startDate
-                                          ? format(new Date(student.startDate), "yyyy-MM-dd")
-                                          : "-"}
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      {student.nextDueDate
-                                        ? format(new Date(student.nextDueDate), "yyyy-MM-dd")
-                                        : "-"}
-                                    </TableCell>
-                                    <TableCell>{getStatusBadge(student.status)}</TableCell>
-                                    <TableCell className="text-right">
-                                      {formatMoney(profitValue, baseCurrency)}
-                                    </TableCell>
-                                  </TableRow>
+                                    </div>
+                                    <div className="mt-3 space-y-2">
+                                      {members.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">
+                                          {isRtl ? "لا يوجد طلاب" : "No students"}
+                                        </p>
+                                      ) : (
+                                        members.map((member, memberIndex) => {
+                                          const memberName = getTextValue(
+                                            (member.studentId as any)?.name ||
+                                              member.studentId?.studentName,
+                                            isRtl
+                                          );
+                                          const memberPhone =
+                                            member.studentId?.whatsappNumber ||
+                                            (member.studentId as any)?.phone ||
+                                            "-";
+
+                                          return (
+                                            <div
+                                              key={member.id || member._id || memberIndex}
+                                              className="flex items-center justify-between text-sm"
+                                            >
+                                              <div className="flex flex-col">
+                                                <span>{memberName || "-"}</span>
+                                                <span className="text-muted-foreground" dir="ltr">
+                                                  {memberPhone}
+                                                </span>
+                                              </div>
+                                              {getGroupStatusBadge(member.status)}
+                                            </div>
+                                          );
+                                        })
+                                      )}
+                                    </div>
+                                  </div>
                                 );
                               })}
-                            </TableBody>
-                          </Table>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </AccordionContent>
                   </AccordionItem>
                 );
