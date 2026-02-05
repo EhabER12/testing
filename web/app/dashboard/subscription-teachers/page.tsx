@@ -129,6 +129,8 @@ export default function SubscriptionTeachersPage() {
     email: "",
     phone: "",
     profitPercentage: "",
+    salaryAmount: "",
+    salaryDueDate: "",
     notes: "",
   });
 
@@ -170,6 +172,8 @@ export default function SubscriptionTeachersPage() {
         email: "",
         phone: "",
         profitPercentage: String(defaultProfitPercentage),
+        salaryAmount: "",
+        salaryDueDate: "",
         notes: "",
       });
     }
@@ -336,6 +340,13 @@ export default function SubscriptionTeachersPage() {
       profitPercentage: String(
         teacher.profitPercentage ?? defaultProfitPercentage
       ),
+      salaryAmount:
+        teacher.salaryAmount !== undefined && teacher.salaryAmount !== null
+          ? String(teacher.salaryAmount)
+          : "",
+      salaryDueDate: teacher.salaryDueDate
+        ? format(new Date(teacher.salaryDueDate), "yyyy-MM-dd")
+        : "",
       notes: teacher.notes || "",
     });
     setDialogOpen(true);
@@ -356,6 +367,13 @@ export default function SubscriptionTeachersPage() {
     const profitPercentage = Number.isFinite(profitPercentageValue)
       ? Math.min(Math.max(profitPercentageValue, 0), 100)
       : defaultProfitPercentage;
+    const salaryAmountValue = Number(formData.salaryAmount);
+    const salaryAmount = Number.isFinite(salaryAmountValue)
+      ? Math.max(salaryAmountValue, 0)
+      : 0;
+    const salaryDueDate = formData.salaryDueDate
+      ? new Date(formData.salaryDueDate)
+      : undefined;
 
     const updatedTeacher: SubscriptionTeacher = {
       ...(editingTeacher?._id ? { _id: editingTeacher._id } : {}),
@@ -363,6 +381,8 @@ export default function SubscriptionTeachersPage() {
       email: formData.email.trim(),
       phone: formData.phone.trim(),
       profitPercentage,
+      salaryAmount,
+      salaryDueDate: salaryDueDate ? salaryDueDate.toISOString() : undefined,
       notes: formData.notes.trim(),
       isActive: editingTeacher?.isActive ?? true,
     };
@@ -669,6 +689,31 @@ export default function SubscriptionTeachersPage() {
                                 </span>
                               )}
                             </div>
+                            {(entry.teacher.salaryAmount || entry.teacher.salaryDueDate) && (
+                              <div className="mt-1 text-xs text-muted-foreground flex items-center gap-2">
+                                {entry.teacher.salaryAmount ? (
+                                  <span className="flex items-center gap-1">
+                                    {t("admin.subscriptionTeachers.salary")}:
+                                    <span className="font-medium">
+                                      {formatMoney(
+                                        entry.teacher.salaryAmount,
+                                        baseCurrency
+                                      )}
+                                    </span>
+                                  </span>
+                                ) : null}
+                                {entry.teacher.salaryDueDate ? (
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {t("admin.subscriptionTeachers.salaryDueDate")}:{" "}
+                                    {format(
+                                      new Date(entry.teacher.salaryDueDate),
+                                      "yyyy-MM-dd"
+                                    )}
+                                  </span>
+                                ) : null}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div
@@ -994,6 +1039,35 @@ export default function SubscriptionTeachersPage() {
                 value={formData.profitPercentage}
                 onChange={(e) =>
                   setFormData({ ...formData, profitPercentage: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="teacher-salary">
+                {t("admin.subscriptionTeachers.salary")}
+              </Label>
+              <Input
+                id="teacher-salary"
+                type="number"
+                min="0"
+                value={formData.salaryAmount}
+                onChange={(e) =>
+                  setFormData({ ...formData, salaryAmount: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="teacher-salary-due">
+                {t("admin.subscriptionTeachers.salaryDueDate")}
+              </Label>
+              <Input
+                id="teacher-salary-due"
+                type="date"
+                value={formData.salaryDueDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, salaryDueDate: e.target.value })
                 }
               />
             </div>

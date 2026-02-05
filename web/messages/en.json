@@ -367,6 +367,8 @@
       "active": "Active",
       "profit": "Profit",
       "profitPercentage": "Profit Percentage (%)",
+      "salary": "Salary",
+      "salaryDueDate": "Salary Due Date",
       "teacherName": "Teacher Name",
       "studentName": "Student Name",
       "teacherNameAr": "Teacher Name (AR)",

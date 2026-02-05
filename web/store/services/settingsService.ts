@@ -233,6 +233,8 @@ export interface SubscriptionTeacher {
   email?: string;
   phone?: string;
   profitPercentage?: number;
+  salaryAmount?: number;
+  salaryDueDate?: string;
   notes?: string;
   isActive?: boolean;
 }
