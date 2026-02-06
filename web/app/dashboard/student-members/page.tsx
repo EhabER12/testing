@@ -17,6 +17,7 @@ import {
   getAllTeachersWithStats,
   getTeacherGroups,
 } from "@/store/services/teacherGroupService";
+import { getWebsiteSettingsThunk } from "@/store/services/settingsService";
 import {
   bulkIssuePackageCertificates,
   issueCertificate,
@@ -137,6 +138,10 @@ export default function StudentMembersPage() {
   const { templates, certificates } = useAppSelector((state) => state.certificates);
   const { user } = useAppSelector((state) => state.auth);
   const { teachersWithStats, teacherGroups } = useAppSelector((state) => state.teacherGroups);
+  const { settings } = useAppSelector((state) => state.settings);
+
+  // Get subscription teachers from settings
+  const subscriptionTeachers = settings?.subscriptionTeachers || [];
 
   useEffect(() => {
     if (!isAuthenticated() || !user) {
@@ -154,6 +159,7 @@ export default function StudentMembersPage() {
     dispatch(getCertificates());
     dispatch(getAllTeachersWithStats());
     dispatch(getTeacherGroups({ groupType: "group", isActive: true, teacherType: "subscription" }));
+    dispatch(getWebsiteSettingsThunk());
     // Try to get templates, but don't fail if it errors
     dispatch(getAllTemplates()).catch((err) => {
       console.warn("Failed to load templates:", err);
@@ -320,9 +326,17 @@ export default function StudentMembersPage() {
         if (selectedPackage) {
           studentData.packagePrice = selectedPackage.price;
         }
-        // Assign teacher if selected (not "none")
+        // Assign subscription teacher if selected (not "none")
         if (newStudent.teacherId && newStudent.teacherId !== "none") {
-          studentData.assignedTeacherId = newStudent.teacherId;
+          const selectedTeacher = subscriptionTeachers.find(
+            (t: any) => (t._id || t.id) === newStudent.teacherId
+          );
+          if (selectedTeacher) {
+            const teacherName = selectedTeacher.name?.ar || selectedTeacher.name?.en || '';
+            if (teacherName) {
+              studentData.assignedTeacherName = teacherName;
+            }
+          }
         }
       } else if (newStudent.planType === "group") {
         const selectedGroup = teacherGroups.find(
@@ -1212,19 +1226,19 @@ export default function StudentMembersPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">{isRtl ? "بدون معلم" : "No teacher"}</SelectItem>
-                      {teachersWithStats && teachersWithStats.length > 0 && teachersWithStats
-                        .sort((a, b) => {
-                          const nameA = isRtl ? (a.fullName?.ar || a.fullName?.en || '') : (a.fullName?.en || a.fullName?.ar || '');
-                          const nameB = isRtl ? (b.fullName?.ar || b.fullName?.en || '') : (b.fullName?.en || b.fullName?.ar || '');
+                      {subscriptionTeachers && subscriptionTeachers.length > 0 && subscriptionTeachers
+                        .filter((teacher: any) => teacher.isActive !== false)
+                        .sort((a: any, b: any) => {
+                          const nameA = isRtl ? (a.name?.ar || a.name?.en || '') : (a.name?.en || a.name?.ar || '');
+                          const nameB = isRtl ? (b.name?.ar || b.name?.en || '') : (b.name?.en || b.name?.ar || '');
                           return nameA.localeCompare(nameB);
                         })
-                        .map((teacher) => {
-                          const teacherName = isRtl ? (teacher.fullName?.ar || teacher.fullName?.en) : (teacher.fullName?.en || teacher.fullName?.ar);
-                          const studentCount = teacher.teacherInfo?.studentsCount || 0;
-                          const label = `${teacherName} (${studentCount} ${isRtl ? "طالب" : "students"})`;
+                        .map((teacher: any) => {
+                          const teacherName = isRtl ? (teacher.name?.ar || teacher.name?.en) : (teacher.name?.en || teacher.name?.ar);
+                          const teacherId = teacher._id || teacher.id || '';
                           return (
-                            <SelectItem key={teacher.id || teacher._id} value={teacher.id || teacher._id || ""}>
-                              {label}
+                            <SelectItem key={teacherId} value={teacherId}>
+                              {teacherName}
                             </SelectItem>
                           );
                         })}
