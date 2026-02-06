@@ -93,7 +93,7 @@ export default function SubscriptionGroupsPage() {
 
   const [formData, setFormData] = useState({
     teacherKey: "",
-    groupName: { ar: "", en: "" },
+    groupName: "",
     pricing: {
       individualRate: 0,
       groupRate: 0,
@@ -144,10 +144,10 @@ export default function SubscriptionGroupsPage() {
             String(teacher._id || teacher.id) ===
             String(group.subscriptionTeacherId || "")
         );
-      return getTextValue(subscriptionTeacher?.name, isRtl);
+      return getTextValue(subscriptionTeacher?.name, true);
     }
 
-    return getTextValue(group.teacherId?.fullName, isRtl);
+    return getTextValue(group.teacherId?.fullName, true);
   };
 
   const teacherOptions = useMemo(() => {
@@ -157,7 +157,7 @@ export default function SubscriptionGroupsPage() {
         if (!teacherId) return null;
         return {
           key: `course:${teacherId}`,
-          label: `${getTextValue(teacher.fullName, isRtl)} ${isRtl ? "(كورسات)" : "(Courses)"}`,
+          label: `${getTextValue(teacher.fullName, true)} (كورسات)`,
           type: "course",
         };
       })
@@ -169,7 +169,7 @@ export default function SubscriptionGroupsPage() {
         if (!teacherId) return null;
         return {
           key: `subscription:${teacherId}`,
-          label: `${getTextValue(teacher.name, isRtl)} ${isRtl ? "(اشتراكات)" : "(Subscriptions)"}`,
+          label: `${getTextValue(teacher.name, true)} (اشتراكات)`,
           type: "subscription",
         };
       })
@@ -178,7 +178,7 @@ export default function SubscriptionGroupsPage() {
     return [...courseTeachers, ...subscriptionTeacherOptions].sort((a, b) =>
       a.label.localeCompare(b.label)
     );
-  }, [teachersWithStats, subscriptionTeachers, isRtl]);
+  }, [teachersWithStats, subscriptionTeachers]);
 
   const groups = useMemo(
     () => teacherGroups.filter((group) => group.groupType === "group"),
@@ -219,7 +219,7 @@ export default function SubscriptionGroupsPage() {
   const resetForm = () => {
     setFormData({
       teacherKey: "",
-      groupName: { ar: "", en: "" },
+      groupName: "",
       pricing: {
         individualRate: 0,
         groupRate: 0,
@@ -244,7 +244,7 @@ export default function SubscriptionGroupsPage() {
         : `course:${group.teacherId?.id || group.teacherId?._id || ""}`;
     setFormData({
       teacherKey: groupTeacherKey,
-      groupName: group.groupName || { ar: "", en: "" },
+      groupName: group.groupName?.ar || group.groupName?.en || "",
       pricing: {
         individualRate: group.pricing?.individualRate ?? 0,
         groupRate: group.pricing?.groupRate ?? 0,
@@ -259,18 +259,18 @@ export default function SubscriptionGroupsPage() {
   const handleCreateGroup = async () => {
     const parsedTeacher = parseTeacherKey(formData.teacherKey);
     if (!parsedTeacher) {
-      toast.error(isRtl ? "?????? ?????? ??????" : "Please select a teacher");
+      toast.error("يجب اختيار معلم");
       return;
     }
 
-    if (!formData.groupName.ar && !formData.groupName.en) {
-      toast.error(isRtl ? "?????? ????? ??? ??????" : "Please enter a group name");
+    if (!formData.groupName) {
+      toast.error("يجب إدخال اسم الجروب");
       return;
     }
 
     try {
         const payload: any = {
-          groupName: formData.groupName,
+          groupName: { ar: formData.groupName, en: formData.groupName },
           groupType: "group",
           pricing: formData.pricing,
           permissions: { canUploadCourses: false, canPublishDirectly: false },
@@ -286,13 +286,13 @@ export default function SubscriptionGroupsPage() {
         }
 
         await dispatch(createTeacherGroup(payload)).unwrap();
-      toast.success(isRtl ? "?? ????? ??????" : "Group created");
+      toast.success("تم إنشاء الجروب");
       setIsCreateDialogOpen(false);
       resetForm();
       await dispatch(getTeacherGroups({ groupType: "group" }));
     } catch (err) {
       console.error("Failed to create group:", err);
-      toast.error(isRtl ? "??? ????? ??????" : "Failed to create group");
+      toast.error("فشل إنشاء الجروب");
     }
   };
 
@@ -304,37 +304,37 @@ export default function SubscriptionGroupsPage() {
         updateTeacherGroup({
           id: (selectedGroup.id || selectedGroup._id)!,
           data: {
-            groupName: formData.groupName,
+            groupName: { ar: formData.groupName, en: formData.groupName },
             pricing: formData.pricing,
             notes: formData.notes,
           },
         })
       ).unwrap();
-      toast.success(isRtl ? "?? ????? ??????" : "Group updated");
+      toast.success("تم تعديل الجروب");
       setIsEditDialogOpen(false);
       resetForm();
       await dispatch(getTeacherGroups({ groupType: "group" }));
     } catch (err) {
       console.error("Failed to update group:", err);
-      toast.error(isRtl ? "??? ????? ??????" : "Failed to update group");
+      toast.error("فشل تعديل الجروب");
     }
   };
 
   const handleDeleteGroup = async (groupId: string) => {
-    if (!confirm(t("admin.teachers.confirmDelete"))) return;
+    if (!confirm("هل أنت متأكد من حذف هذا الجروب؟")) return;
     try {
       await dispatch(deleteTeacherGroup(groupId)).unwrap();
-      toast.success(isRtl ? "?? ??? ??????" : "Group deleted");
+      toast.success("تم حذف الجروب");
       await dispatch(getTeacherGroups({ groupType: "group" }));
     } catch (err) {
       console.error("Failed to delete group:", err);
-      toast.error(isRtl ? "??? ??? ??????" : "Failed to delete group");
+      toast.error("فشل حذف الجروب");
     }
   };
 
   const handleAddStudent = async () => {
     if (!selectedGroup || !selectedStudentId || selectedStudentId === "no-students") {
-      toast.error(isRtl ? "???? ??????" : "Please select a student");
+      toast.error("يجب اختيار طالب");
       return;
     }
     try {
@@ -344,24 +344,24 @@ export default function SubscriptionGroupsPage() {
           studentId: selectedStudentId,
         })
       ).unwrap();
-      toast.success(isRtl ? "?? ????? ??????" : "Student added");
+      toast.success("تم إضافة الطالب");
       setIsAddStudentDialogOpen(false);
       setSelectedStudentId("");
       await dispatch(getTeacherGroups({ groupType: "group" }));
     } catch (err) {
       console.error("Failed to add student:", err);
-      toast.error(isRtl ? "??? ????? ??????" : "Failed to add student");
+      toast.error("فشل إضافة الطالب");
     }
   };
 
   const handleRemoveStudent = async (groupId: string, studentId: string) => {
-    if (!confirm(t("admin.teachers.confirmRemoveStudent"))) return;
+    if (!confirm("هل أنت متأكد من حذف هذا الطالب؟")) return;
     try {
       await dispatch(removeStudentFromGroup({ groupId, studentId })).unwrap();
       await dispatch(getTeacherGroups({ groupType: "group" }));
     } catch (err) {
       console.error("Failed to remove student:", err);
-      toast.error(isRtl ? "??? ??? ??????" : "Failed to remove student");
+      toast.error("فشل حذف الطالب");
     }
   };
 
@@ -375,7 +375,7 @@ export default function SubscriptionGroupsPage() {
       await dispatch(getTeacherGroups({ groupType: "group" }));
     } catch (err) {
       console.error("Failed to update status:", err);
-      toast.error(isRtl ? "??? ????? ??????" : "Failed to update status");
+      toast.error("فشل تعديل الحالة");
     }
   };
 
@@ -392,10 +392,10 @@ export default function SubscriptionGroupsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {t("admin.sidebar.subscriptionGroups")}
+            {"جروبات الاشتراكات"}
           </h2>
           <p className="text-muted-foreground">
-            {isRtl ? "????? ?????? ?????????? ?????? ??????" : "Manage subscription groups and add students"}
+            {"إدارة الجروبات وإضافة الطلاب"}
           </p>
         </div>
         <Button
@@ -406,32 +406,32 @@ export default function SubscriptionGroupsPage() {
           className="bg-genoun-green hover:bg-genoun-green/90"
         >
           <Plus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-          {t("admin.teachers.createGroup")}
+          {"إنشاء جروب"}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isRtl ? "الفلاتر" : "Filters"}</CardTitle>
+          <CardTitle>{"الفلاتر"}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4 md:flex-row md:items-end">
             <div className="grid gap-2 flex-1">
-              <Label>{isRtl ? "بحث بالاسم" : "Search"}</Label>
+              <Label>{"بحث بالاسم"}</Label>
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={isRtl ? "اسم الجروب أو المعلم" : "Group or teacher name"}
+                placeholder={"اسم الجروب أو المعلم"}
               />
             </div>
             <div className="grid gap-2 w-full md:w-[260px]">
-              <Label>{isRtl ? "تصفية بالمعلم" : "Filter by Teacher"}</Label>
+              <Label>{"تصفية بالمعلم"}</Label>
               <Select value={selectedTeacherKey} onValueChange={setSelectedTeacherKey}>
                 <SelectTrigger>
-                  <SelectValue placeholder={isRtl ? "اختر المعلم" : "Select teacher"} />
+                  <SelectValue placeholder={"اختر المعلم"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{isRtl ? "جميع المعلمين" : "All teachers"}</SelectItem>
+                  <SelectItem value="all">{"جميع المعلمين"}</SelectItem>
                   {teacherOptions.map((option) => (
                     <SelectItem key={option.key} value={option.key}>
                       {option.label}
@@ -446,11 +446,11 @@ export default function SubscriptionGroupsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t("admin.teachers.teacherGroups")}</CardTitle>
+          <CardTitle>{"الجروبات"}</CardTitle>
           <CardDescription>
             {filteredGroups.length === groups.length
-              ? `${groups.length} ${t("admin.teachers.totalGroups")}`
-              : `${filteredGroups.length} / ${groups.length} ${t("admin.teachers.totalGroups")}`}
+              ? `${groups.length} جروب`
+              : `${filteredGroups.length} / ${groups.length} جروب`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -458,10 +458,10 @@ export default function SubscriptionGroupsPage() {
             <div className="text-center py-12">
               <Users className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-semibold">
-                {t("admin.teachers.noGroups")}
+                {"لا توجد جروبات"}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {t("admin.teachers.createFirst")}
+                {"أنشئ جروب جديد للبدء"}
               </p>
             </div>
           ) : (
@@ -470,10 +470,10 @@ export default function SubscriptionGroupsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="h-10"></TableHead>
-                    <TableHead className="h-10">{t("admin.teachers.groupName")}</TableHead>
-                    <TableHead className="h-10">{t("admin.teachers.teacher")}</TableHead>
-                    <TableHead className="h-10">{t("admin.teachers.students")}</TableHead>
-                    <TableHead className="text-right h-10">{t("admin.teachers.actions")}</TableHead>
+                    <TableHead className="h-10">{"اسم الجروب"}</TableHead>
+                    <TableHead className="h-10">{"المعلم"}</TableHead>
+                    <TableHead className="h-10">{"الطلاب"}</TableHead>
+                    <TableHead className="text-right h-10">{"إجراءات"}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -481,19 +481,15 @@ export default function SubscriptionGroupsPage() {
                     const groupId = (group.id || group._id)!;
                     const isExpanded = expandedGroups.includes(groupId);
                     const groupName =
-                      getTextValue(group.groupName, isRtl) ||
-                      (isRtl ? "جروب" : "Group");
+                      getTextValue(group.groupName, true) ||
+                      "جروب";
                     const studentCount = group.stats?.totalStudents ?? group.students?.length ?? 0;
                     const activeCount = group.stats?.activeStudents ?? 0;
                     const teacherName = getGroupTeacherName(group);
                     const teacherTypeLabel =
                       group.teacherType === "subscription"
-                        ? isRtl
-                          ? "اشتراكات"
-                          : "Subscriptions"
-                        : isRtl
-                          ? "كورسات"
-                          : "Courses";
+                        ? "اشتراكات"
+                        : "كورسات";
 
                     return (
                       <Fragment key={groupId}>
@@ -534,9 +530,9 @@ export default function SubscriptionGroupsPage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>{t("admin.teachers.actions")}</DropdownMenuLabel>
+                                  <DropdownMenuLabel>{"إجراءات"}</DropdownMenuLabel>
                                   <DropdownMenuItem onClick={() => openEditDialog(group)}>
-                                    {t("admin.common.edit")}
+                                    {"تعديل"}
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
@@ -544,7 +540,7 @@ export default function SubscriptionGroupsPage() {
                                     onClick={() => handleDeleteGroup(groupId)}
                                   >
                                     <Trash2 className="h-4 w-4 mr-2" />
-                                    {t("admin.common.delete")}
+                                    {"حذف"}
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -556,30 +552,30 @@ export default function SubscriptionGroupsPage() {
                             <TableCell colSpan={5}>
                               <div className="p-4 space-y-4">
                                 <div className="flex items-center justify-between">
-                                  <h4 className="text-sm font-bold">{t("admin.teachers.students")}</h4>
+                                  <h4 className="text-sm font-bold">{"الطلاب"}</h4>
                                   <Badge variant="outline">
-                                    {(group.students || []).length} {t("admin.teachers.totalStudents")}
+                                    {(group.students || []).length} {"طالب"}
                                   </Badge>
                                 </div>
                                 {group.students && group.students.length === 0 ? (
                                   <p className="text-xs text-muted-foreground text-center py-4">
-                                    {t("admin.teachers.noStudents")}
+                                    {"لا يوجد طلاب"}
                                   </p>
                                 ) : (
                                   <Table>
                                     <TableHeader>
                                       <TableRow className="hover:bg-transparent">
                                         <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">
-                                          {t("admin.teachers.studentName")}
+                                          {"اسم الطالب"}
                                         </TableHead>
                                         <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">
-                                          {t("admin.teachers.whatsapp")}
+                                          {"رقم الواتساب"}
                                         </TableHead>
                                         <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">
-                                          {t("admin.teachers.studentStatus")}
+                                          {"الحالة"}
                                         </TableHead>
                                         <TableHead className="h-9 py-2 text-right text-[11px] font-semibold uppercase">
-                                          {t("admin.teachers.actions")}
+                                          {"إجراءات"}
                                         </TableHead>
                                       </TableRow>
                                     </TableHeader>
@@ -624,13 +620,13 @@ export default function SubscriptionGroupsPage() {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                   <SelectItem value="active">
-                                                    {t("admin.teachers.statuses.active")}
+                                                    {"نشط"}
                                                   </SelectItem>
                                                   <SelectItem value="inactive">
-                                                    {t("admin.teachers.statuses.inactive")}
+                                                    {"غير نشط"}
                                                   </SelectItem>
                                                   <SelectItem value="completed">
-                                                    {t("admin.teachers.statuses.completed")}
+                                                    {"مكتمل"}
                                                   </SelectItem>
                                                 </SelectContent>
                                               </Select>
@@ -668,36 +664,27 @@ export default function SubscriptionGroupsPage() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-lg" dir={isRtl ? "rtl" : "ltr"}>
           <DialogHeader>
-            <DialogTitle>{t("admin.teachers.createGroup")}</DialogTitle>
-            <DialogDescription>{t("admin.teachers.description")}</DialogDescription>
+            <DialogTitle>{"إنشاء جروب جديد"}</DialogTitle>
+            <DialogDescription>{"أدخل بيانات الجروب"}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid gap-2">
-              <Label>{t("admin.teachers.groupName")} (AR)</Label>
+              <Label>{"اسم الجروب"}</Label>
               <Input
-                value={formData.groupName.ar}
+                value={formData.groupName}
                 onChange={(e) =>
-                  setFormData({ ...formData, groupName: { ...formData.groupName, ar: e.target.value } })
+                  setFormData({ ...formData, groupName: e.target.value })
                 }
               />
             </div>
             <div className="grid gap-2">
-              <Label>{t("admin.teachers.groupName")} (EN)</Label>
-              <Input
-                value={formData.groupName.en}
-                onChange={(e) =>
-                  setFormData({ ...formData, groupName: { ...formData.groupName, en: e.target.value } })
-                }
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>{t("admin.teachers.teacher")}</Label>
+              <Label>{"المعلم"}</Label>
               <Select
                 value={formData.teacherKey}
                 onValueChange={(val) => setFormData({ ...formData, teacherKey: val })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={t("admin.teachers.teacher")} />
+                  <SelectValue placeholder={"اختر المعلم"} />
                 </SelectTrigger>
                 <SelectContent>
                   {teacherOptions.map((option) => (
@@ -710,7 +697,7 @@ export default function SubscriptionGroupsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>{t("admin.teachers.groupRate")}</Label>
+                <Label>{"سعر الجروب"}</Label>
                 <Input
                   type="number"
                   value={formData.pricing.groupRate}
@@ -723,7 +710,7 @@ export default function SubscriptionGroupsPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label>{t("admin.teachers.currency")}</Label>
+                <Label>{"العملة"}</Label>
                 <Select
                   value={formData.pricing.currency}
                   onValueChange={(val) =>
@@ -745,7 +732,7 @@ export default function SubscriptionGroupsPage() {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>{t("admin.teachers.notes")}</Label>
+              <Label>{"ملاحظات"}</Label>
               <Input
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -754,10 +741,10 @@ export default function SubscriptionGroupsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-              {t("admin.common.cancel")}
+              {"إلغاء"}
             </Button>
             <Button className="bg-genoun-green hover:bg-genoun-green/90" onClick={handleCreateGroup}>
-              {t("admin.common.save")}
+              {"حفظ"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -766,30 +753,21 @@ export default function SubscriptionGroupsPage() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-lg" dir={isRtl ? "rtl" : "ltr"}>
           <DialogHeader>
-            <DialogTitle>{t("admin.teachers.editGroup")}</DialogTitle>
-            <DialogDescription>{t("admin.teachers.description")}</DialogDescription>
+            <DialogTitle>{"تعديل الجروب"}</DialogTitle>
+            <DialogDescription>{"تعديل بيانات الجروب"}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid gap-2">
-              <Label>{t("admin.teachers.groupName")} (AR)</Label>
+              <Label>{"اسم الجروب"}</Label>
               <Input
-                value={formData.groupName.ar}
+                value={formData.groupName}
                 onChange={(e) =>
-                  setFormData({ ...formData, groupName: { ...formData.groupName, ar: e.target.value } })
+                  setFormData({ ...formData, groupName: e.target.value })
                 }
               />
             </div>
             <div className="grid gap-2">
-              <Label>{t("admin.teachers.groupName")} (EN)</Label>
-              <Input
-                value={formData.groupName.en}
-                onChange={(e) =>
-                  setFormData({ ...formData, groupName: { ...formData.groupName, en: e.target.value } })
-                }
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>{t("admin.teachers.groupRate")}</Label>
+              <Label>{"سعر الجروب"}</Label>
               <Input
                 type="number"
                 value={formData.pricing.groupRate}
@@ -802,7 +780,7 @@ export default function SubscriptionGroupsPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label>{t("admin.teachers.notes")}</Label>
+              <Label>{"ملاحظات"}</Label>
               <Input
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -811,10 +789,10 @@ export default function SubscriptionGroupsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              {t("admin.common.cancel")}
+              {"إلغاء"}
             </Button>
             <Button className="bg-genoun-green hover:bg-genoun-green/90" onClick={handleUpdateGroup}>
-              {t("admin.common.save")}
+              {"حفظ"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -823,15 +801,15 @@ export default function SubscriptionGroupsPage() {
       <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("admin.teachers.addStudent")}</DialogTitle>
+            <DialogTitle>{"إضافة طالب"}</DialogTitle>
             <DialogDescription>
-              {t("admin.teachers.selectStudent")} {t("admin.teachers.to")} {getTextValue(selectedGroup?.groupName, isRtl) || t("admin.teachers.group")}
+              {"اختر طالب لإضافته إلى"} {getTextValue(selectedGroup?.groupName, true) || "الجروب"}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
               <SelectTrigger>
-                <SelectValue placeholder={t("admin.teachers.selectStudent")} />
+                <SelectValue placeholder={"اختر طالب"} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
                 {studentMembers && studentMembers.length > 0 ? (
@@ -848,14 +826,14 @@ export default function SubscriptionGroupsPage() {
                     if (availableStudents.length === 0) {
                       return (
                         <SelectItem value="no-students" disabled>
-                          {isRtl ? "???? ?????? ?????? ??????" : "All students already added"}
+                          {"تم إضافة جميع الطلاب بالفعل"}
                         </SelectItem>
                       );
                     }
 
                     return availableStudents.map((student) => {
                       const studentId = (student.id || student._id)!;
-                      const studentName = getTextValue(student.studentName || student.name, isRtl) || (isRtl ? "????" : "Student");
+                      const studentName = getTextValue(student.studentName || student.name, true) || "طالب";
                       const phoneNumber = student.whatsappNumber || student.phone || "N/A";
                       return (
                         <SelectItem key={studentId} value={studentId}>
@@ -866,7 +844,7 @@ export default function SubscriptionGroupsPage() {
                   })()
                 ) : (
                   <SelectItem value="no-students" disabled>
-                    {t("admin.teachers.noStudents")}
+                    {"لا يوجد طلاب"}
                   </SelectItem>
                 )}
               </SelectContent>
@@ -880,14 +858,14 @@ export default function SubscriptionGroupsPage() {
                 setSelectedStudentId("");
               }}
             >
-              {t("admin.common.cancel")}
+              {"إلغاء"}
             </Button>
             <Button
               className="bg-genoun-green hover:bg-genoun-green/90"
               onClick={handleAddStudent}
               disabled={!selectedStudentId || selectedStudentId === "no-students"}
             >
-              {t("admin.teachers.addStudent")}
+              {"إضافة طالب"}
             </Button>
           </DialogFooter>
         </DialogContent>

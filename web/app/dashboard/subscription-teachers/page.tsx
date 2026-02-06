@@ -125,10 +125,7 @@ export default function SubscriptionTeachersPage() {
 
   const [formData, setFormData] = useState({
     nameAr: "",
-    nameEn: "",
-    email: "",
     phone: "",
-    profitPercentage: "",
     salaryAmount: "",
     salaryDueDate: "",
     notes: "",
@@ -168,16 +165,13 @@ export default function SubscriptionTeachersPage() {
     if (dialogOpen && !editingTeacher) {
       setFormData({
         nameAr: "",
-        nameEn: "",
-        email: "",
         phone: "",
-        profitPercentage: String(defaultProfitPercentage),
         salaryAmount: "",
         salaryDueDate: "",
         notes: "",
       });
     }
-  }, [dialogOpen, editingTeacher, defaultProfitPercentage]);
+  }, [dialogOpen, editingTeacher]);
 
   const subscriptionTeachers = settings?.subscriptionTeachers || [];
 
@@ -221,7 +215,7 @@ export default function SubscriptionTeachersPage() {
       .filter((group) => group.groupType === "group")
       .map((group) => ({
         id: group.id || group._id || "",
-        name: getTextValue(group.groupName, isRtl) || (isRtl ? "جروب" : "Group"),
+        name: getTextValue(group.groupName, true) || "جروب",
       }))
       .filter((group) => group.id)
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -347,12 +341,7 @@ export default function SubscriptionTeachersPage() {
     setEditingTeacher(teacher);
     setFormData({
       nameAr: teacher.name?.ar || "",
-      nameEn: teacher.name?.en || "",
-      email: teacher.email || "",
       phone: teacher.phone || "",
-      profitPercentage: String(
-        teacher.profitPercentage ?? defaultProfitPercentage
-      ),
       salaryAmount:
         teacher.salaryAmount !== undefined && teacher.salaryAmount !== null
           ? String(teacher.salaryAmount)
@@ -367,19 +356,12 @@ export default function SubscriptionTeachersPage() {
 
   const handleSaveTeacher = async () => {
     const nameAr = formData.nameAr.trim();
-    const nameEn = formData.nameEn.trim();
-    const safeNameAr = nameAr || nameEn;
-    const safeNameEn = nameEn || nameAr;
 
-    if (!safeNameAr || !safeNameEn) {
-      toast.error(t("admin.subscriptionTeachers.teacherNameRequired"));
+    if (!nameAr) {
+      toast.error("يجب إدخال اسم المعلم");
       return;
     }
 
-    const profitPercentageValue = Number(formData.profitPercentage);
-    const profitPercentage = Number.isFinite(profitPercentageValue)
-      ? Math.min(Math.max(profitPercentageValue, 0), 100)
-      : defaultProfitPercentage;
     const salaryAmountValue = Number(formData.salaryAmount);
     const salaryAmount = Number.isFinite(salaryAmountValue)
       ? Math.max(salaryAmountValue, 0)
@@ -390,10 +372,8 @@ export default function SubscriptionTeachersPage() {
 
     const updatedTeacher: SubscriptionTeacher = {
       ...(editingTeacher?._id ? { _id: editingTeacher._id } : {}),
-      name: { ar: safeNameAr, en: safeNameEn },
-      email: formData.email.trim(),
+      name: { ar: nameAr, en: nameAr },
       phone: formData.phone.trim(),
-      profitPercentage,
       salaryAmount,
       salaryDueDate: salaryDueDate ? salaryDueDate.toISOString() : undefined,
       notes: formData.notes.trim(),
@@ -460,13 +440,13 @@ export default function SubscriptionTeachersPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-800">{t("admin.subscriptionTeachers.active")}</Badge>;
+        return <Badge className="bg-green-100 text-green-800">{"نشط"}</Badge>;
       case "due_soon":
-        return <Badge className="bg-yellow-100 text-yellow-800">{t("admin.subscriptionTeachers.dueSoon")}</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800">{"قريب الاستحقاق"}</Badge>;
       case "overdue":
-        return <Badge className="bg-red-100 text-red-800">{t("admin.subscriptionTeachers.overdue")}</Badge>;
+        return <Badge className="bg-red-100 text-red-800">{"متأخر"}</Badge>;
       case "paused":
-        return <Badge className="bg-gray-100 text-gray-800">{t("admin.subscriptionTeachers.paused")}</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800">{"موقوف"}</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -475,11 +455,11 @@ export default function SubscriptionTeachersPage() {
   const getGroupStatusBadge = (status?: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-800">{t("admin.teachers.statuses.active")}</Badge>;
+        return <Badge className="bg-green-100 text-green-800">{"نشط"}</Badge>;
       case "inactive":
-        return <Badge className="bg-gray-100 text-gray-800">{t("admin.teachers.statuses.inactive")}</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800">{"غير نشط"}</Badge>;
       case "completed":
-        return <Badge className="bg-blue-100 text-blue-800">{t("admin.teachers.statuses.completed")}</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800">{"مكتمل"}</Badge>;
       default:
         return <Badge variant="outline">{status || "-"}</Badge>;
     }
@@ -501,10 +481,10 @@ export default function SubscriptionTeachersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {t("admin.subscriptionTeachers.title")}
+            {"مدرسين الاشتراكات"}
           </h2>
           <p className="text-muted-foreground">
-            {t("admin.subscriptionTeachers.description")}
+            {"إدارة مدرسين الاشتراكات وطلابهم"}
           </p>
         </div>
         <Button
@@ -512,15 +492,15 @@ export default function SubscriptionTeachersPage() {
           onClick={handleOpenAdd}
         >
           <Plus className="h-4 w-4 mr-2" />
-          {t("admin.subscriptionTeachers.addTeacher")}
+          {"إضافة معلم"}
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t("admin.subscriptionTeachers.totalTeachers")}
+              {"إجمالي المعلمين"}
             </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -531,7 +511,7 @@ export default function SubscriptionTeachersPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t("admin.subscriptionTeachers.totalStudents")}
+              {"إجمالي الطلاب"}
             </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -542,7 +522,7 @@ export default function SubscriptionTeachersPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t("admin.subscriptionTeachers.activeStudents")}
+              {"الطلاب النشطين"}
             </CardTitle>
             <UserCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
@@ -552,26 +532,13 @@ export default function SubscriptionTeachersPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {t("admin.subscriptionTeachers.totalProfit")}
-            </CardTitle>
-            <UserCircle className="h-4 w-4 text-genoun-green" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-genoun-green">
-              {formatMoney(totalProfit, baseCurrency)}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{t("admin.subscriptionTeachers.filterTeacher")}</CardTitle>
+          <CardTitle>{"فلترة المعلمين"}</CardTitle>
           <CardDescription>
-            {t("admin.subscriptionTeachers.searchPlaceholder")}
+            {"ابحث عن معلم بالاسم أو رقم الهاتف"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -583,7 +550,7 @@ export default function SubscriptionTeachersPage() {
                 }`}
               />
               <Input
-                placeholder={t("admin.subscriptionTeachers.searchPlaceholder")}
+                placeholder={"ابحث عن معلم..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={isRtl ? "pr-8" : "pl-8"}
@@ -596,12 +563,12 @@ export default function SubscriptionTeachersPage() {
               >
                 <SelectTrigger>
                   <SelectValue
-                    placeholder={t("admin.subscriptionTeachers.filterTeacher")}
+                    placeholder={"اختر معلم"}
                   />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">
-                    {t("admin.subscriptionTeachers.allTeachers")}
+                    {"جميع المعلمين"}
                   </SelectItem>
                   {allTeachers.map((teacher, index) => (
                     <SelectItem
@@ -620,12 +587,12 @@ export default function SubscriptionTeachersPage() {
               <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
                 <SelectTrigger>
                   <SelectValue
-                    placeholder={t("admin.subscriptionTeachers.filterGroup")}
+                    placeholder={"اختر جروب"}
                   />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">
-                    {t("admin.subscriptionTeachers.allGroups")}
+                    {"جميع الجروبات"}
                   </SelectItem>
                   {groupOptions.map((group) => (
                     <SelectItem key={group.id} value={group.id}>
@@ -641,10 +608,10 @@ export default function SubscriptionTeachersPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t("admin.subscriptionTeachers.teacherList")}</CardTitle>
+          <CardTitle>{"قائمة المعلمين"}</CardTitle>
           <CardDescription>
             {filteredTeachers.length === 0
-              ? t("admin.subscriptionTeachers.noTeachers")
+              ? "لا يوجد معلمين"
               : `${filteredTeachers.length} / ${totalTeachers}`}
           </CardDescription>
         </CardHeader>
@@ -653,10 +620,10 @@ export default function SubscriptionTeachersPage() {
             <div className="text-center py-12">
               <Users className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-semibold text-gray-900">
-                {t("admin.subscriptionTeachers.noTeachers")}
+                {"لا يوجد معلمين"}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {t("admin.subscriptionTeachers.noTeachersDesc")}
+                {"أضف معلم جديد للبدء"}
               </p>
             </div>
           ) : (
@@ -706,7 +673,7 @@ export default function SubscriptionTeachersPage() {
                               <div className="mt-1 text-xs text-muted-foreground flex items-center gap-2">
                                 {entry.teacher.salaryAmount ? (
                                   <span className="flex items-center gap-1">
-                                    {t("admin.subscriptionTeachers.salary")}:
+                                    {"الراتب"}:
                                     <span className="font-medium">
                                       {formatMoney(
                                         entry.teacher.salaryAmount,
@@ -718,7 +685,7 @@ export default function SubscriptionTeachersPage() {
                                 {entry.teacher.salaryDueDate ? (
                                   <span className="flex items-center gap-1">
                                     <Calendar className="h-3 w-3" />
-                                    {t("admin.subscriptionTeachers.salaryDueDate")}:{" "}
+                                    {"تاريخ الاستحقاق"}:{" "}
                                     {format(
                                       new Date(entry.teacher.salaryDueDate),
                                       "yyyy-MM-dd"
@@ -736,21 +703,14 @@ export default function SubscriptionTeachersPage() {
                         >
                           <Badge variant="outline" className="bg-blue-50">
                             {entry.students.length}{" "}
-                            {t("admin.subscriptionTeachers.students")}
+                            {"طالب"}
                           </Badge>
                           {entry.activeStudents.length > 0 && (
                             <Badge className="bg-green-100 text-green-800">
                               {entry.activeStudents.length}{" "}
-                              {t("admin.subscriptionTeachers.active")}
+                              {"نشط"}
                             </Badge>
                           )}
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                            {entry.profitPercentage}%{" "}
-                            {t("admin.subscriptionTeachers.profit")}
-                          </Badge>
-                          <Badge className="bg-genoun-green/10 text-genoun-green">
-                            {formatMoney(entry.totalProfit, baseCurrency)}
-                          </Badge>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -784,16 +744,16 @@ export default function SubscriptionTeachersPage() {
                         <div>
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-semibold">
-                              {isRtl ? "الطلاب الفردي" : "Individual Students"}
+                              {"الطلاب الفردي"}
                             </h4>
                             <Badge variant="outline">
                               {individualStudents.length}{" "}
-                              {t("admin.subscriptionTeachers.students")}
+                              {"طالب"}
                             </Badge>
                           </div>
                           {individualStudents.length === 0 ? (
                             <div className="text-center py-6 text-muted-foreground">
-                              {t("admin.subscriptionTeachers.noStudents")}
+                              {"لا يوجد طلاب"}
                             </div>
                           ) : (
                             <div className="overflow-x-auto">
@@ -801,25 +761,22 @@ export default function SubscriptionTeachersPage() {
                                 <TableHeader>
                                   <TableRow>
                                     <TableHead>
-                                      {t("admin.subscriptionTeachers.studentName")}
+                                      {"اسم الطالب"}
                                     </TableHead>
                                     <TableHead>
-                                      {t("admin.subscriptionTeachers.phone")}
+                                      {"رقم الهاتف"}
                                     </TableHead>
                                     <TableHead>
-                                      {t("admin.subscriptionTeachers.package")}
+                                      {"الباقة"}
                                     </TableHead>
                                     <TableHead>
-                                      {t("admin.subscriptionTeachers.startDate")}
+                                      {"تاريخ البداية"}
                                     </TableHead>
                                     <TableHead>
-                                      {t("admin.subscriptionTeachers.nextDue")}
+                                      {"تاريخ النهاية"}
                                     </TableHead>
                                     <TableHead>
-                                      {t("admin.subscriptionTeachers.status")}
-                                    </TableHead>
-                                    <TableHead className="text-right">
-                                      {t("admin.subscriptionTeachers.studentProfit")}
+                                      {"الحالة"}
                                     </TableHead>
                                   </TableRow>
                                 </TableHeader>
@@ -829,9 +786,6 @@ export default function SubscriptionTeachersPage() {
                                       student.studentName || student.name,
                                       isRtl
                                     );
-                                    const profitValue =
-                                      Number(student.packagePrice || 0) *
-                                      (entry.profitPercentage / 100);
                                     const rowClass =
                                       student.status === "overdue"
                                         ? "bg-red-50"
@@ -882,9 +836,6 @@ export default function SubscriptionTeachersPage() {
                                             : "-"}
                                         </TableCell>
                                         <TableCell>{getStatusBadge(student.status)}</TableCell>
-                                        <TableCell className="text-right">
-                                          {formatMoney(profitValue, baseCurrency)}
-                                        </TableCell>
                                       </TableRow>
                                     );
                                   })}
@@ -897,21 +848,21 @@ export default function SubscriptionTeachersPage() {
                         <div>
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-semibold">
-                              {isRtl ? "الجروبات" : "Groups"}
+                              {"الجروبات"}
                             </h4>
                             <Badge variant="outline">{groups.length}</Badge>
                           </div>
                           {groups.length === 0 ? (
                             <div className="text-center py-6 text-muted-foreground">
-                              {isRtl ? "لا توجد جروبات" : "No groups"}
+                              {"لا توجد جروبات"}
                             </div>
                           ) : (
                             <div className="space-y-4">
                               {groups.map((group) => {
                                 const groupId = group.id || group._id;
                                 const groupName =
-                                  getTextValue(group.groupName, isRtl) ||
-                                  (isRtl ? "جروب" : "Group");
+                                  getTextValue(group.groupName, true) ||
+                                  "جروب";
                                 const members = group.students || [];
                                 const membersCount =
                                   group.stats?.totalStudents ?? members.length;
@@ -921,13 +872,13 @@ export default function SubscriptionTeachersPage() {
                                     <div className="flex items-center justify-between">
                                       <div className="font-medium">{groupName}</div>
                                       <Badge variant="outline">
-                                        {membersCount} {isRtl ? "طالب" : "students"}
+                                        {membersCount} {"طالب"}
                                       </Badge>
                                     </div>
                                     <div className="mt-3 space-y-2">
                                       {members.length === 0 ? (
                                         <p className="text-sm text-muted-foreground">
-                                          {isRtl ? "لا يوجد طلاب" : "No students"}
+                                          {"لا يوجد طلاب"}
                                         </p>
                                       ) : (
                                         members.map((member, memberIndex) => {
@@ -979,18 +930,18 @@ export default function SubscriptionTeachersPage() {
           <DialogHeader>
             <DialogTitle>
               {editingTeacher
-                ? t("admin.subscriptionTeachers.edit")
-                : t("admin.subscriptionTeachers.addTeacher")}
+                ? "تعديل المعلم"
+                : "إضافة معلم جديد"}
             </DialogTitle>
             <DialogDescription>
-              {t("admin.subscriptionTeachers.description")}
+              {"أدخل بيانات المعلم"}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="teacher-name-ar">
-                {t("admin.subscriptionTeachers.teacherNameAr")}
+                {"اسم المعلم"}
               </Label>
               <Input
                 id="teacher-name-ar"
@@ -1002,34 +953,8 @@ export default function SubscriptionTeachersPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="teacher-name-en">
-                {t("admin.subscriptionTeachers.teacherNameEn")}
-              </Label>
-              <Input
-                id="teacher-name-en"
-                value={formData.nameEn}
-                onChange={(e) =>
-                  setFormData({ ...formData, nameEn: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="teacher-email">
-                {t("admin.subscriptionTeachers.email")}
-              </Label>
-              <Input
-                id="teacher-email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid gap-2">
               <Label htmlFor="teacher-phone">
-                {t("admin.subscriptionTeachers.phone")}
+                {"رقم الهاتف"}
               </Label>
               <Input
                 id="teacher-phone"
@@ -1041,24 +966,8 @@ export default function SubscriptionTeachersPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="teacher-profit">
-                {t("admin.subscriptionTeachers.profitPercentage")}
-              </Label>
-              <Input
-                id="teacher-profit"
-                type="number"
-                min="0"
-                max="100"
-                value={formData.profitPercentage}
-                onChange={(e) =>
-                  setFormData({ ...formData, profitPercentage: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid gap-2">
               <Label htmlFor="teacher-salary">
-                {t("admin.subscriptionTeachers.salary")}
+                {"الراتب"}
               </Label>
               <Input
                 id="teacher-salary"
@@ -1073,7 +982,7 @@ export default function SubscriptionTeachersPage() {
 
             <div className="grid gap-2">
               <Label htmlFor="teacher-salary-due">
-                {t("admin.subscriptionTeachers.salaryDueDate")}
+                {"تاريخ استحقاق الراتب"}
               </Label>
               <Input
                 id="teacher-salary-due"
@@ -1087,7 +996,7 @@ export default function SubscriptionTeachersPage() {
 
             <div className="grid gap-2">
               <Label htmlFor="teacher-notes">
-                {t("admin.subscriptionTeachers.notes")}
+                {"ملاحظات"}
               </Label>
               <Input
                 id="teacher-notes"
@@ -1101,14 +1010,14 @@ export default function SubscriptionTeachersPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              {t("admin.subscriptionTeachers.cancel")}
+              {"إلغاء"}
             </Button>
             <Button
               onClick={handleSaveTeacher}
               disabled={saving}
               className="bg-genoun-green hover:bg-genoun-green/90"
             >
-              {t("admin.subscriptionTeachers.save")}
+              {"حفظ"}
             </Button>
           </DialogFooter>
         </DialogContent>

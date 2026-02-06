@@ -168,20 +168,16 @@ export default function StudentMembersPage() {
 
   const handleDelete = async (id: string) => {
     if (
-      confirm(
-        isRtl
-          ? "هل أنت متأكد من حذف هذا الطالب؟"
-          : "Are you sure you want to delete this student?"
-      )
+      confirm("هل أنت متأكد من حذف هذا الطالب؟")
     ) {
       setDeleteLoading(id);
       try {
         await dispatch(deleteStudentMember(id)).unwrap();
-        toast.success(isRtl ? "تم حذف الطالب بنجاح" : "Student deleted successfully");
+        toast.success("تم حذف الطالب بنجاح");
         dispatch(getStudentMembers());
       } catch (err) {
         console.error("Failed to delete student:", err);
-        toast.error(isRtl ? "فشل حذف الطالب" : "Failed to delete student");
+        toast.error("فشل حذف الطالب");
       } finally {
         setDeleteLoading(null);
       }
@@ -191,11 +187,11 @@ export default function StudentMembersPage() {
 
   const handleGenerateCertificates = async () => {
     if (selectedPackageId === "all") {
-      toast.error(isRtl ? "الرجاء اختيار باقة أولاً" : "Please select a package first");
+      toast.error("الرجاء اختيار باقة أولاً");
       return;
     }
 
-    if (confirm(isRtl ? "هل أنت متأكد من استخراج شهادات لجميع الطلاب النشطين في هذه الباقة؟" : "Are you sure you want to generate certificates for all active students in this package?")) {
+    if (confirm("هل أنت متأكد من استخراج شهادات لجميع الطلاب النشطين في هذه الباقة؟")) {
       setGenerateLoading(true);
       try {
         // Step 1: Issue certificates
@@ -206,9 +202,7 @@ export default function StudentMembersPage() {
         
         if (successCount > 0) {
           toast.success(
-            isRtl
-              ? `تم إصدار ${successCount} شهادة بنجاح. جاري التحميل...`
-              : `Successfully issued ${successCount} certificates. Downloading...`
+            `تم إصدار ${successCount} شهادة بنجاح. جاري التحميل...`
           );
           
           // Step 2: Refresh certificates list
@@ -246,9 +240,7 @@ export default function StudentMembersPage() {
           
           if (downloadedCount > 0) {
             toast.success(
-              isRtl
-                ? `تم تحميل ${downloadedCount} شهادة بنجاح`
-                : `Successfully downloaded ${downloadedCount} certificates`
+              `تم تحميل ${downloadedCount} شهادة بنجاح`
             );
           }
         }
@@ -258,9 +250,7 @@ export default function StudentMembersPage() {
             const name = f.name;
             return typeof name === 'object' ? (name?.ar || name?.en || 'Unknown') : (name || 'Unknown');
           }).join("، ");
-          const msg = isRtl
-            ? `فشل إصدار ${failedCount} شهادة. الطلاب: ${failedNames}.`
-            : `Failed to issue ${failedCount} certificates. Students: ${failedNames}.`;
+          const msg = `فشل إصدار ${failedCount} شهادة. الطلاب: ${failedNames}.`;
 
           toast.error(msg, { duration: 6000 });
           console.error("Failed certificates:", result.data.failed);
@@ -283,7 +273,7 @@ export default function StudentMembersPage() {
       const result = await dispatch(importStudentMembers({ file: importFile, sheetName })).unwrap();
       setImportResult(result.data); // Assuming backend returns { data: { success: n, failed: n, errors: [] } }
       dispatch(getStudentMembers());
-      toast.success(isRtl ? "تم استيراد الملف" : "File imported");
+      toast.success("تم استيراد الملف");
     } catch (err: any) {
       console.error("Import failed:", err);
       toast.error(typeof err === 'string' ? err : "Import failed");
@@ -294,17 +284,17 @@ export default function StudentMembersPage() {
 
   const handleAddStudent = async () => {
     if (!newStudent.name || !newStudent.phone) {
-      toast.error(isRtl ? "???? ??? ???? ?????? ????????" : "Please fill all required fields");
+      toast.error("يجب ملء جميع الحقول المطلوبة");
       return;
     }
 
     if (newStudent.planType === "package" && !newStudent.packageId) {
-      toast.error(isRtl ? "???? ???? ??????" : "Please select a package");
+      toast.error("يجب اختيار باقة");
       return;
     }
 
     if (newStudent.planType === "group" && !newStudent.groupId) {
-      toast.error(isRtl ? "???? ???? ??????" : "Please select a group");
+      toast.error("يجب اختيار جروب");
       return;
     }
 
@@ -365,11 +355,11 @@ export default function StudentMembersPage() {
           ).unwrap();
         } catch (groupErr) {
           console.error("Failed to add student to group:", groupErr);
-          toast.error(isRtl ? "??? ??? ?????? ???????" : "Failed to link student to group");
+          toast.error("فشل ربط الطالب بالجروب");
         }
       }
 
-      toast.success(isRtl ? "?? ????? ?????? ?????" : "Student added successfully");
+      toast.success("تم إضافة الطالب بنجاح");
       setAddDialogOpen(false);
       setNewStudent({
         name: "",
@@ -385,7 +375,7 @@ export default function StudentMembersPage() {
       dispatch(getStudentMembers());
     } catch (err: any) {
       console.error("Failed to add student:", err);
-      toast.error(typeof err === 'string' ? err : (isRtl ? "??? ????? ??????" : "Failed to add student"));
+      toast.error(typeof err === 'string' ? err : "فشل إضافة الطالب");
     } finally {
       setAddLoading(false);
     }
@@ -429,10 +419,10 @@ export default function StudentMembersPage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast.success(isRtl ? "تم تصدير البيانات بنجاح" : "Data exported successfully");
+      toast.success("تم تصدير البيانات بنجاح");
     } catch (err: any) {
       console.error("Export failed:", err);
-      toast.error(isRtl ? "فشل التصدير" : "Export failed");
+      toast.error("فشل التصدير");
     } finally {
       setExportLoading(false);
     }
@@ -442,14 +432,14 @@ export default function StudentMembersPage() {
   const handleGenerateStudentCertificate = async (student: StudentMember) => {
     const studentId = student.id || student._id;
     if (!studentId) {
-      toast.error(isRtl ? "معرف الطالب غير صالح" : "Invalid student ID");
+      toast.error("معرف الطالب غير صالح");
       return;
     }
 
     // Check if student has a package
     const packageId = student.packageId?.id || student.packageId?._id;
     if (!packageId) {
-      toast.error(isRtl ? "الطالب غير مرتبط بباقة" : "Student is not linked to a package");
+      toast.error("الطالب غير مرتبط بباقة");
       return;
     }
 
@@ -482,7 +472,7 @@ export default function StudentMembersPage() {
         const certId = existingCert.id || existingCert._id;
         
         if (!certId) {
-          toast.error(isRtl ? "معرف الشهادة غير صالح" : "Invalid certificate ID");
+          toast.error("معرف الشهادة غير صالح");
           setCertificateLoading(null);
           return;
         }
@@ -497,7 +487,7 @@ export default function StudentMembersPage() {
         link.click();
         window.URL.revokeObjectURL(url);
         
-        toast.success(isRtl ? "تم تحميل الشهادة بنجاح" : "Certificate downloaded successfully");
+        toast.success("تم تحميل الشهادة بنجاح");
         setCertificateLoading(null);
         return;
       }
@@ -537,7 +527,7 @@ export default function StudentMembersPage() {
       link.click();
       window.URL.revokeObjectURL(url);
 
-      toast.success(isRtl ? "تم تحميل الشهادة بنجاح" : "Certificate downloaded successfully");
+      toast.success("تم تحميل الشهادة بنجاح");
     } catch (err: any) {
       console.error("Certificate generation failed:", err);
       const errorMessage = err?.message || String(err);
@@ -568,7 +558,7 @@ export default function StudentMembersPage() {
             const certId = existingCert.id || existingCert._id;
             
             if (!certId) {
-              toast.error(isRtl ? "معرف الشهادة غير صالح" : "Invalid certificate ID");
+              toast.error("معرف الشهادة غير صالح");
               setCertificateLoading(null);
               return;
             }
@@ -582,7 +572,7 @@ export default function StudentMembersPage() {
             link.click();
             window.URL.revokeObjectURL(url);
             
-            toast.success(isRtl ? "تم تحميل الشهادة الموجودة بنجاح" : "Existing certificate downloaded successfully");
+            toast.success("تم تحميل الشهادة الموجودة بنجاح");
             setCertificateLoading(null);
             return;
           }
@@ -635,13 +625,13 @@ export default function StudentMembersPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-800">{isRtl ? "نشط" : "Active"}</Badge>;
+        return <Badge className="bg-green-100 text-green-800">{"نشط"}</Badge>;
       case "due_soon":
-        return <Badge className="bg-yellow-100 text-yellow-800">{isRtl ? "تجديد قريباً" : "Due Soon"}</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800">{"تجديد قريباً"}</Badge>;
       case "overdue":
-        return <Badge className="bg-red-100 text-red-800">{isRtl ? "متأخر" : "Overdue"}</Badge>;
+        return <Badge className="bg-red-100 text-red-800">{"متأخر"}</Badge>;
       case "paused":
-        return <Badge className="bg-gray-100 text-gray-800">{isRtl ? "موقف" : "Paused"}</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800">{"موقف"}</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -663,7 +653,7 @@ export default function StudentMembersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {isRtl ? "???? ??????????" : "Subscription Students"}
+            {"طلاب الاشتراكات"}
           </h2>
           <p className="text-muted-foreground">
             {isRtl
@@ -677,7 +667,7 @@ export default function StudentMembersPage() {
             className="bg-genoun-green hover:bg-genoun-green/90"
           >
             <Plus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-            {isRtl ? "إضافة طالب" : "Add Student"}
+            {"إضافة طالب"}
           </Button>
           <Button
             onClick={handleExportCSV}
@@ -685,7 +675,7 @@ export default function StudentMembersPage() {
             className="bg-green-600 hover:bg-green-700"
           >
             <Download className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-            {exportLoading ? (isRtl ? "جاري التصدير..." : "Exporting...") : (isRtl ? "تصدير CSV" : "Export CSV")}
+            {exportLoading ? "جاري التصدير..." : "تصدير CSV"}
           </Button>
           <Button onClick={() => {
             setImportDialogOpen(true);
@@ -694,7 +684,7 @@ export default function StudentMembersPage() {
             setImportSheetName("");
           }} className="bg-blue-600 hover:bg-blue-700">
             <Upload className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-            {isRtl ? "استيراد CSV" : "Import CSV"}
+            {"استيراد CSV"}
           </Button>
         </div>
       </div>
@@ -703,7 +693,7 @@ export default function StudentMembersPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {isRtl ? "إجمالي الطلاب" : "Total Students"}
+              {"إجمالي الطلاب"}
             </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -714,7 +704,7 @@ export default function StudentMembersPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {isRtl ? "طلاب نشطين" : "Active Students"}
+              {"طلاب نشطين"}
             </CardTitle>
             <UserCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
@@ -727,7 +717,7 @@ export default function StudentMembersPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {isRtl ? "متأخرين بالدفع" : "Overdue Payment"}
+              {"متأخرين بالدفع"}
             </CardTitle>
             <AlertCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
@@ -745,11 +735,11 @@ export default function StudentMembersPage() {
         <Tabs defaultValue="all" value={selectedPackageId} onValueChange={setSelectedPackageId} dir={isRtl ? "rtl" : "ltr"}>
           <TabsList className="bg-muted/60 p-1 h-auto flex-wrap justify-start">
             <TabsTrigger value="all" className="px-4 py-2">
-              {isRtl ? "جميع الباقات" : "All Packages"}
+              {"جميع الباقات"}
             </TabsTrigger>
             {packages.map(pkg => (
               <TabsTrigger key={pkg.id || pkg._id} value={pkg.id || pkg._id || ""} className="px-4 py-2">
-                {isRtl ? pkg.name.ar : pkg.name.en}
+                {pkg.name.ar || pkg.name.en}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -763,7 +753,7 @@ export default function StudentMembersPage() {
                 <Award className="h-6 w-6 text-purple-600" />
                 <div>
                   <h3 className="font-semibold text-purple-900">
-                    {isRtl ? "إنشاء شهادات جماعية" : "Bulk Certificate Generation"}
+                    {"إنشاء شهادات جماعية"}
                   </h3>
                   <p className="text-sm text-purple-700">
                     {isRtl
@@ -780,12 +770,8 @@ export default function StudentMembersPage() {
               >
                 <Award className={`h-5 w-5 ${isRtl ? "ml-2" : "mr-2"}`} />
                 {generateLoading
-                  ? isRtl
-                    ? "جاري الإصدار..."
-                    : "Generating..."
-                  : isRtl
-                  ? "إنشاء جميع الشهادات"
-                  : "Generate All Certificates"}
+                  ? "جاري الإصدار..."
+                  : "إنشاء جميع الشهادات"}
               </Button>
             </CardContent>
           </Card>
@@ -794,24 +780,24 @@ export default function StudentMembersPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>{isRtl ? "قائمة الطلاب" : "Students List"}</CardTitle>
+              <CardTitle>{"قائمة الطلاب"}</CardTitle>
               <div className="flex gap-2">
                 <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder={isRtl ? "تصفية حسب المعلم" : "Filter by Teacher"} />
+                    <SelectValue placeholder={"تصفية حسب المعلم"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{isRtl ? "جميع المعلمين" : "All Teachers"}</SelectItem>
+                    <SelectItem value="all">{"جميع المعلمين"}</SelectItem>
                     {teachersWithStats && teachersWithStats.length > 0 ? (
                       teachersWithStats
                         .sort((a, b) => {
-                          const nameA = isRtl ? (a.fullName?.ar || a.fullName?.en || '') : (a.fullName?.en || a.fullName?.ar || '');
-                          const nameB = isRtl ? (b.fullName?.ar || b.fullName?.en || '') : (b.fullName?.en || b.fullName?.ar || '');
+                          const nameA = a.fullName?.ar || a.fullName?.en || '';
+                          const nameB = b.fullName?.ar || b.fullName?.en || '';
                           return nameA.localeCompare(nameB);
                         })
                         .map((teacher) => (
                           <SelectItem key={teacher.id || teacher._id} value={teacher.id || teacher._id || ''}>
-                            {isRtl ? (teacher.fullName?.ar || teacher.fullName?.en) : (teacher.fullName?.en || teacher.fullName?.ar)}
+                            {teacher.fullName?.ar || teacher.fullName?.en}
                           </SelectItem>
                         ))
                     ) : (
@@ -831,10 +817,10 @@ export default function StudentMembersPage() {
                 </Select>
                 <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate}>
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder={isRtl ? "تصفية حسب المحافظة" : "Filter by Governorate"} />
+                    <SelectValue placeholder={"تصفية حسب المحافظة"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{isRtl ? "جميع المحافظات" : "All Governorates"}</SelectItem>
+                    <SelectItem value="all">{"جميع المحافظات"}</SelectItem>
                     {Array.from(new Set(studentMembers.map(s => s.governorate).filter(Boolean))).sort().map((gov) => (
                       <SelectItem key={gov} value={gov!}>{gov}</SelectItem>
                     ))}
@@ -842,14 +828,14 @@ export default function StudentMembersPage() {
                 </Select>
                 <Select value={showOverdueOnly ? "overdue" : "all"} onValueChange={(val) => setShowOverdueOnly(val === "overdue")}>
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder={isRtl ? "حالة الدفع" : "Payment Status"} />
+                    <SelectValue placeholder={"حالة الدفع"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{isRtl ? "جميع الطلاب" : "All Students"}</SelectItem>
+                    <SelectItem value="all">{"جميع الطلاب"}</SelectItem>
                     <SelectItem value="overdue">
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-red-500"></div>
-                        {isRtl ? "المتأخرين فقط" : "Overdue Only"}
+                        {"المتأخرين فقط"}
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -862,10 +848,10 @@ export default function StudentMembersPage() {
               <div className="text-center py-12">
                 <Users className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-semibold text-gray-900">
-                  {isRtl ? "لا يوجد طلاب اشتراكات" : "No subscription students found"}
+                  {"لا يوجد طلاب اشتراكات"}
                 </h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  {isRtl ? "قم باستيراد ملف لملء القائمة" : "Import a file to populate the list"}
+                  {"قم باستيراد ملف لملء القائمة"}
                 </p>
               </div>
             ) : (
@@ -873,16 +859,16 @@ export default function StudentMembersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{isRtl ? "الاسم" : "Name"}</TableHead>
-                      <TableHead>{isRtl ? "رقم الهاتف" : "Phone"}</TableHead>
-                      <TableHead>{isRtl ? "المحافظة" : "Governorate"}</TableHead>
-                      <TableHead>{isRtl ? "الباقة / الجروب" : "Package / Group"}</TableHead>
-                      <TableHead>{isRtl ? "المعلم" : "Teacher"}</TableHead>
-                      <TableHead>{isRtl ? "تاريخ البداية" : "Start Date"}</TableHead>
-                      <TableHead>{isRtl ? "التجديد القادم" : "Next Due"}</TableHead>
-                      <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
+                      <TableHead>{"الاسم"}</TableHead>
+                      <TableHead>{"رقم الهاتف"}</TableHead>
+                      <TableHead>{"المحافظة"}</TableHead>
+                      <TableHead>{"الباقة / الجروب"}</TableHead>
+                      <TableHead>{"المعلم"}</TableHead>
+                      <TableHead>{"تاريخ البداية"}</TableHead>
+                      <TableHead>{"التجديد القادم"}</TableHead>
+                      <TableHead>{"الحالة"}</TableHead>
                       <TableHead className="text-right">
-                        {isRtl ? "الإجراءات" : "Actions"}
+                        {"الإجراءات"}
                       </TableHead>
                     </TableRow>
                   </TableHeader>
