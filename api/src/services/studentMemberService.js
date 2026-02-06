@@ -5,6 +5,7 @@ import logger from "../utils/logger.js";
 import { differenceInDays, addDays, parse as parseDate, isValid } from "date-fns";
 import Package from "../models/packageModel.js";
 import TeacherGroup from "../models/teacherGroupModel.js";
+import Settings from "../models/settingsModel.js";
 import teacherGroupService from "./teacherGroupService.js";
 import { parse } from 'csv-parse/sync';
 
@@ -31,6 +32,13 @@ export class StudentMemberService {
     const packages = await Package.find({});
     const teacherGroups = await TeacherGroup.find({ groupType: "group", isActive: true })
       .populate("teacherId", "fullName email");
+    const settings = await Settings.findOne().select("subscriptionTeachers").lean();
+    const subscriptionTeachersMap = new Map();
+    (settings?.subscriptionTeachers || []).forEach((teacher) => {
+      if (teacher?._id) {
+        subscriptionTeachersMap.set(String(teacher._id), teacher);
+      }
+    });
     const affectedTeacherIds = new Set();
     for (const [index, record] of records.entries()) {
       try {
@@ -67,6 +75,22 @@ export class StudentMemberService {
 
         let selectedGroup = null;
         const matchesTeacher = (group) => {
+          if (group?.teacherType === "subscription") {
+            const subscriptionTeacher = subscriptionTeachersMap.get(
+              String(group.subscriptionTeacherId || "")
+            );
+            const nameAr = normalize(subscriptionTeacher?.name?.ar);
+            const nameEn = normalize(subscriptionTeacher?.name?.en);
+            const email = normalize(subscriptionTeacher?.email);
+            const phone = normalize(subscriptionTeacher?.phone);
+            return (
+              nameAr === teacherQuery ||
+              nameEn === teacherQuery ||
+              email === teacherQuery ||
+              phone === teacherQuery
+            );
+          }
+
           const teacher = group.teacherId;
           const nameAr = normalize(teacher?.fullName?.ar);
           const nameEn = normalize(teacher?.fullName?.en);
@@ -234,8 +258,19 @@ export class StudentMemberService {
         }
 
         // Create member
-        if (selectedGroup?.teacherId?._id || selectedGroup?.teacherId?.id) {
-          memberData.assignedTeacherId = selectedGroup.teacherId._id || selectedGroup.teacherId.id;
+        if (selectedGroup) {
+          if (selectedGroup.teacherType === "subscription") {
+            const subscriptionTeacher = subscriptionTeachersMap.get(
+              String(selectedGroup.subscriptionTeacherId || "")
+            );
+            memberData.assignedTeacherName =
+              subscriptionTeacher?.name?.ar ||
+              subscriptionTeacher?.name?.en ||
+              subscriptionTeacher?.email ||
+              "";
+          } else if (selectedGroup?.teacherId?._id || selectedGroup?.teacherId?.id) {
+            memberData.assignedTeacherId = selectedGroup.teacherId._id || selectedGroup.teacherId.id;
+          }
         }
 
         const createdMember = await this.createMember(memberData, createdBy);

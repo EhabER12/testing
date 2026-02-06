@@ -26,16 +26,19 @@ export const createTeacherGroup = async (req, res, next) => {
 // @access  Private/Admin/Moderator
 export const getAllTeacherGroups = async (req, res, next) => {
   try {
-    const { teacherId, groupType, isActive } = req.query;
+    const { teacherId, groupType, isActive, teacherType, subscriptionTeacherId } = req.query;
     const filters = {};
 
-    // If user is a teacher, force filter by their own ID
+    // If user is a teacher, force filter by their own ID (course teachers only)
     if (req.user.role === "teacher") {
       filters.teacherId = req.user._id;
+      filters.teacherType = "course";
     } else if (teacherId) {
       filters.teacherId = teacherId;
     }
 
+    if (subscriptionTeacherId) filters.subscriptionTeacherId = subscriptionTeacherId;
+    if (teacherType) filters.teacherType = teacherType;
     if (groupType) filters.groupType = groupType;
     if (isActive !== undefined) filters.isActive = isActive === "true";
 
@@ -54,8 +57,15 @@ export const getTeacherGroupById = async (req, res, next) => {
     const teacherGroup = await teacherGroupService.getTeacherGroupById(req.params.id);
     
     // If user is a teacher, only allow access to their own groups
-    if (req.user.role === "teacher" && teacherGroup.teacherId._id.toString() !== req.user._id.toString()) {
-      return ApiResponse.error(res, "Unauthorized access", 403);
+    if (req.user.role === "teacher") {
+      const groupTeacherId =
+        teacherGroup?.teacherId?._id ||
+        teacherGroup?.teacherId?.id ||
+        teacherGroup?.teacherId;
+      const groupTeacherType = teacherGroup?.teacherType || "course";
+      if (groupTeacherType !== "course" || String(groupTeacherId) !== String(req.user._id)) {
+        return ApiResponse.error(res, "Unauthorized access", 403);
+      }
     }
 
     return ApiResponse.success(res, teacherGroup, "Teacher group retrieved successfully");
@@ -90,7 +100,12 @@ export const addStudent = async (req, res, next) => {
     // Check ownership if user is a teacher
     if (req.user.role === "teacher") {
       const teacherGroup = await teacherGroupService.getTeacherGroupById(req.params.id);
-      if (teacherGroup.teacherId._id.toString() !== req.user._id.toString()) {
+      const groupTeacherId =
+        teacherGroup?.teacherId?._id ||
+        teacherGroup?.teacherId?.id ||
+        teacherGroup?.teacherId;
+      const groupTeacherType = teacherGroup?.teacherType || "course";
+      if (groupTeacherType !== "course" || String(groupTeacherId) !== String(req.user._id)) {
         return ApiResponse.error(res, "Unauthorized access", 403);
       }
     }
@@ -114,7 +129,12 @@ export const removeStudent = async (req, res, next) => {
     // Check ownership if user is a teacher
     if (req.user.role === "teacher") {
       const teacherGroup = await teacherGroupService.getTeacherGroupById(req.params.id);
-      if (teacherGroup.teacherId._id.toString() !== req.user._id.toString()) {
+      const groupTeacherId =
+        teacherGroup?.teacherId?._id ||
+        teacherGroup?.teacherId?.id ||
+        teacherGroup?.teacherId;
+      const groupTeacherType = teacherGroup?.teacherType || "course";
+      if (groupTeacherType !== "course" || String(groupTeacherId) !== String(req.user._id)) {
         return ApiResponse.error(res, "Unauthorized access", 403);
       }
     }
@@ -140,7 +160,12 @@ export const updateStudentStatus = async (req, res, next) => {
     // Check ownership if user is a teacher
     if (req.user.role === "teacher") {
       const teacherGroup = await teacherGroupService.getTeacherGroupById(req.params.id);
-      if (teacherGroup.teacherId._id.toString() !== req.user._id.toString()) {
+      const groupTeacherId =
+        teacherGroup?.teacherId?._id ||
+        teacherGroup?.teacherId?.id ||
+        teacherGroup?.teacherId;
+      const groupTeacherType = teacherGroup?.teacherType || "course";
+      if (groupTeacherType !== "course" || String(groupTeacherId) !== String(req.user._id)) {
         return ApiResponse.error(res, "Unauthorized access", 403);
       }
     }

@@ -160,7 +160,7 @@ export default function SubscriptionTeachersPage() {
     }
 
     dispatch(getStudentMembers());
-    dispatch(getTeacherGroups({ groupType: "group" }));
+    dispatch(getTeacherGroups({ groupType: "group", teacherType: "subscription" }));
     dispatch(getWebsiteSettingsThunk());
   }, [dispatch, user, router]);
 
@@ -230,7 +230,7 @@ export default function SubscriptionTeachersPage() {
   const teachersWithStats = useMemo<TeacherWithStats[]>(() => {
     return allTeachers.map((teacher) => {
       const teacherTokens = new Set(
-        [teacher.name?.ar, teacher.name?.en, teacher.email]
+        [teacher.name?.ar, teacher.name?.en, teacher.email, teacher.phone]
           .filter(Boolean)
           .map((value) => normalizeText(value))
       );
@@ -242,6 +242,19 @@ export default function SubscriptionTeachersPage() {
 
       const activeStudents = students.filter(isPayingStudent);
       const groups = teacherGroups.filter((group) => {
+        if (group.teacherType === "subscription") {
+          const subTeacher = group.subscriptionTeacher;
+          const groupTeacherTokens = [
+            subTeacher?.name?.ar,
+            subTeacher?.name?.en,
+            subTeacher?.email,
+            subTeacher?.phone,
+          ]
+            .filter(Boolean)
+            .map((value) => normalizeText(value));
+          return groupTeacherTokens.some((token) => teacherTokens.has(token));
+        }
+
         const groupTeacherTokens = [
           group.teacherId?.fullName?.ar,
           group.teacherId?.fullName?.en,

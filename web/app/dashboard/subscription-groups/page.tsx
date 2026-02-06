@@ -14,6 +14,7 @@ import {
   updateStudentStatus,
   updateTeacherGroup,
 } from "@/store/services/teacherGroupService";
+import { getWebsiteSettingsThunk } from "@/store/services/settingsService";
 import { getStudentMembers } from "@/store/services/studentMemberService";
 import { isAuthenticated, isAdmin, isModerator } from "@/store/services/authService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
@@ -88,10 +89,10 @@ export default function SubscriptionGroupsPage() {
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTeacherId, setSelectedTeacherId] = useState("all");
+  const [selectedTeacherKey, setSelectedTeacherKey] = useState("all");
 
   const [formData, setFormData] = useState({
-    teacherId: "",
+    teacherKey: "",
     groupName: { ar: "", en: "" },
     pricing: {
       individualRate: 0,
@@ -105,6 +106,7 @@ export default function SubscriptionGroupsPage() {
   const { teacherGroups, teachersWithStats, isLoading } = useAppSelector(
     (state) => state.teacherGroups
   );
+  const { settings } = useAppSelector((state) => state.settings);
   const { studentMembers = [] } = useAppSelector((state) => state.studentMembers);
   const { user } = useAppSelector((state) => state.auth);
 
@@ -122,7 +124,61 @@ export default function SubscriptionGroupsPage() {
     dispatch(getTeacherGroups({ groupType: "group" }));
     dispatch(getAllTeachersWithStats());
     dispatch(getStudentMembers());
+    dispatch(getWebsiteSettingsThunk());
   }, [dispatch, user, router]);
+
+  const subscriptionTeachers = settings?.subscriptionTeachers || [];
+
+  const parseTeacherKey = (key: string) => {
+    const [type, id] = key.split(":");
+    if (!type || !id) return null;
+    return { type, id };
+  };
+
+  const getGroupTeacherName = (group: TeacherGroup) => {
+    if (group.teacherType === "subscription") {
+      const subscriptionTeacher =
+        group.subscriptionTeacher ||
+        subscriptionTeachers.find(
+          (teacher: any) =>
+            String(teacher._id || teacher.id) ===
+            String(group.subscriptionTeacherId || "")
+        );
+      return getTextValue(subscriptionTeacher?.name, isRtl);
+    }
+
+    return getTextValue(group.teacherId?.fullName, isRtl);
+  };
+
+  const teacherOptions = useMemo(() => {
+    const courseTeachers = teachersWithStats
+      .map((teacher) => {
+        const teacherId = teacher.id || teacher._id || "";
+        if (!teacherId) return null;
+        return {
+          key: `course:${teacherId}`,
+          label: `${getTextValue(teacher.fullName, isRtl)} ${isRtl ? "(كورسات)" : "(Courses)"}`,
+          type: "course",
+        };
+      })
+      .filter(Boolean) as { key: string; label: string; type: "course" }[];
+
+    const subscriptionTeacherOptions = subscriptionTeachers
+      .map((teacher: any) => {
+        const teacherId = teacher._id || teacher.id || "";
+        if (!teacherId) return null;
+        return {
+          key: `subscription:${teacherId}`,
+          label: `${getTextValue(teacher.name, isRtl)} ${isRtl ? "(اشتراكات)" : "(Subscriptions)"}`,
+          type: "subscription",
+        };
+      })
+      .filter(Boolean) as { key: string; label: string; type: "subscription" }[];
+
+    return [...courseTeachers, ...subscriptionTeacherOptions].sort((a, b) =>
+      a.label.localeCompare(b.label)
+    );
+  }, [teachersWithStats, subscriptionTeachers, isRtl]);
 
   const groups = useMemo(
     () => teacherGroups.filter((group) => group.groupType === "group"),
@@ -131,26 +187,38 @@ export default function SubscriptionGroupsPage() {
 
   const filteredGroups = useMemo(() => {
     let list = groups;
-    if (selectedTeacherId !== "all") {
-      list = list.filter(
-        (group) =>
-          (group.teacherId?.id || group.teacherId?._id) === selectedTeacherId
-      );
+    if (selectedTeacherKey !== "all") {
+      const parsed = parseTeacherKey(selectedTeacherKey);
+      if (parsed) {
+        list = list.filter((group) => {
+          const groupType = group.teacherType || "course";
+          if (parsed.type === "subscription") {
+            return (
+              groupType === "subscription" &&
+              String(group.subscriptionTeacherId || "") === parsed.id
+            );
+          }
+          return (
+            groupType !== "subscription" &&
+            String(group.teacherId?.id || group.teacherId?._id || "") === parsed.id
+          );
+        });
+      }
     }
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       list = list.filter((group) => {
         const groupName = getTextValue(group.groupName, isRtl).toLowerCase();
-        const teacherName = getTextValue(group.teacherId?.fullName, isRtl).toLowerCase();
+        const teacherName = getGroupTeacherName(group).toLowerCase();
         return groupName.includes(query) || teacherName.includes(query);
       });
     }
     return list;
-  }, [groups, selectedTeacherId, searchQuery, isRtl]);
+  }, [groups, selectedTeacherKey, searchQuery, isRtl, subscriptionTeachers]);
 
   const resetForm = () => {
     setFormData({
-      teacherId: "",
+      teacherKey: "",
       groupName: { ar: "", en: "" },
       pricing: {
         individualRate: 0,
@@ -170,8 +238,12 @@ export default function SubscriptionGroupsPage() {
 
   const openEditDialog = (group: TeacherGroup) => {
     setSelectedGroup(group);
+    const groupTeacherKey =
+      group.teacherType === "subscription"
+        ? `subscription:${group.subscriptionTeacherId || ""}`
+        : `course:${group.teacherId?.id || group.teacherId?._id || ""}`;
     setFormData({
-      teacherId: group.teacherId?.id || group.teacherId?._id || "",
+      teacherKey: groupTeacherKey,
       groupName: group.groupName || { ar: "", en: "" },
       pricing: {
         individualRate: group.pricing?.individualRate ?? 0,
@@ -185,7 +257,8 @@ export default function SubscriptionGroupsPage() {
   };
 
   const handleCreateGroup = async () => {
-    if (!formData.teacherId) {
+    const parsedTeacher = parseTeacherKey(formData.teacherKey);
+    if (!parsedTeacher) {
       toast.error(isRtl ? "?????? ?????? ??????" : "Please select a teacher");
       return;
     }
@@ -196,16 +269,23 @@ export default function SubscriptionGroupsPage() {
     }
 
     try {
-      await dispatch(
-        createTeacherGroup({
-          teacherId: formData.teacherId,
+        const payload: any = {
           groupName: formData.groupName,
           groupType: "group",
           pricing: formData.pricing,
           permissions: { canUploadCourses: false, canPublishDirectly: false },
           notes: formData.notes,
-        })
-      ).unwrap();
+        };
+
+        if (parsedTeacher.type === "subscription") {
+          payload.teacherType = "subscription";
+          payload.subscriptionTeacherId = parsedTeacher.id;
+        } else {
+          payload.teacherType = "course";
+          payload.teacherId = parsedTeacher.id;
+        }
+
+        await dispatch(createTeacherGroup(payload)).unwrap();
       toast.success(isRtl ? "?? ????? ??????" : "Group created");
       setIsCreateDialogOpen(false);
       resetForm();
@@ -346,20 +426,17 @@ export default function SubscriptionGroupsPage() {
             </div>
             <div className="grid gap-2 w-full md:w-[260px]">
               <Label>{isRtl ? "تصفية بالمعلم" : "Filter by Teacher"}</Label>
-              <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
+              <Select value={selectedTeacherKey} onValueChange={setSelectedTeacherKey}>
                 <SelectTrigger>
                   <SelectValue placeholder={isRtl ? "اختر المعلم" : "Select teacher"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{isRtl ? "جميع المعلمين" : "All teachers"}</SelectItem>
-                  {teachersWithStats.map((teacher) => {
-                    const teacherId = teacher.id || teacher._id;
-                    return (
-                      <SelectItem key={teacherId} value={teacherId}>
-                        {getTextValue(teacher.fullName, isRtl)}
-                      </SelectItem>
-                    );
-                  })}
+                  {teacherOptions.map((option) => (
+                    <SelectItem key={option.key} value={option.key}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -408,6 +485,15 @@ export default function SubscriptionGroupsPage() {
                       (isRtl ? "جروب" : "Group");
                     const studentCount = group.stats?.totalStudents ?? group.students?.length ?? 0;
                     const activeCount = group.stats?.activeStudents ?? 0;
+                    const teacherName = getGroupTeacherName(group);
+                    const teacherTypeLabel =
+                      group.teacherType === "subscription"
+                        ? isRtl
+                          ? "اشتراكات"
+                          : "Subscriptions"
+                        : isRtl
+                          ? "كورسات"
+                          : "Courses";
 
                     return (
                       <Fragment key={groupId}>
@@ -421,7 +507,7 @@ export default function SubscriptionGroupsPage() {
                           </TableCell>
                           <TableCell className="font-medium">{groupName}</TableCell>
                           <TableCell>
-                            {group.teacherId?.fullName && getTextValue(group.teacherId.fullName, isRtl)}
+                            {teacherName ? `${teacherName} (${teacherTypeLabel})` : `(${teacherTypeLabel})`}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
@@ -606,19 +692,19 @@ export default function SubscriptionGroupsPage() {
             </div>
             <div className="grid gap-2">
               <Label>{t("admin.teachers.teacher")}</Label>
-              <Select value={formData.teacherId} onValueChange={(val) => setFormData({ ...formData, teacherId: val })}>
+              <Select
+                value={formData.teacherKey}
+                onValueChange={(val) => setFormData({ ...formData, teacherKey: val })}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={t("admin.teachers.teacher")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {teachersWithStats.map((teacher) => {
-                    const teacherId = teacher.id || teacher._id;
-                    return (
-                      <SelectItem key={teacherId} value={teacherId}>
-                        {getTextValue(teacher.fullName, isRtl)}
-                      </SelectItem>
-                    );
-                  })}
+                  {teacherOptions.map((option) => (
+                    <SelectItem key={option.key} value={option.key}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

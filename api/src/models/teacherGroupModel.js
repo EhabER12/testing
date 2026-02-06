@@ -2,11 +2,28 @@ import mongoose from "mongoose";
 
 const teacherGroupSchema = new mongoose.Schema(
   {
-    // Teacher Reference
+    // Teacher Type (course user vs subscription teacher)
+    teacherType: {
+      type: String,
+      enum: ["course", "subscription"],
+      default: "course",
+      required: true,
+      index: true,
+    },
+
+    // Teacher Reference (course teachers)
     teacherId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "Teacher is required"],
+      required: function () {
+        return this.teacherType !== "subscription";
+      },
+      index: true,
+    },
+
+    // Subscription Teacher Reference (settings.subscriptionTeachers subdoc id)
+    subscriptionTeacherId: {
+      type: mongoose.Schema.Types.ObjectId,
       index: true,
     },
 
@@ -183,6 +200,7 @@ teacherGroupSchema.index({ teacherId: 1, isActive: 1 });
 teacherGroupSchema.index({ "students.studentId": 1 });
 teacherGroupSchema.index({ groupType: 1 });
 teacherGroupSchema.index({ teacherId: 1, groupType: 1, isActive: 1 });
+teacherGroupSchema.index({ subscriptionTeacherId: 1, teacherType: 1, isActive: 1 });
 
 // Update statistics before saving
 teacherGroupSchema.pre("save", function (next) {

@@ -142,7 +142,7 @@ export default function TeachersManagementPage() {
       return;
     }
 
-    dispatch(getTeacherGroups());
+    dispatch(getTeacherGroups({ teacherType: "course" }));
     if (isAdmin()) {
       dispatch(getAllTeachersWithStats());
     }
@@ -167,7 +167,7 @@ export default function TeachersManagementPage() {
       setIsCreateDialogOpen(false);
       resetForm();
       // Refresh the groups list
-      await dispatch(getTeacherGroups());
+      await dispatch(getTeacherGroups({ teacherType: "course" }));
     } catch (err) {
       console.error("Failed to create group:", err);
     }
@@ -182,7 +182,7 @@ export default function TeachersManagementPage() {
       setIsEditDialogOpen(false);
       resetForm();
       // Refresh the groups list
-      await dispatch(getTeacherGroups());
+      await dispatch(getTeacherGroups({ teacherType: "course" }));
     } catch (err) {
       console.error("Failed to update group:", err);
     }
@@ -193,7 +193,7 @@ export default function TeachersManagementPage() {
       try {
         await dispatch(deleteTeacherGroup(id)).unwrap();
         // Refresh the groups list
-        await dispatch(getTeacherGroups());
+        await dispatch(getTeacherGroups({ teacherType: "course" }));
       } catch (err) {
         console.error("Failed to delete group:", err);
       }
@@ -217,7 +217,7 @@ export default function TeachersManagementPage() {
       setIsAddStudentDialogOpen(false);
       setSelectedStudentId("");
       // Refresh the groups list to show updated student counts
-      await dispatch(getTeacherGroups());
+      await dispatch(getTeacherGroups({ teacherType: "course" }));
     } catch (err: any) {
       console.error("Failed to add student:", err);
       const errorMsg = err?.message || err?.toString() || "Unknown error";
@@ -230,7 +230,7 @@ export default function TeachersManagementPage() {
       try {
         await dispatch(removeStudentFromGroup({ groupId, studentId })).unwrap();
         // Refresh the groups list to show updated student counts
-        await dispatch(getTeacherGroups());
+        await dispatch(getTeacherGroups({ teacherType: "course" }));
       } catch (err) {
         console.error("Failed to remove student:", err);
       }
@@ -245,7 +245,7 @@ export default function TeachersManagementPage() {
     try {
       await dispatch(updateStudentStatus({ groupId, studentId, status })).unwrap();
       // Refresh the groups list to show updated student counts
-      await dispatch(getTeacherGroups());
+      await dispatch(getTeacherGroups({ teacherType: "course" }));
     } catch (err) {
       console.error("Failed to update status:", err);
     }

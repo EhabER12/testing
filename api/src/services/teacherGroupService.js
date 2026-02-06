@@ -2,6 +2,7 @@ import TeacherGroup from "../models/teacherGroupModel.js";
 import User from "../models/userModel.js";
 import StudentMember from "../models/studentMemberModel.js";
 import Course from "../models/courseModel.js";
+import Settings from "../models/settingsModel.js";
 import { ApiError } from "../utils/apiError.js";
 import { WhatsappNotificationService } from "./whatsappNotificationService.js";
 import logger from "../utils/logger.js";
@@ -11,17 +12,82 @@ class TeacherGroupService {
     this.whatsappService = new WhatsappNotificationService();
   }
 
+  async getSubscriptionTeachersMap() {
+    const settings = await Settings.findOne().select("subscriptionTeachers").lean();
+    const map = new Map();
+    (settings?.subscriptionTeachers || []).forEach((teacher) => {
+      if (teacher?._id) {
+        map.set(String(teacher._id), teacher);
+      }
+    });
+    return map;
+  }
+
+  async getSubscriptionTeacherById(subscriptionTeacherId) {
+    if (!subscriptionTeacherId) return null;
+    const settings = await Settings.findOne().select("subscriptionTeachers");
+    const teacher = settings?.subscriptionTeachers?.id(subscriptionTeacherId);
+    return teacher ? teacher.toObject() : null;
+  }
+
+  attachSubscriptionTeacher(group, subscriptionTeacherMap) {
+    if (!group) return group;
+    const normalizedGroup = group.teacherType
+      ? group
+      : { ...group, teacherType: "course" };
+    if (normalizedGroup.teacherType !== "subscription") return normalizedGroup;
+    const teacher = subscriptionTeacherMap.get(
+      String(normalizedGroup.subscriptionTeacherId || "")
+    );
+    if (!teacher) {
+      return { ...normalizedGroup, subscriptionTeacher: null };
+    }
+    return {
+      ...normalizedGroup,
+      subscriptionTeacher: {
+        ...teacher,
+        id: String(teacher._id || teacher.id || ""),
+      },
+    };
+  }
+
   // Create a new teacher group
   async createTeacherGroup(data, creatorId) {
-    const { teacherId, groupName, students, groupType, pricing, permissions, schedule, notes } = data;
+    const {
+      teacherId,
+      subscriptionTeacherId,
+      teacherType,
+      groupName,
+      students,
+      groupType,
+      pricing,
+      permissions,
+      schedule,
+      notes,
+    } = data;
 
-    // Verify teacher exists and has teacher role
-    const teacher = await User.findById(teacherId);
-    if (!teacher) {
-      throw new ApiError(404, "Teacher not found");
-    }
-    if (teacher.role !== "teacher") {
-      throw new ApiError(400, "User is not a teacher");
+    const resolvedTeacherType = teacherType === "subscription" ? "subscription" : "course";
+
+    if (resolvedTeacherType === "course") {
+      if (!teacherId) {
+        throw new ApiError(400, "Teacher is required");
+      }
+      // Verify teacher exists and has teacher role
+      const teacher = await User.findById(teacherId);
+      if (!teacher) {
+        throw new ApiError(404, "Teacher not found");
+      }
+      if (teacher.role !== "teacher") {
+        throw new ApiError(400, "User is not a teacher");
+      }
+    } else {
+      if (!subscriptionTeacherId) {
+        throw new ApiError(400, "Subscription teacher is required");
+      }
+      const subscriptionTeacher = await this.getSubscriptionTeacherById(subscriptionTeacherId);
+      if (!subscriptionTeacher) {
+        throw new ApiError(404, "Subscription teacher not found");
+      }
     }
 
     // Verify all students exist
@@ -34,7 +100,10 @@ class TeacherGroupService {
     }
 
     const teacherGroup = new TeacherGroup({
-      teacherId,
+      teacherType: resolvedTeacherType,
+      teacherId: resolvedTeacherType === "course" ? teacherId : undefined,
+      subscriptionTeacherId:
+        resolvedTeacherType === "subscription" ? subscriptionTeacherId : undefined,
       groupName,
       students: students || [],
       groupType: groupType || "individual",
@@ -47,8 +116,10 @@ class TeacherGroupService {
 
     await teacherGroup.save();
 
-    // Update teacher's teacherInfo
-    await this.updateTeacherInfo(teacherId);
+    // Update teacher's teacherInfo (course teachers only)
+    if (resolvedTeacherType === "course") {
+      await this.updateTeacherInfo(teacherId);
+    }
 
     return this.getTeacherGroupById(teacherGroup._id);
   }
@@ -59,6 +130,26 @@ class TeacherGroupService {
 
     if (filters.teacherId) {
       query.teacherId = filters.teacherId;
+    }
+
+    if (filters.subscriptionTeacherId) {
+      query.subscriptionTeacherId = filters.subscriptionTeacherId;
+    }
+
+    if (filters.teacherType) {
+      query.$and = query.$and || [];
+      if (filters.teacherType === "course") {
+        query.$and.push({
+          $or: [{ teacherType: "course" }, { teacherType: { $exists: false } }],
+        });
+      } else if (filters.teacherType === "subscription") {
+        query.$and.push({
+          $or: [
+            { teacherType: "subscription" },
+            { teacherType: { $exists: false } },
+          ],
+        });
+      }
     }
 
     if (filters.groupType) {
@@ -75,7 +166,10 @@ class TeacherGroupService {
       .populate("createdBy", "fullName email")
       .sort({ createdAt: -1 });
 
-    return teacherGroups;
+    const subscriptionTeacherMap = await this.getSubscriptionTeachersMap();
+    return teacherGroups.map((group) =>
+      this.attachSubscriptionTeacher(group.toObject(), subscriptionTeacherMap)
+    );
   }
 
   // Get teacher group by ID
@@ -97,7 +191,8 @@ class TeacherGroupService {
       throw new ApiError(404, "Teacher group not found");
     }
 
-    return teacherGroup;
+    const subscriptionTeacherMap = await this.getSubscriptionTeachersMap();
+    return this.attachSubscriptionTeacher(teacherGroup.toObject(), subscriptionTeacherMap);
   }
 
   // Update teacher group
@@ -122,7 +217,7 @@ class TeacherGroupService {
     await teacherGroup.save();
 
     // Update teacher's permissions in User model if changed
-    if (data.permissions) {
+    if (data.permissions && teacherGroup.teacherType !== "subscription" && teacherGroup.teacherId) {
       await User.findByIdAndUpdate(teacherGroup.teacherId, {
         "teacherInfo.canPublishDirectly": data.permissions.canPublishDirectly,
       });
@@ -163,10 +258,25 @@ class TeacherGroupService {
 
     // Send WhatsApp notification (reuse student object from above)
     try {
-      const teacher = await User.findById(teacherGroup.teacherId);
+      let teacherName = "";
+      if (teacherGroup.teacherType === "subscription") {
+        const subscriptionTeacher = await this.getSubscriptionTeacherById(
+          teacherGroup.subscriptionTeacherId
+        );
+        teacherName =
+          subscriptionTeacher?.name?.ar ||
+          subscriptionTeacher?.name?.en ||
+          subscriptionTeacher?.email ||
+          "";
+      } else if (teacherGroup.teacherId) {
+        const teacher = await User.findById(teacherGroup.teacherId);
+        teacherName =
+          teacher?.fullName?.ar || teacher?.fullName?.en || teacher?.email || "";
+      }
 
       if (student && student.phone && this.whatsappService.isConfigured()) {
-        const message = `مرحباً ${student.name.ar}، لقد تمت إضافتك إلى مجموعة "${teacherGroup.groupName?.ar || teacherGroup.groupName?.en || 'تعليمية'}" مع المعلم ${teacher.fullName?.ar || teacher.fullName?.en}. بالتوفيق! 🌟`;
+        const teacherLabel = teacherName ? `مع المعلم ${teacherName}` : "مع المعلم";
+        const message = `مرحباً ${student.name.ar}، لقد تمت إضافتك إلى مجموعة "${teacherGroup.groupName?.ar || teacherGroup.groupName?.en || 'تعليمية'}" ${teacherLabel}. بالتوفيق! 🌟`;
         await this.whatsappService.sendMessage(student.phone, message);
       }
     } catch (err) {
@@ -174,7 +284,9 @@ class TeacherGroupService {
     }
 
     // Update teacher info
-    await this.updateTeacherInfo(teacherGroup.teacherId);
+    if (teacherGroup.teacherType !== "subscription" && teacherGroup.teacherId) {
+      await this.updateTeacherInfo(teacherGroup.teacherId);
+    }
 
     return this.getTeacherGroupById(groupId);
   }
@@ -194,7 +306,9 @@ class TeacherGroupService {
     await teacherGroup.save();
 
     // Update teacher info
-    await this.updateTeacherInfo(teacherGroup.teacherId);
+    if (teacherGroup.teacherType !== "subscription" && teacherGroup.teacherId) {
+      await this.updateTeacherInfo(teacherGroup.teacherId);
+    }
 
     return this.getTeacherGroupById(groupId);
   }
@@ -249,17 +363,24 @@ class TeacherGroupService {
     }
 
     const teacherId = teacherGroup.teacherId;
+    const teacherType = teacherGroup.teacherType;
     await TeacherGroup.findByIdAndDelete(id);
 
     // Update teacher info
-    await this.updateTeacherInfo(teacherId);
+    if (teacherType !== "subscription" && teacherId) {
+      await this.updateTeacherInfo(teacherId);
+    }
 
     return { message: "Teacher group deleted successfully" };
   }
 
   // Get teacher statistics
   async getTeacherStatistics(teacherId) {
-    const groups = await TeacherGroup.find({ teacherId, isActive: true });
+    const groups = await TeacherGroup.find({
+      teacherId,
+      isActive: true,
+      $or: [{ teacherType: "course" }, { teacherType: { $exists: false } }],
+    });
 
     const totalStudents = groups.reduce((sum, g) => sum + g.stats.totalStudents, 0);
     const activeStudents = groups.reduce((sum, g) => sum + g.stats.activeStudents, 0);
@@ -301,7 +422,11 @@ class TeacherGroupService {
 
   // Update teacher info in User model
   async updateTeacherInfo(teacherId) {
-    const groups = await TeacherGroup.find({ teacherId, isActive: true });
+    const groups = await TeacherGroup.find({
+      teacherId,
+      isActive: true,
+      $or: [{ teacherType: "course" }, { teacherType: { $exists: false } }],
+    });
     const totalStudents = groups.reduce((sum, g) => sum + g.stats.totalStudents, 0);
     const coursesCount = await Course.countDocuments({ instructor: teacherId });
 

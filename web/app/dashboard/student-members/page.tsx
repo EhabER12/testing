@@ -152,7 +152,7 @@ export default function StudentMembersPage() {
     dispatch(getPackages());
     dispatch(getCertificates());
     dispatch(getAllTeachersWithStats());
-    dispatch(getTeacherGroups({ groupType: "group", isActive: true }));
+    dispatch(getTeacherGroups({ groupType: "group", isActive: true, teacherType: "subscription" }));
     // Try to get templates, but don't fail if it errors
     dispatch(getAllTemplates()).catch((err) => {
       console.warn("Failed to load templates:", err);
@@ -323,7 +323,14 @@ export default function StudentMembersPage() {
         const selectedGroup = teacherGroups.find(
           (group) => (group.id || group._id) === newStudent.groupId
         );
-        if (selectedGroup?.teacherId?.id || selectedGroup?.teacherId?._id) {
+        if (selectedGroup?.teacherType === "subscription") {
+          const subscriptionTeacherName = getTextValue(
+            selectedGroup.subscriptionTeacher?.name || ""
+          );
+          if (subscriptionTeacherName) {
+            studentData.assignedTeacherName = subscriptionTeacherName;
+          }
+        } else if (selectedGroup?.teacherId?.id || selectedGroup?.teacherId?._id) {
           studentData.assignedTeacherId =
             selectedGroup.teacherId.id || selectedGroup.teacherId._id;
         }
@@ -1202,7 +1209,12 @@ export default function StudentMembersPage() {
                   <SelectContent>
                     {teacherGroups.map((group) => {
                       const groupName = getTextValue(group.groupName) || (isRtl ? "جروب" : "Group");
-                      const teacherName = group.teacherId ? getTextValue(group.teacherId.fullName) : "";
+                      const teacherName =
+                        group.teacherType === "subscription"
+                          ? getTextValue(group.subscriptionTeacher?.name)
+                          : group.teacherId
+                            ? getTextValue(group.teacherId.fullName)
+                            : "";
                       const count = typeof group.stats?.totalStudents === "number" ? group.stats.totalStudents : null;
                       const countLabel = count !== null
                         ? (isRtl ? `${count} طالب` : `${count} students`)

@@ -68,7 +68,7 @@ export default function OverdueSubscriptionsPage() {
     }
 
     dispatch(getStudentMembers());
-    dispatch(getTeacherGroups({ groupType: "group", isActive: true }));
+    dispatch(getTeacherGroups({ groupType: "group", isActive: true, teacherType: "subscription" }));
   }, [dispatch, user, router]);
 
   const groupByStudentId = useMemo(() => {

@@ -2,10 +2,21 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "@/lib/axios";
 import { BilingualText } from "./courseService";
 
+export type TeacherType = "course" | "subscription";
+
+export interface SubscriptionTeacherRef {
+  id?: string;
+  _id?: string;
+  name: BilingualText;
+  email?: string;
+  phone?: string;
+}
+
 export interface TeacherGroup {
   id: string;
   _id?: string;
-  teacherId: {
+  teacherType?: TeacherType;
+  teacherId?: {
     id: string;
     _id?: string;
     fullName: BilingualText;
@@ -17,6 +28,8 @@ export interface TeacherGroup {
       coursesCount?: number;
     };
   };
+  subscriptionTeacherId?: string;
+  subscriptionTeacher?: SubscriptionTeacherRef | null;
   groupName?: BilingualText;
   students: {
     studentId: {
@@ -70,7 +83,9 @@ export interface TeacherGroup {
 }
 
 export interface CreateTeacherGroupData {
-  teacherId: string;
+  teacherId?: string;
+  subscriptionTeacherId?: string;
+  teacherType?: TeacherType;
   groupName?: BilingualText;
   students?: {
     studentId: string;
@@ -133,12 +148,22 @@ export interface TeacherWithStats {
 // Get all teacher groups
 export const getTeacherGroups = createAsyncThunk<
   TeacherGroup[],
-  { teacherId?: string; groupType?: string; isActive?: boolean } | undefined,
+  {
+    teacherId?: string;
+    subscriptionTeacherId?: string;
+    teacherType?: TeacherType;
+    groupType?: string;
+    isActive?: boolean;
+  } | undefined,
   { rejectValue: string }
 >("teacherGroups/getAll", async (filters, { rejectWithValue }) => {
   try {
     const params = new URLSearchParams();
     if (filters?.teacherId) params.append("teacherId", filters.teacherId);
+    if (filters?.subscriptionTeacherId) {
+      params.append("subscriptionTeacherId", filters.subscriptionTeacherId);
+    }
+    if (filters?.teacherType) params.append("teacherType", filters.teacherType);
     if (filters?.groupType) params.append("groupType", filters.groupType);
     if (filters?.isActive !== undefined) params.append("isActive", filters.isActive.toString());
 
