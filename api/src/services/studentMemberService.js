@@ -206,6 +206,21 @@ export class StudentMemberService {
           throw new Error(`Invalid start date: ${startDateInput}`);
         }
 
+        // Handle end date / nextDueDate
+        const endDateInput =
+          record['end_date'] ||
+          record['end_date (YYYY-MM-DD)'] ||
+          record['end date'] ||
+          record.endDate ||
+          record.nextDueDate ||
+          record.next_due_date ||
+          "";
+        const endDate = parseDateValue(endDateInput);
+        const endDateRaw = String(endDateInput || "").trim();
+        if (endDateRaw && !endDate) {
+          throw new Error(`Invalid end date: ${endDateInput}`);
+        }
+
         // Handle billingDay: usually 1-28. If they provided a date, extract the day.
         let billingDay;
         if (record.billingDay !== undefined && record.billingDay !== null) {
@@ -242,10 +257,17 @@ export class StudentMemberService {
           name: { ar: nameValue, en: nameValue },
           phone: record.phone || "",
           governorate: record.governorate || record.province || "", // Support both column names
-          billingDay: billingDay,
         };
         if (startDate) {
           memberData.startDate = startDate;
+        }
+        // If end date is provided, use it directly
+        if (endDate) {
+          memberData.nextDueDate = endDate;
+        }
+        // Handle billingDay for backward compatibility (only if no end date)
+        if (!endDate && billingDay) {
+          memberData.billingDay = billingDay;
         }
 
         if (sheetName) {
@@ -388,19 +410,29 @@ export class StudentMemberService {
 
   // Create new member
   async createMember(memberData, createdBy) {
-    // Calculate next due date based on billing day
     const startDate = memberData.startDate || new Date();
-    const billingDay = memberData.billingDay || startDate.getDate();
-
+    
+    // Use provided endDate/nextDueDate directly, or calculate if not provided
+    let nextDueDate = memberData.nextDueDate || memberData.endDate;
+    
     const member = new StudentMember({
       ...memberData,
       startDate,
-      billingDay,
       createdBy,
     });
 
-    // Calculate next due date
-    member.nextDueDate = member.calculateNextDueDate(startDate);
+    // If nextDueDate is provided directly, use it; otherwise calculate it
+    if (nextDueDate) {
+      member.nextDueDate = new Date(nextDueDate);
+    } else {
+      // Fallback: calculate based on package duration or default to 1 month
+      member.nextDueDate = member.calculateNextDueDate(startDate);
+    }
+
+    // Set billingDay from the nextDueDate day for backward compatibility
+    if (!member.billingDay && member.nextDueDate) {
+      member.billingDay = Math.min(member.nextDueDate.getDate(), 28);
+    }
 
     await member.save();
 

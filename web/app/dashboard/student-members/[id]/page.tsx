@@ -52,7 +52,6 @@ export default function EditStudentMemberPage() {
         packageId: "",
         startDate: "",
         nextDueDate: "",
-        billingDay: "1",
         notes: ""
     });
 
@@ -86,7 +85,6 @@ export default function EditStudentMemberPage() {
                 packageId: currentStudentMember.packageId?.id || currentStudentMember.packageId?._id || "",
                 startDate: currentStudentMember.startDate ? format(new Date(currentStudentMember.startDate), "yyyy-MM-dd") : "",
                 nextDueDate: currentStudentMember.nextDueDate ? format(new Date(currentStudentMember.nextDueDate), "yyyy-MM-dd") : "",
-                billingDay: currentStudentMember.billingDay?.toString() || "1",
                 notes: currentStudentMember.notes || ""
             });
         }
@@ -107,7 +105,6 @@ export default function EditStudentMemberPage() {
                 packageId: formData.packageId,
                 startDate: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
                 nextDueDate: formData.nextDueDate ? new Date(formData.nextDueDate).toISOString() : undefined,
-                billingDay: parseInt(formData.billingDay),
                 notes: formData.notes
             };
 
@@ -235,17 +232,6 @@ export default function EditStudentMemberPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label>{isRtl ? "يوم الفوترة (يوم الشهر)" : "Billing Day (1-28)"}</Label>
-                                <Input
-                                    type="number"
-                                    min="1"
-                                    max="28"
-                                    value={formData.billingDay}
-                                    onChange={(e) => setFormData({ ...formData, billingDay: e.target.value })}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
                                 <Label>{isRtl ? "تاريخ البداية" : "Start Date"}</Label>
                                 <Input
                                     type="date"
@@ -254,7 +240,7 @@ export default function EditStudentMemberPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>{isRtl ? "ميعاد التجديد القادم" : "Next Due Date"}</Label>
+                                <Label>{isRtl ? "تاريخ النهاية" : "End Date"}</Label>
                                 <Input
                                     type="date"
                                     value={formData.nextDueDate}

@@ -60,14 +60,13 @@ const studentMemberSchema = new mongoose.Schema(
       default: Date.now,
     },
     billingDay: {
-      type: Number, // 1-28 (day of month)
-      required: [true, "Billing day is required"],
+      type: Number, // 1-28 (day of month) - Optional, kept for backward compatibility
       min: 1,
       max: 28,
     },
     nextDueDate: {
       type: Date,
-      required: [true, "Next due date is required"],
+      required: [true, "End date is required"],
       index: true,
     },
 

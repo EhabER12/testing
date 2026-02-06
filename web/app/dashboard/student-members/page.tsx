@@ -128,7 +128,7 @@ export default function StudentMembersPage() {
     packageId: "",
     groupId: "",
     startDate: format(new Date(), "yyyy-MM-dd"),
-    billingDay: new Date().getDate().toString(),
+    endDate: format(new Date(new Date().setMonth(new Date().getMonth() + 1)), "yyyy-MM-dd"),
   });
 
   const { studentMembers, isLoading } = useAppSelector((state) => state.studentMembers);
@@ -308,7 +308,7 @@ export default function StudentMembersPage() {
         phone: newStudent.phone,
         governorate: newStudent.governorate,
         startDate: newStudent.startDate,
-        billingDay: parseInt(newStudent.billingDay) || 1,
+        nextDueDate: newStudent.endDate,
       };
 
       if (newStudent.planType === "package") {
@@ -360,7 +360,7 @@ export default function StudentMembersPage() {
         packageId: "",
         groupId: "",
         startDate: format(new Date(), "yyyy-MM-dd"),
-        billingDay: new Date().getDate().toString(),
+        endDate: format(new Date(new Date().setMonth(new Date().getMonth() + 1)), "yyyy-MM-dd"),
       });
       dispatch(getStudentMembers());
     } catch (err: any) {
@@ -372,7 +372,7 @@ export default function StudentMembersPage() {
   };
 
   const downloadTemplate = () => {
-    const headers = ["name", "phone", "governorate", "plan", "group", "group_id", "teacher", "start time (YYYY-MM-DD)", "billingDay"];
+    const headers = ["name", "phone", "governorate", "plan", "group", "group_id", "teacher", "start time (YYYY-MM-DD)", "end_date (YYYY-MM-DD)"];
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -1013,8 +1013,8 @@ export default function StudentMembersPage() {
             <DialogTitle>{isRtl ? "استيراد طلاب (CSV)" : "Import Students (CSV)"}</DialogTitle>
             <DialogDescription>
               {isRtl
-                ? "قم برفع ملف CSV. للباقات اكتب اسم الباقة في plan. للجروبات اكتب اسم الجروب في group واسم المعلم في teacher، أو استخدم group_id مباشرة. ميعاد التجديد ويوم الفاتورة اختياريين ويمكن تركهم فارغين."
-                : "Upload a CSV file. Use plan for packages. For groups, use group + teacher, or provide group_id directly. Start date and billing day are optional and can be left empty."}
+                ? "قم برفع ملف CSV. للباقات اكتب اسم الباقة في plan. للجروبات اكتب اسم الجروب في group واسم المعلم في teacher، أو استخدم group_id مباشرة. تاريخ البداية وتاريخ النهاية اختياريين."
+                : "Upload a CSV file. Use plan for packages. For groups, use group + teacher, or provide group_id directly. Start date and end date are optional."}
             </DialogDescription>
           </DialogHeader>
 
@@ -1241,15 +1241,12 @@ export default function StudentMembersPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="student-billing-day">{isRtl ? "يوم الفاتورة" : "Billing Day"}</Label>
+                <Label htmlFor="student-end-date">{isRtl ? "تاريخ النهاية" : "End Date"}</Label>
                 <Input
-                  id="student-billing-day"
-                  type="number"
-                  min="1"
-                  max="28"
-                  value={newStudent.billingDay}
-                  onChange={(e) => setNewStudent({ ...newStudent, billingDay: e.target.value })}
-                  placeholder="1-28"
+                  id="student-end-date"
+                  type="date"
+                  value={newStudent.endDate}
+                  onChange={(e) => setNewStudent({ ...newStudent, endDate: e.target.value })}
                 />
               </div>
             </div>

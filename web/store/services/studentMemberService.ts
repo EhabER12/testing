@@ -16,8 +16,8 @@ export interface StudentMember {
   governorate?: string;
   sheetName?: string;
   startDate: string;
-  billingDay: number;
-  nextDueDate: string;
+  billingDay?: number; // Optional - kept for backward compatibility
+  nextDueDate: string; // End date of subscription
   status: "active" | "due_soon" | "overdue" | "paused" | "cancelled";
   packageId?: {
     id: string;
