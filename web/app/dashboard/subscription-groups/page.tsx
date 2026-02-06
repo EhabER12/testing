@@ -7,7 +7,6 @@ import {
   addStudentToGroup,
   createTeacherGroup,
   deleteTeacherGroup,
-  getAllTeachersWithStats,
   getTeacherGroups,
   removeStudentFromGroup,
   TeacherGroup,
@@ -63,6 +62,7 @@ import {
 import {
   ChevronDown,
   ChevronUp,
+  Eye,
   MoreHorizontal,
   Plus,
   Trash2,
@@ -85,6 +85,7 @@ export default function SubscriptionGroupsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<TeacherGroup | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState("");
@@ -103,7 +104,7 @@ export default function SubscriptionGroupsPage() {
     notes: "",
   });
 
-  const { teacherGroups, teachersWithStats, isLoading } = useAppSelector(
+  const { teacherGroups, isLoading } = useAppSelector(
     (state) => state.teacherGroups
   );
   const { settings } = useAppSelector((state) => state.settings);
@@ -122,7 +123,6 @@ export default function SubscriptionGroupsPage() {
     }
 
     dispatch(getTeacherGroups({ groupType: "group" }));
-    dispatch(getAllTeachersWithStats());
     dispatch(getStudentMembers());
     dispatch(getWebsiteSettingsThunk());
   }, [dispatch, user, router]);
@@ -150,35 +150,21 @@ export default function SubscriptionGroupsPage() {
     return getTextValue(group.teacherId?.fullName, true);
   };
 
+  // Only show subscription teachers (not course teachers)
   const teacherOptions = useMemo(() => {
-    const courseTeachers = teachersWithStats
-      .map((teacher) => {
-        const teacherId = teacher.id || teacher._id || "";
-        if (!teacherId) return null;
-        return {
-          key: `course:${teacherId}`,
-          label: `${getTextValue(teacher.fullName, true)} (كورسات)`,
-          type: "course",
-        };
-      })
-      .filter(Boolean) as { key: string; label: string; type: "course" }[];
-
-    const subscriptionTeacherOptions = subscriptionTeachers
+    return subscriptionTeachers
       .map((teacher: any) => {
         const teacherId = teacher._id || teacher.id || "";
         if (!teacherId) return null;
         return {
           key: `subscription:${teacherId}`,
-          label: `${getTextValue(teacher.name, true)} (اشتراكات)`,
+          label: getTextValue(teacher.name, true),
           type: "subscription",
         };
       })
-      .filter(Boolean) as { key: string; label: string; type: "subscription" }[];
-
-    return [...courseTeachers, ...subscriptionTeacherOptions].sort((a, b) =>
-      a.label.localeCompare(b.label)
-    );
-  }, [teachersWithStats, subscriptionTeachers]);
+      .filter(Boolean)
+      .sort((a: any, b: any) => a.label.localeCompare(b.label)) as { key: string; label: string; type: "subscription" }[];
+  }, [subscriptionTeachers]);
 
   const groups = useMemo(
     () => teacherGroups.filter((group) => group.groupType === "group"),
@@ -531,6 +517,15 @@ export default function SubscriptionGroupsPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuLabel>{"إجراءات"}</DropdownMenuLabel>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedGroup(group);
+                                      setIsDetailsDialogOpen(true);
+                                    }}
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    {"عرض التفاصيل"}
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => openEditDialog(group)}>
                                     {"تعديل"}
                                   </DropdownMenuItem>
@@ -865,6 +860,154 @@ export default function SubscriptionGroupsPage() {
               onClick={handleAddStudent}
               disabled={!selectedStudentId || selectedStudentId === "no-students"}
             >
+              {"إضافة طالب"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Group Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir={isRtl ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              {"تفاصيل الجروب"}
+            </DialogTitle>
+            <DialogDescription>
+              {getTextValue(selectedGroup?.groupName, true) || "جروب"}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedGroup && (
+            <div className="space-y-6 py-4">
+              {/* Group Info */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <Label className="text-xs text-muted-foreground">{"اسم الجروب"}</Label>
+                  <p className="font-medium">{getTextValue(selectedGroup.groupName, true) || "جروب"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">{"المعلم"}</Label>
+                  <p className="font-medium">{getGroupTeacherName(selectedGroup) || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">{"سعر الجروب"}</Label>
+                  <p className="font-medium">
+                    {selectedGroup.pricing?.groupRate || 0} {selectedGroup.pricing?.currency || "EGP"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">{"الحالة"}</Label>
+                  <Badge variant={selectedGroup.isActive ? "default" : "secondary"}>
+                    {selectedGroup.isActive ? "نشط" : "غير نشط"}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Statistics */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-4 border rounded-lg text-center">
+                  <div className="text-2xl font-bold text-genoun-green">
+                    {selectedGroup.stats?.totalStudents ?? selectedGroup.students?.length ?? 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{"إجمالي الطلاب"}</div>
+                </div>
+                <div className="p-4 border rounded-lg text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {selectedGroup.stats?.activeStudents ?? 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{"طلاب نشطين"}</div>
+                </div>
+                <div className="p-4 border rounded-lg text-center">
+                  <div className="text-2xl font-bold text-gray-600">
+                    {(selectedGroup.stats?.totalStudents ?? selectedGroup.students?.length ?? 0) - (selectedGroup.stats?.activeStudents ?? 0)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{"طلاب غير نشطين"}</div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {selectedGroup.notes && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <Label className="text-xs text-yellow-800">{"ملاحظات"}</Label>
+                  <p className="text-sm text-yellow-900 mt-1">{selectedGroup.notes}</p>
+                </div>
+              )}
+
+              {/* Students List */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold">{"قائمة الطلاب"}</h4>
+                  <Badge variant="outline">
+                    {selectedGroup.students?.length || 0} {"طالب"}
+                  </Badge>
+                </div>
+                {selectedGroup.students && selectedGroup.students.length > 0 ? (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="font-semibold">{"اسم الطالب"}</TableHead>
+                          <TableHead className="font-semibold">{"رقم الواتساب"}</TableHead>
+                          <TableHead className="font-semibold">{"الحالة"}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedGroup.students.map((student, index) => {
+                          if (!student || !student.studentId) return null;
+                          const studentName = getTextValue(
+                            (student.studentId as any)?.name || student.studentId?.studentName,
+                            true
+                          );
+                          const phone = student.studentId?.whatsappNumber || (student.studentId as any)?.phone || "-";
+                          const status = student.status || "active";
+                          return (
+                            <TableRow key={student.studentId?.id || student.studentId?._id || index}>
+                              <TableCell className="font-medium">{studentName || "طالب"}</TableCell>
+                              <TableCell>{phone}</TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={status === "active" ? "default" : status === "completed" ? "secondary" : "outline"}
+                                  className={
+                                    status === "active"
+                                      ? "bg-green-100 text-green-800"
+                                      : status === "completed"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-gray-100 text-gray-800"
+                                  }
+                                >
+                                  {status === "active" ? "نشط" : status === "completed" ? "مكتمل" : "غير نشط"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground border rounded-lg">
+                    <Users className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                    {"لا يوجد طلاب في هذا الجروب"}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
+              {"إغلاق"}
+            </Button>
+            <Button
+              className="bg-genoun-green hover:bg-genoun-green/90"
+              onClick={() => {
+                setIsDetailsDialogOpen(false);
+                if (selectedGroup) {
+                  setSelectedGroup(selectedGroup);
+                  setIsAddStudentDialogOpen(true);
+                }
+              }}
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
               {"إضافة طالب"}
             </Button>
           </DialogFooter>

@@ -74,6 +74,7 @@ import {
   Edit,
   Calendar,
   Package as PackageIcon,
+  Layers,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
@@ -327,6 +328,10 @@ export default function SubscriptionTeachersPage() {
     (sum, entry) => sum + entry.activeStudents.length,
     0
   );
+  const totalGroups = teachersWithStats.reduce(
+    (sum, entry) => sum + entry.groups.length,
+    0
+  );
   const totalProfit = teachersWithStats.reduce(
     (sum, entry) => sum + entry.totalProfit,
     0
@@ -496,7 +501,7 @@ export default function SubscriptionTeachersPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -529,6 +534,19 @@ export default function SubscriptionTeachersPage() {
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
               {totalActiveStudents}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {"إجمالي الجروبات"}
+            </CardTitle>
+            <Layers className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {totalGroups}
             </div>
           </CardContent>
         </Card>
@@ -711,6 +729,10 @@ export default function SubscriptionTeachersPage() {
                               {"نشط"}
                             </Badge>
                           )}
+                          <Badge variant="outline" className="bg-purple-50">
+                            {entry.groups.length}{" "}
+                            {"جروب"}
+                          </Badge>
                           <Button
                             variant="ghost"
                             size="icon"
