@@ -127,6 +127,7 @@ export default function StudentMembersPage() {
     planType: "package",
     packageId: "",
     groupId: "",
+    teacherId: "",
     startDate: format(new Date(), "yyyy-MM-dd"),
     endDate: format(new Date(new Date().setMonth(new Date().getMonth() + 1)), "yyyy-MM-dd"),
   });
@@ -319,6 +320,10 @@ export default function StudentMembersPage() {
         if (selectedPackage) {
           studentData.packagePrice = selectedPackage.price;
         }
+        // Assign teacher if selected (not "none")
+        if (newStudent.teacherId && newStudent.teacherId !== "none") {
+          studentData.assignedTeacherId = newStudent.teacherId;
+        }
       } else if (newStudent.planType === "group") {
         const selectedGroup = teacherGroups.find(
           (group) => (group.id || group._id) === newStudent.groupId
@@ -359,6 +364,7 @@ export default function StudentMembersPage() {
         planType: "package",
         packageId: "",
         groupId: "",
+        teacherId: "",
         startDate: format(new Date(), "yyyy-MM-dd"),
         endDate: format(new Date(new Date().setMonth(new Date().getMonth() + 1)), "yyyy-MM-dd"),
       });
@@ -1167,33 +1173,65 @@ export default function StudentMembersPage() {
             </div>
 
             {newStudent.planType === "package" && (
-              <div className="grid gap-2">
-                <Label>{isRtl ? "الباقة" : "Package"} *</Label>
-                <Select
-                  value={newStudent.packageId}
-                  onValueChange={(value) => setNewStudent({ ...newStudent, packageId: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={isRtl ? "اختر الباقة" : "Select package"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {packages.map((pkg) => {
-                      const sessions = pkg.limits?.maxSessions;
-                      const sessionsLabel = sessions
-                        ? (isRtl ? `${sessions} حصة` : `${sessions} sessions`)
-                        : "";
-                      const name = isRtl ? pkg.name.ar : pkg.name.en;
-                      const priceLabel = `${pkg.price} ${pkg.currency}`;
-                      const label = `${name}${sessionsLabel ? ` - ${sessionsLabel}` : ""} - ${priceLabel}`;
-                      return (
-                        <SelectItem key={pkg.id || pkg._id} value={pkg.id || pkg._id || ""}>
-                          {label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
+              <>
+                <div className="grid gap-2">
+                  <Label>{isRtl ? "الباقة" : "Package"} *</Label>
+                  <Select
+                    value={newStudent.packageId}
+                    onValueChange={(value) => setNewStudent({ ...newStudent, packageId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={isRtl ? "اختر الباقة" : "Select package"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {packages.map((pkg) => {
+                        const sessions = pkg.limits?.maxSessions;
+                        const sessionsLabel = sessions
+                          ? (isRtl ? `${sessions} حصة` : `${sessions} sessions`)
+                          : "";
+                        const name = isRtl ? pkg.name.ar : pkg.name.en;
+                        const priceLabel = `${pkg.price} ${pkg.currency}`;
+                        const label = `${name}${sessionsLabel ? ` - ${sessionsLabel}` : ""} - ${priceLabel}`;
+                        return (
+                          <SelectItem key={pkg.id || pkg._id} value={pkg.id || pkg._id || ""}>
+                            {label}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>{isRtl ? "المعلم" : "Teacher"}</Label>
+                  <Select
+                    value={newStudent.teacherId}
+                    onValueChange={(value) => setNewStudent({ ...newStudent, teacherId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={isRtl ? "اختر المعلم (اختياري)" : "Select teacher (optional)"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{isRtl ? "بدون معلم" : "No teacher"}</SelectItem>
+                      {teachersWithStats && teachersWithStats.length > 0 && teachersWithStats
+                        .sort((a, b) => {
+                          const nameA = isRtl ? (a.fullName?.ar || a.fullName?.en || '') : (a.fullName?.en || a.fullName?.ar || '');
+                          const nameB = isRtl ? (b.fullName?.ar || b.fullName?.en || '') : (b.fullName?.en || b.fullName?.ar || '');
+                          return nameA.localeCompare(nameB);
+                        })
+                        .map((teacher) => {
+                          const teacherName = isRtl ? (teacher.fullName?.ar || teacher.fullName?.en) : (teacher.fullName?.en || teacher.fullName?.ar);
+                          const studentCount = teacher.teacherInfo?.studentsCount || 0;
+                          const label = `${teacherName} (${studentCount} ${isRtl ? "طالب" : "students"})`;
+                          return (
+                            <SelectItem key={teacher.id || teacher._id} value={teacher.id || teacher._id || ""}>
+                              {label}
+                            </SelectItem>
+                          );
+                        })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
 
             {newStudent.planType === "group" && (
