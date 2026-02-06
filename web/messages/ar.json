@@ -352,7 +352,7 @@
       "title": "مدرسين الاشتراكات",
       "description": "إدارة مدرسين الاشتراكات وطلابهم والأرباح",
       "addTeacher": "إضافة مدرس",
-      "searchPlaceholder": "???? ?????? ?? ?????? ?? ?????? ?? ??????",
+        "searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني أو الهاتف أو المجموعة...",
       "filterTeacher": "فلترة مدرس",
       "allTeachers": "كل المدرسين",
       "totalTeachers": "إجمالي المدرسين",
@@ -366,7 +366,7 @@
       "students": "طلاب",
       "active": "نشط",
       "profit": "الأرباح",
-      "profitPercentage": "???? ????? (%)",
+        "profitPercentage": "نسبة الربح (%)",
       "teacherName": "اسم المدرس",
       "studentName": "اسم الطالب",
       "teacherNameAr": "اسم المدرس (عربي)",
@@ -388,10 +388,10 @@
       "dueSoon": "تجديد قريبًا",
       "overdue": "متأخر",
       "paused": "موقوف",
-      "filterGroup": "????? ????",
-      "allGroups": "?? ????????",
-      "salary": "??????",
-      "salaryDueDate": "???? ??????? ??????"
+        "filterGroup": "فلترة مجموعة",
+        "allGroups": "كل المجموعات",
+        "salary": "الراتب",
+        "salaryDueDate": "تاريخ استحقاق الراتب"
     },
     "analytics": {
       "title": "التحليلات",
