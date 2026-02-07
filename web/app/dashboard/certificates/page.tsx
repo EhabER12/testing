@@ -80,6 +80,7 @@ import {
   FileText,
   Trash2,
   Info,
+  FileSpreadsheet,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
@@ -116,6 +117,10 @@ export default function CertificatesPage() {
   });
   const [verifyResult, setVerifyResult] = useState<any>(null);
   const [selectedGovernorate, setSelectedGovernorate] = useState<string>("all");
+  const [bulkActionDialog, setBulkActionDialog] = useState<{
+    open: boolean;
+    mode: "download" | "export" | null;
+  }>({ open: false, mode: null });
 
   const { certificates, templates, isLoading, error, isSuccess } = useAppSelector(
     (state) => state.certificates
@@ -267,7 +272,51 @@ export default function CertificatesPage() {
     }
   };
 
-  const handleGenerateCertificates = async () => {
+  // Export certificates to CSV
+  const exportCertificatesToCSV = (certificatesData: Array<{
+    studentName: string;
+    certificateNumber: string;
+    courseName: string;
+    issuedAt: string;
+    sheetName?: string;
+  }>) => {
+    // CSV Header
+    const headers = [
+      isRtl ? "اسم الطالب" : "Student Name",
+      isRtl ? "رقم الشهادة" : "Certificate Number",
+      isRtl ? "اسم الدورة/الباقة" : "Course/Package Name",
+      isRtl ? "تاريخ الإصدار" : "Issued Date",
+      isRtl ? "الشيت" : "Sheet Name",
+    ];
+
+    // CSV Rows
+    const rows = certificatesData.map(cert => [
+      cert.studentName,
+      cert.certificateNumber,
+      cert.courseName,
+      cert.issuedAt,
+      cert.sheetName || "-",
+    ]);
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    // Add BOM for Arabic support
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `certificates-${format(new Date(), "yyyy-MM-dd-HHmm")}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Open bulk action dialog
+  const openBulkActionDialog = () => {
     const filteredStudents = studentMembers
       .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
       .filter((s) => s.status === "active")
@@ -279,13 +328,41 @@ export default function CertificatesPage() {
       return;
     }
 
-    if (confirm(isRtl ? "هل أنت متأكد من استخراج شهادات لجميع الطلاب حسب الفلاتر؟" : "Are you sure you want to generate certificates for all students in these filters?")) {
+    setBulkActionDialog({ open: true, mode: null });
+  };
+
+  const handleGenerateCertificates = async (mode: "download" | "export") => {
+    setBulkActionDialog({ open: false, mode: null });
+    
+    const filteredStudents = studentMembers
+      .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
+      .filter((s) => s.status === "active")
+      .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
+      .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher);
+
+    if (filteredStudents.length === 0) {
+      toast.error(isRtl ? "لا يوجد طلاب مطابقين للفلاتر" : "No students match the selected filters");
+      return;
+    }
+
+    const confirmMsg = mode === "download"
+      ? (isRtl ? "هل أنت متأكد من استخراج وتحميل شهادات لجميع الطلاب حسب الفلاتر؟" : "Are you sure you want to generate and download certificates for all students in these filters?")
+      : (isRtl ? "هل أنت متأكد من إصدار أرقام شهادات لجميع الطلاب حسب الفلاتر؟" : "Are you sure you want to issue certificate numbers for all students in these filters?");
+
+    if (confirm(confirmMsg)) {
       setGenerateLoading(true);
       try {
         let successCount = 0;
         let failedCount = 0;
         const failedNames: string[] = [];
         const missingTemplateNames: string[] = [];
+        const issuedCertificates: Array<{
+          studentName: string;
+          certificateNumber: string;
+          courseName: string;
+          issuedAt: string;
+          sheetName?: string;
+        }> = [];
 
         for (const student of filteredStudents) {
           const studentId = student.id || student._id;
@@ -322,13 +399,24 @@ export default function CertificatesPage() {
             ).unwrap();
 
             const certId = certificate?.id || certificate?._id;
-            if (certId) {
+            
+            // Store certificate data for export
+            issuedCertificates.push({
+              studentName: nameValue || "Unknown",
+              certificateNumber: certificate?.certificateNumber || "-",
+              courseName: getTextValue(student.packageId?.name) || "-",
+              issuedAt: certificate?.issuedAt ? format(new Date(certificate.issuedAt), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+              sheetName: student.sheetName,
+            });
+
+            // Only download PDF if mode is "download"
+            if (mode === "download" && certId) {
               const blob = await dispatch(downloadCertificate(certId)).unwrap();
               const url = window.URL.createObjectURL(blob);
               const link = document.createElement("a");
               link.href = url;
               const studentName = nameValue || "student";
-              link.download = `certificate-${studentName.replace(/\\s+/g, "_")}.pdf`;
+              link.download = `certificate-${studentName.replace(/\s+/g, "_")}.pdf`;
               link.click();
               window.URL.revokeObjectURL(url);
             }
@@ -346,6 +434,16 @@ export default function CertificatesPage() {
               ? `تم إصدار ${successCount} شهادة بنجاح` : `Successfully issued ${successCount} certificates`
           );
           await dispatch(getCertificates()).unwrap();
+
+          // Export to CSV if mode is "export"
+          if (mode === "export" && issuedCertificates.length > 0) {
+            exportCertificatesToCSV(issuedCertificates);
+            toast.success(
+              isRtl
+                ? "تم تصدير بيانات الشهادات إلى ملف CSV"
+                : "Certificate data exported to CSV file"
+            );
+          }
         }
 
         if (missingTemplateNames.length > 0) {
@@ -980,7 +1078,7 @@ export default function CertificatesPage() {
                     {isRtl ? "رفع شيت الطلاب (CSV)" : "Upload Students CSV"}
                   </Button>
                   <Button
-                    onClick={handleGenerateCertificates}
+                    onClick={openBulkActionDialog}
                     disabled={generateLoading || studentMembers.length === 0}
                     className="bg-purple-600 hover:bg-purple-700 text-white"
                   >
@@ -1297,6 +1395,83 @@ export default function CertificatesPage() {
               className="bg-genoun-green hover:bg-genoun-green/90"
             >
               {importLoading ? (isRtl ? "جاري الرفع..." : "Uploading...") : (isRtl ? "استيراد" : "Import")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Action Dialog */}
+      <Dialog
+        open={bulkActionDialog.open}
+        onOpenChange={(open) => setBulkActionDialog({ open, mode: null })}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {isRtl ? "اختر طريقة الإصدار" : "Choose Issue Method"}
+            </DialogTitle>
+            <DialogDescription>
+              {isRtl
+                ? "اختر كيف تريد إصدار الشهادات للطلاب المحددين"
+                : "Choose how you want to issue certificates for the selected students"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-6">
+            {/* Download PDFs Option */}
+            <Button
+              variant="outline"
+              className="h-auto p-4 justify-start gap-4 hover:bg-purple-50 hover:border-purple-300"
+              onClick={() => handleGenerateCertificates("download")}
+            >
+              <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                <Download className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className={`text-${isRtl ? "right" : "left"}`}>
+                <div className="font-semibold text-base">
+                  {isRtl ? "تحميل الشهادات (PDF)" : "Download Certificates (PDF)"}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {isRtl
+                    ? "إصدار وتحميل ملفات PDF لجميع الشهادات"
+                    : "Issue and download PDF files for all certificates"}
+                </div>
+              </div>
+            </Button>
+
+            {/* Export Sheet Option */}
+            <Button
+              variant="outline"
+              className="h-auto p-4 justify-start gap-4 hover:bg-green-50 hover:border-green-300"
+              onClick={() => handleGenerateCertificates("export")}
+            >
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                <FileSpreadsheet className="h-6 w-6 text-green-600" />
+              </div>
+              <div className={`text-${isRtl ? "right" : "left"}`}>
+                <div className="font-semibold text-base">
+                  {isRtl ? "تصدير أرقام الشهادات (CSV)" : "Export Certificate Numbers (CSV)"}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {isRtl
+                    ? "إصدار الشهادات وتصدير شيت بأرقام الشهادات وأسماء الطلاب"
+                    : "Issue certificates and export a sheet with numbers and student names"}
+                </div>
+              </div>
+            </Button>
+
+            <div className="text-xs text-muted-foreground text-center mt-2 p-3 bg-muted/50 rounded-lg">
+              <Info className="h-4 w-4 inline-block mr-1" />
+              {isRtl
+                ? "يمكن للطالب استخدام رقم الشهادة للحصول على شهادته من صفحة الشهادات العامة"
+                : "Students can use the certificate number to retrieve their certificate from the public certificates page"}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBulkActionDialog({ open: false, mode: null })}
+            >
+              {isRtl ? "إلغاء" : "Cancel"}
             </Button>
           </DialogFooter>
         </DialogContent>
