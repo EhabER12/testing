@@ -110,6 +110,7 @@ export interface NavbarLink {
 
 export interface SectionConfig {
   _id?: string;
+  badge?: { ar: string; en: string };
   title: { ar: string; en: string };
   subtitle: { ar: string; en: string };
   content: { ar: string; en: string };

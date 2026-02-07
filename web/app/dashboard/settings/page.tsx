@@ -134,13 +134,13 @@ export default function SettingsDashboardPage() {
   const [activeTab, setActiveTab] = useState("general");
   const [navbarLinks, setNavbarLinks] = useState<NavbarLink[]>([]);
   const [homepageSections, setHomepageSections] = useState<HomepageSections>({
-    hero: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 0 },
-    features: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 1 },
-    services: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 2 },
-    stats: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 3 },
-    about: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 4 },
-    cta: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 5 },
-    testimonials: { title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 6 },
+    hero: { badge: { ar: "", en: "" }, title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 0 },
+    features: { badge: { ar: "", en: "" }, title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 1 },
+    services: { badge: { ar: "", en: "" }, title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 2 },
+    stats: { badge: { ar: "", en: "" }, title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 3 },
+    about: { badge: { ar: "", en: "" }, title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 4 },
+    cta: { badge: { ar: "", en: "" }, title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 5 },
+    testimonials: { badge: { ar: "", en: "" }, title: { ar: "", en: "" }, subtitle: { ar: "", en: "" }, content: { ar: "", en: "" }, buttonText: { ar: "", en: "" }, buttonLink: "", isEnabled: true, order: 6 },
   });
   const [promoModal, setPromoModal] = useState<PromoModalSettingsType>({
     isEnabled: false,

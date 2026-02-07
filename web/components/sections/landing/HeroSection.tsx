@@ -58,6 +58,13 @@ export function HeroSection({
 
   const ctaLink = showDynamic ? heroSettings.buttonLink : "/forms/consultation-request";
 
+  // Badge from settings or fallback to translation
+  const badge = showDynamic && heroSettings?.badge
+    ? isRtl
+      ? heroSettings.badge.ar || t("badge")
+      : heroSettings.badge.en || t("badge")
+    : t("badge");
+
   useGSAP(() => {
     if (!heroRef.current) return;
 
@@ -213,7 +220,7 @@ export function HeroSection({
             <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full bg-genoun-gold/10 border border-genoun-gold/20 mb-6">
               <Sparkles className="w-4 h-4 text-genoun-gold" />
               <span className="text-genoun-gold text-sm font-medium tracking-wide">
-                {t("badge")}
+                {badge}
               </span>
             </div>
 

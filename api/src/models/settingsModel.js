@@ -88,6 +88,10 @@ const navbarLinkSchema = new mongoose.Schema({
 
 // Homepage Section Schema
 const sectionConfigSchema = new mongoose.Schema({
+  badge: {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
   title: {
     ar: { type: String, default: "" },
     en: { type: String, default: "" },

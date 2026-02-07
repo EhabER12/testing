@@ -33,7 +33,9 @@ export const HomepageSectionsSettings: React.FC<HomepageSectionsSettingsProps> =
     const updatedSections = { ...sections };
     const section = { ...updatedSections[sectionKey] } as SectionConfig;
 
-    if (field.startsWith("title_")) {
+    if (field.startsWith("badge_")) {
+      section.badge = { ...(section.badge || { ar: "", en: "" }), [field.split("_")[1]]: value };
+    } else if (field.startsWith("title_")) {
       section.title = { ...section.title, [field.split("_")[1]]: value };
     } else if (field.startsWith("subtitle_")) {
       section.subtitle = { ...section.subtitle, [field.split("_")[1]]: value };
@@ -71,6 +73,29 @@ export const HomepageSectionsSettings: React.FC<HomepageSectionsSettingsProps> =
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Badge Field - Only for Hero section */}
+          {key === "hero" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{formLang === "ar" ? "الشارة (عربي)" : "Badge (Arabic)"}</Label>
+                <Input
+                  value={section.badge?.ar || ""}
+                  onChange={(e) => updateSection(key, "badge_ar", e.target.value)}
+                  dir="rtl"
+                  placeholder={formLang === "ar" ? "مثال: منصتك المتكاملة لتعلم القرآن" : "e.g., Your Complete Quran Learning Platform"}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{formLang === "ar" ? "الشارة (إنجليزي)" : "Badge (English)"}</Label>
+                <Input
+                  value={section.badge?.en || ""}
+                  onChange={(e) => updateSection(key, "badge_en", e.target.value)}
+                  placeholder={formLang === "ar" ? "مثال: Your Complete Quran Learning Platform" : "e.g., Your Complete Quran Learning Platform"}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{formLang === "ar" ? "العنوان (عربي)" : "Title (Arabic)"}</Label>
