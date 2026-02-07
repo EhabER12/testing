@@ -662,15 +662,71 @@ export default function SubscriptionTeachersPage() {
                 return (
                   <AccordionItem key={teacherKey} value={teacherKey}>
                     <AccordionTrigger className="hover:no-underline">
-                      <div
-                        className={`flex items-center gap-4 w-full ${isRtl ? "flex-row-reverse" : "flex-row"
-                          }`}
-                      >
-                        {/* Actions/Procedures - appears on left for RTL */}
+                      <div className="flex items-center justify-between w-full">
+                        {/* Teacher Info - appears on right for RTL */}
                         <div
-                          className={`flex items-center gap-2 shrink-0 ${isRtl ? "flex-row-reverse" : "flex-row"
-                            }`}
+                          className={`flex items-center gap-3 cursor-pointer ${isRtl ? "flex-row" : "flex-row"}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewTeacherDetails(teacherKey);
+                          }}
                         >
+                          <div className="h-10 w-10 rounded-full bg-genoun-green/10 flex items-center justify-center shrink-0">
+                            <UserCircle className="h-6 w-6 text-genoun-green" />
+                          </div>
+                          <div className={isRtl ? "text-right" : "text-left"}>
+                            <p className="font-medium text-genoun-green hover:underline">{teacherName}</p>
+                            <div className={`text-sm text-muted-foreground flex items-center gap-2 flex-wrap ${isRtl ? "flex-row-reverse" : ""}`}>
+                              {entry.teacher.email && (
+                                <span className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  {entry.teacher.email}
+                                </span>
+                              )}
+                              {entry.teacher.phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {entry.teacher.phone}
+                                </span>
+                              )}
+                            </div>
+                            {(entry.teacher.salaryAmount || entry.teacher.salaryDueDate) && (
+                              <div className={`mt-1 text-xs text-muted-foreground flex items-center gap-2 flex-wrap ${isRtl ? "flex-row-reverse" : ""}`}>
+                                {entry.teacher.salaryAmount ? (
+                                  <span className="flex items-center gap-1">
+                                    {isRtl ? "الراتب" : "Salary"}:
+                                    <span className="font-medium">
+                                      {formatMoney(
+                                        entry.teacher.salaryAmount,
+                                        baseCurrency
+                                      )}
+                                    </span>
+                                  </span>
+                                ) : null}
+                                {entry.teacher.salaryDueDate ? (
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {isRtl ? "تاريخ الاستحقاق" : "Due Date"}:{" "}
+                                    {format(
+                                      new Date(entry.teacher.salaryDueDate),
+                                      "yyyy-MM-dd"
+                                    )}
+                                  </span>
+                                ) : null}
+                              </div>
+                            )}
+                            {subscriptionProfitEnabled && entry.totalProfit > 0 && (
+                              <div className={`mt-1 text-xs flex items-center gap-1 ${isRtl ? "flex-row-reverse" : ""}`}>
+                                <span className="text-green-600 font-medium">
+                                  {isRtl ? "الربح" : "Profit"}: {formatMoney(entry.totalProfit, baseCurrency)}
+                                </span>
+                                <span className="text-muted-foreground">({entry.profitPercentage}%)</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {/* Actions/Procedures - appears on left for RTL */}
+                        <div className={`flex items-center gap-2 shrink-0 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
                           <Badge variant="outline" className="bg-blue-50">
                             {entry.students.length}{" "}
                             {"طالب"}
@@ -713,8 +769,7 @@ export default function SubscriptionTeachersPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className={`h-8 w-8 text-red-500 ${entry.teacher._id ? "" : "opacity-50 cursor-not-allowed"
-                              }`}
+                            className={`h-8 w-8 text-red-500 ${entry.teacher._id ? "" : "opacity-50 cursor-not-allowed"}`}
                             disabled={!entry.teacher._id}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -723,69 +778,6 @@ export default function SubscriptionTeachersPage() {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                        </div>
-                        {/* Teacher Info - appears on right for RTL */}
-                        <div
-                          className={`flex items-center gap-3 flex-1 cursor-pointer ${isRtl ? "flex-row justify-end" : "flex-row justify-start"
-                            }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewTeacherDetails(teacherKey);
-                          }}
-                        >
-                          <div className="h-10 w-10 rounded-full bg-genoun-green/10 flex items-center justify-center shrink-0">
-                            <UserCircle className="h-6 w-6 text-genoun-green" />
-                          </div>
-                          <div className={isRtl ? "text-right" : "text-left"}>
-                            <p className="font-medium text-genoun-green hover:underline">{teacherName}</p>
-                            <div className={`text-sm text-muted-foreground flex items-center gap-2 flex-wrap ${isRtl ? "flex-row-reverse justify-end" : "justify-start"}`}>
-                              {entry.teacher.email && (
-                                <span className="flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />
-                                  {entry.teacher.email}
-                                </span>
-                              )}
-                              {entry.teacher.phone && (
-                                <span className="flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />
-                                  {entry.teacher.phone}
-                                </span>
-                              )}
-                            </div>
-                            {(entry.teacher.salaryAmount || entry.teacher.salaryDueDate) && (
-                              <div className={`mt-1 text-xs text-muted-foreground flex items-center gap-2 flex-wrap ${isRtl ? "flex-row-reverse justify-end" : "justify-start"}`}>
-                                {entry.teacher.salaryAmount ? (
-                                  <span className="flex items-center gap-1">
-                                    {isRtl ? "الراتب" : "Salary"}:
-                                    <span className="font-medium">
-                                      {formatMoney(
-                                        entry.teacher.salaryAmount,
-                                        baseCurrency
-                                      )}
-                                    </span>
-                                  </span>
-                                ) : null}
-                                {entry.teacher.salaryDueDate ? (
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    {isRtl ? "تاريخ الاستحقاق" : "Due Date"}:{" "}
-                                    {format(
-                                      new Date(entry.teacher.salaryDueDate),
-                                      "yyyy-MM-dd"
-                                    )}
-                                  </span>
-                                ) : null}
-                              </div>
-                            )}
-                            {subscriptionProfitEnabled && entry.totalProfit > 0 && (
-                              <div className={`mt-1 text-xs flex items-center gap-1 ${isRtl ? "flex-row-reverse justify-end" : "justify-start"}`}>
-                                <span className="text-green-600 font-medium">
-                                  {isRtl ? "الربح" : "Profit"}: {formatMoney(entry.totalProfit, baseCurrency)}
-                                </span>
-                                <span className="text-muted-foreground">({entry.profitPercentage}%)</span>
-                              </div>
-                            )}
-                          </div>
                         </div>
                       </div>
                     </AccordionTrigger>
