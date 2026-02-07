@@ -305,17 +305,40 @@ export default function Footer({ settings }: FooterProps) {
               </h3>
               <div className="flex flex-wrap gap-3">
                 {settings?.socialLinks && settings.socialLinks.length > 0
-                  ? settings.socialLinks.map((social) => (
-                      <a
-                        key={social._id}
-                        href={social.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-white/80 hover:bg-genoun-gold hover:text-genoun-green transition-all duration-300"
-                      >
-                        {getSocialIcon(social.platform)}
-                      </a>
-                    ))
+                  ? settings.socialLinks.map((social) => {
+                      const isWhatsApp = social.platform.toLowerCase() === 'whatsapp';
+                      // Extract phone number from WhatsApp URL (e.g., https://wa.me/1234567890)
+                      const whatsappNumber = isWhatsApp 
+                        ? social.url.replace(/.*wa\.me\//, '').replace(/[^0-9+]/g, '')
+                        : '';
+                      
+                      if (isWhatsApp && whatsappNumber) {
+                        return (
+                          <a
+                            key={social._id}
+                            href={social.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 text-white/80 hover:bg-genoun-gold hover:text-genoun-green transition-all duration-300"
+                          >
+                            {getSocialIcon(social.platform)}
+                            <span className="text-sm" dir="ltr">{whatsappNumber}</span>
+                          </a>
+                        );
+                      }
+                      
+                      return (
+                        <a
+                          key={social._id}
+                          href={social.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-white/80 hover:bg-genoun-gold hover:text-genoun-green transition-all duration-300"
+                        >
+                          {getSocialIcon(social.platform)}
+                        </a>
+                      );
+                    })
                   : null}
               </div>
 
