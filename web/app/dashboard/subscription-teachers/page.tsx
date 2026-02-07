@@ -663,7 +663,7 @@ export default function SubscriptionTeachersPage() {
                   <AccordionItem key={teacherKey} value={teacherKey}>
                     <AccordionTrigger className="hover:no-underline">
                       <div
-                        className={`flex items-center gap-4 w-full ${isRtl ? "flex-row" : "flex-row-reverse"
+                        className={`flex items-center gap-4 w-full ${isRtl ? "flex-row-reverse" : "flex-row"
                           }`}
                       >
                         {/* Actions/Procedures - appears on left for RTL */}
