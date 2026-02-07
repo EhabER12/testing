@@ -75,6 +75,7 @@ import {
   Calendar,
   Package as PackageIcon,
   Layers,
+  Eye,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
@@ -410,6 +411,10 @@ export default function SubscriptionTeachersPage() {
     }
   };
 
+  const handleViewTeacherDetails = (teacherKey: string) => {
+    router.push(`/dashboard/subscription-teachers/${encodeURIComponent(teacherKey)}`);
+  };
+
   const handleDeleteTeacher = async (
     teacher: SubscriptionTeacher,
     index: number
@@ -660,90 +665,15 @@ export default function SubscriptionTeachersPage() {
                     <AccordionTrigger className="hover:no-underline">
                       <div
                         className={`flex items-center gap-4 w-full ${
-                          isRtl ? "flex-row-reverse" : ""
+                          isRtl ? "flex-row" : "flex-row-reverse"
                         }`}
                       >
+                        {/* Actions/Procedures - appears on left for RTL */}
                         <div
-                          className={`flex items-center gap-3 flex-1 ${
-                            isRtl ? "flex-row-reverse" : ""
+                          className={`flex items-center gap-2 shrink-0 ${
+                            isRtl ? "flex-row" : "flex-row-reverse"
                           }`}
                         >
-                          <div className="h-10 w-10 rounded-full bg-genoun-green/10 flex items-center justify-center">
-                            <UserCircle className="h-6 w-6 text-genoun-green" />
-                          </div>
-                          <div className={isRtl ? "text-right" : "text-left"}>
-                            <p className="font-medium">{teacherName}</p>
-                            <div className="text-sm text-muted-foreground flex items-center gap-2">
-                              {entry.teacher.email && (
-                                <span className="flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />
-                                  {entry.teacher.email}
-                                </span>
-                              )}
-                              {entry.teacher.phone && (
-                                <span className="flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />
-                                  {entry.teacher.phone}
-                                </span>
-                              )}
-                            </div>
-                            {(entry.teacher.salaryAmount || entry.teacher.salaryDueDate) && (
-                              <div className="mt-1 text-xs text-muted-foreground flex items-center gap-2">
-                                {entry.teacher.salaryAmount ? (
-                                  <span className="flex items-center gap-1">
-                                    {"الراتب"}:
-                                    <span className="font-medium">
-                                      {formatMoney(
-                                        entry.teacher.salaryAmount,
-                                        baseCurrency
-                                      )}
-                                    </span>
-                                  </span>
-                                ) : null}
-                                {entry.teacher.salaryDueDate ? (
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    {"تاريخ الاستحقاق"}:{" "}
-                                    {format(
-                                      new Date(entry.teacher.salaryDueDate),
-                                      "yyyy-MM-dd"
-                                    )}
-                                  </span>
-                                ) : null}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div
-                          className={`flex items-center gap-2 ${
-                            isRtl ? "flex-row-reverse" : ""
-                          }`}
-                        >
-                          <Badge variant="outline" className="bg-blue-50">
-                            {entry.students.length}{" "}
-                            {"طالب"}
-                          </Badge>
-                          {entry.activeStudents.length > 0 && (
-                            <Badge className="bg-green-100 text-green-800">
-                              {entry.activeStudents.length}{" "}
-                              {"نشط"}
-                            </Badge>
-                          )}
-                          <Badge variant="outline" className="bg-purple-50">
-                            {entry.groups.length}{" "}
-                            {"جروب"}
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEdit(entry.teacher);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -758,6 +688,109 @@ export default function SubscriptionTeachersPage() {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEdit(entry.teacher);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-3 text-genoun-green hover:text-genoun-green/80"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewTeacherDetails(teacherKey);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span className={`${isRtl ? "mr-1" : "ml-1"} text-xs`}>
+                              {isRtl ? "عرض" : "View"}
+                            </span>
+                          </Button>
+                          <Badge variant="outline" className="bg-purple-50">
+                            {entry.groups.length}{" "}
+                            {"جروب"}
+                          </Badge>
+                          {entry.activeStudents.length > 0 && (
+                            <Badge className="bg-green-100 text-green-800">
+                              {entry.activeStudents.length}{" "}
+                              {"نشط"}
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="bg-blue-50">
+                            {entry.students.length}{" "}
+                            {"طالب"}
+                          </Badge>
+                        </div>
+                        {/* Teacher Info - appears on right for RTL */}
+                        <div
+                          className={`flex items-center gap-3 flex-1 cursor-pointer ${
+                            isRtl ? "flex-row-reverse justify-end" : "justify-start"
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewTeacherDetails(teacherKey);
+                          }}
+                        >
+                          <div className={isRtl ? "text-right" : "text-left"}>
+                            <p className="font-medium text-genoun-green hover:underline">{teacherName}</p>
+                            <div className={`text-sm text-muted-foreground flex items-center gap-2 flex-wrap ${isRtl ? "justify-end" : "justify-start"}`}>
+                              {entry.teacher.email && (
+                                <span className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  {entry.teacher.email}
+                                </span>
+                              )}
+                              {entry.teacher.phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {entry.teacher.phone}
+                                </span>
+                              )}
+                            </div>
+                            {(entry.teacher.salaryAmount || entry.teacher.salaryDueDate) && (
+                              <div className={`mt-1 text-xs text-muted-foreground flex items-center gap-2 flex-wrap ${isRtl ? "justify-end" : "justify-start"}`}>
+                                {entry.teacher.salaryAmount ? (
+                                  <span className="flex items-center gap-1">
+                                    {isRtl ? "الراتب" : "Salary"}:
+                                    <span className="font-medium">
+                                      {formatMoney(
+                                        entry.teacher.salaryAmount,
+                                        baseCurrency
+                                      )}
+                                    </span>
+                                  </span>
+                                ) : null}
+                                {entry.teacher.salaryDueDate ? (
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {isRtl ? "تاريخ الاستحقاق" : "Due Date"}:{" "}
+                                    {format(
+                                      new Date(entry.teacher.salaryDueDate),
+                                      "yyyy-MM-dd"
+                                    )}
+                                  </span>
+                                ) : null}
+                              </div>
+                            )}
+                            {subscriptionProfitEnabled && entry.totalProfit > 0 && (
+                              <div className={`mt-1 text-xs flex items-center gap-1 ${isRtl ? "justify-end" : "justify-start"}`}>
+                                <span className="text-green-600 font-medium">
+                                  {isRtl ? "الربح" : "Profit"}: {formatMoney(entry.totalProfit, baseCurrency)}
+                                </span>
+                                <span className="text-muted-foreground">({entry.profitPercentage}%)</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="h-10 w-10 rounded-full bg-genoun-green/10 flex items-center justify-center shrink-0">
+                            <UserCircle className="h-6 w-6 text-genoun-green" />
+                          </div>
                         </div>
                       </div>
                     </AccordionTrigger>
