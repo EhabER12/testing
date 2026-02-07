@@ -16,12 +16,16 @@ export const fetchSettings = async () => {
       process.env.NEXT_PUBLIC_SETTINGS_REVALIDATE || "",
       10
     );
+    // Default to 30 seconds for faster updates (was 300)
     const revalidateSeconds = Number.isFinite(revalidateValue)
-      ? Math.max(revalidateValue, 30)
-      : 300;
+      ? Math.max(revalidateValue, 10)
+      : 30;
 
     const res = await fetch(`${normalizedBase}/settings/public`, {
-      next: { revalidate: revalidateSeconds },
+      next: { 
+        revalidate: revalidateSeconds,
+        tags: ['settings'] // Enable targeted revalidation
+      },
     });
 
     if (!res.ok) {

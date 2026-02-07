@@ -42,6 +42,7 @@ import {
   ApiKeysSettings,
 } from "@/store/services/settingsService";
 import { resetSettingsStatus } from "@/store/slices/settingsSlice";
+import { revalidateSettings } from "@/app/actions/settings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
@@ -279,6 +280,8 @@ export default function SettingsDashboardPage() {
     if (isSuccess && message) {
       toast.dismiss();
       toast.success(message);
+      // Revalidate the settings cache so changes appear on the website
+      revalidateSettings().catch(console.error);
     } else if (isError && message) {
       toast.dismiss();
       toast.error(message);
