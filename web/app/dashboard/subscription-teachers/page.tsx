@@ -265,9 +265,9 @@ export default function SubscriptionTeachersPage() {
         : 0;
       const totalProfit = subscriptionProfitEnabled
         ? activeStudents.reduce((sum, student) => {
-            const price = Number(student.packagePrice || 0);
-            return sum + price * (profitPercentage / 100);
-          }, 0)
+          const price = Number(student.packagePrice || 0);
+          return sum + price * (profitPercentage / 100);
+        }, 0)
         : 0;
 
       return {
@@ -389,8 +389,8 @@ export default function SubscriptionTeachersPage() {
     const canUpdateExisting = Boolean(editingTeacher?._id);
     const updatedList = canUpdateExisting
       ? subscriptionTeachers.map((teacher) =>
-          teacher._id === editingTeacher?._id ? updatedTeacher : teacher
-        )
+        teacher._id === editingTeacher?._id ? updatedTeacher : teacher
+      )
       : [...subscriptionTeachers, updatedTeacher];
 
     setSaving(true);
@@ -568,9 +568,8 @@ export default function SubscriptionTeachersPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
             <div className="relative flex-1">
               <Search
-                className={`absolute top-2.5 h-4 w-4 text-muted-foreground ${
-                  isRtl ? "right-2" : "left-2"
-                }`}
+                className={`absolute top-2.5 h-4 w-4 text-muted-foreground ${isRtl ? "right-2" : "left-2"
+                  }`}
               />
               <Input
                 placeholder={"ابحث عن معلم..."}
@@ -664,15 +663,71 @@ export default function SubscriptionTeachersPage() {
                   <AccordionItem key={teacherKey} value={teacherKey}>
                     <AccordionTrigger className="hover:no-underline">
                       <div
-                        className={`flex items-center gap-4 w-full ${
-                          isRtl ? "flex-row-reverse" : "flex-row"
-                        }`}
+                        className={`flex items-center gap-4 w-full ${isRtl ? "flex-row" : "flex-row-reverse"
+                          }`}
                       >
+                        {/* Actions/Procedures - appears on left for RTL */}
+                        <div
+                          className={`flex items-center gap-2 shrink-0 ${isRtl ? "flex-row-reverse" : "flex-row"
+                            }`}
+                        >
+                          <Badge variant="outline" className="bg-blue-50">
+                            {entry.students.length}{" "}
+                            {"طالب"}
+                          </Badge>
+                          {entry.activeStudents.length > 0 && (
+                            <Badge className="bg-green-100 text-green-800">
+                              {entry.activeStudents.length}{" "}
+                              {"نشط"}
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="bg-purple-50">
+                            {entry.groups.length}{" "}
+                            {"جروب"}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-3 text-genoun-green hover:text-genoun-green/80"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewTeacherDetails(teacherKey);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span className={`${isRtl ? "mr-1" : "ml-1"} text-xs`}>
+                              {isRtl ? "عرض" : "View"}
+                            </span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEdit(entry.teacher);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 text-red-500 ${entry.teacher._id ? "" : "opacity-50 cursor-not-allowed"
+                              }`}
+                            disabled={!entry.teacher._id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTeacher(entry.teacher, index);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                         {/* Teacher Info - appears on right for RTL */}
                         <div
-                          className={`flex items-center gap-3 flex-1 cursor-pointer ${
-                            isRtl ? "flex-row justify-end" : "flex-row justify-start"
-                          }`}
+                          className={`flex items-center gap-3 flex-1 cursor-pointer ${isRtl ? "flex-row justify-end" : "flex-row justify-start"
+                            }`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleViewTeacherDetails(teacherKey);
@@ -732,66 +787,6 @@ export default function SubscriptionTeachersPage() {
                             )}
                           </div>
                         </div>
-                        {/* Actions/Procedures - appears on left for RTL */}
-                        <div
-                          className={`flex items-center gap-2 shrink-0 ${
-                            isRtl ? "flex-row-reverse" : "flex-row"
-                          }`}
-                        >
-                          <Badge variant="outline" className="bg-blue-50">
-                            {entry.students.length}{" "}
-                            {"طالب"}
-                          </Badge>
-                          {entry.activeStudents.length > 0 && (
-                            <Badge className="bg-green-100 text-green-800">
-                              {entry.activeStudents.length}{" "}
-                              {"نشط"}
-                            </Badge>
-                          )}
-                          <Badge variant="outline" className="bg-purple-50">
-                            {entry.groups.length}{" "}
-                            {"جروب"}
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-3 text-genoun-green hover:text-genoun-green/80"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewTeacherDetails(teacherKey);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                            <span className={`${isRtl ? "mr-1" : "ml-1"} text-xs`}>
-                              {isRtl ? "عرض" : "View"}
-                            </span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEdit(entry.teacher);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`h-8 w-8 text-red-500 ${
-                              entry.teacher._id ? "" : "opacity-50 cursor-not-allowed"
-                            }`}
-                            disabled={!entry.teacher._id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteTeacher(entry.teacher, index);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
@@ -845,10 +840,10 @@ export default function SubscriptionTeachersPage() {
                                       student.status === "overdue"
                                         ? "bg-red-50"
                                         : student.status === "due_soon"
-                                        ? "bg-yellow-50"
-                                        : student.status === "paused"
-                                        ? "bg-gray-50"
-                                        : "";
+                                          ? "bg-yellow-50"
+                                          : student.status === "paused"
+                                            ? "bg-gray-50"
+                                            : "";
 
                                     return (
                                       <TableRow
@@ -939,7 +934,7 @@ export default function SubscriptionTeachersPage() {
                                         members.map((member, memberIndex) => {
                                           const memberName = getTextValue(
                                             (member.studentId as any)?.name ||
-                                              member.studentId?.studentName,
+                                            member.studentId?.studentName,
                                             isRtl
                                           );
                                           const memberPhone =
