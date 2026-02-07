@@ -297,51 +297,6 @@ export default function Footer({ settings }: FooterProps) {
               </ul>
             </div>
 
-            {/* Social Links */}
-            <div>
-              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <span className="w-8 h-0.5 bg-genoun-gold rounded-full"></span>
-                {t.followUs}
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {settings?.socialLinks && settings.socialLinks.length > 0
-                  ? settings.socialLinks.map((social) => {
-                      const isWhatsApp = social.platform.toLowerCase() === 'whatsapp';
-                      // Extract phone number from WhatsApp URL (e.g., https://wa.me/1234567890)
-                      const whatsappNumber = isWhatsApp 
-                        ? social.url.replace(/.*wa\.me\//, '').replace(/[^0-9+]/g, '')
-                        : '';
-                      
-                      if (isWhatsApp && whatsappNumber) {
-                        return (
-                          <a
-                            key={social._id}
-                            href={social.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 text-white/80 hover:bg-genoun-gold hover:text-genoun-green transition-all duration-300"
-                          >
-                            {getSocialIcon(social.platform)}
-                            <span className="text-sm" dir="ltr">{whatsappNumber}</span>
-                          </a>
-                        );
-                      }
-                      
-                      return (
-                        <a
-                          key={social._id}
-                          href={social.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-white/80 hover:bg-genoun-gold hover:text-genoun-green transition-all duration-300"
-                        >
-                          {getSocialIcon(social.platform)}
-                        </a>
-                      );
-                    })
-                  : null}
-              </div>
-
               {/* Back to Top Button */}
               <button
                 onClick={scrollToTop}
@@ -352,7 +307,6 @@ export default function Footer({ settings }: FooterProps) {
                 </div>
                 <span>{t.backToTop}</span>
               </button>
-            </div>
           </div>
 
           {/* Bottom Bar */}
