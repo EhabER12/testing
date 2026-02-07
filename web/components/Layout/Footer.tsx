@@ -30,6 +30,7 @@ interface WebsiteSettings {
   }[];
   contactEmail: string;
   contactPhone: string;
+  whatsappNumber?: string;
   address: string;
   address_ar?: string;
 }
@@ -264,6 +265,21 @@ export default function Footer({ settings }: FooterProps) {
                       className="hover:text-genoun-gold transition-colors"
                     >
                       {settings.contactPhone}
+                    </a>
+                  </li>
+                )}
+                {settings?.whatsappNumber && (
+                  <li className="flex items-center gap-3 text-white/70 text-sm">
+                    <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-genoun-gold">
+                      <WhatsAppIcon />
+                    </div>
+                    <a
+                      href={`https://wa.me/${settings.whatsappNumber.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-genoun-gold transition-colors"
+                    >
+                      {settings.whatsappNumber}
                     </a>
                   </li>
                 )}

@@ -40,7 +40,8 @@ router.put(
       'socialLinks', 'theme', 'navbarLinks', 'homepageSections',
       'promoModal', 'homepageBanner', 'homepageCourses', 'emailSettings',
       'authorityBar', 'reviewsSettings', 'whyGenounSettings',
-      'headerDisplay', 'marketingBanners', 'notifications', 'paymentGateways'
+      'headerDisplay', 'marketingBanners', 'notifications', 'paymentGateways',
+      'financeSettings', 'apiKeys', 'teacherProfitSettings', 'subscriptionStudentProfitSettings'
     ];
 
     fieldsToparse.forEach(field => {
