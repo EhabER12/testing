@@ -149,6 +149,7 @@ export const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
                     className="w-full"
                     controlsList="nodownload"
                     disablePictureInPicture
+                    autoPlay
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
                 />
