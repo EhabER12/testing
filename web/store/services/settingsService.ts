@@ -268,6 +268,7 @@ export interface WebsiteSettingsData {
   contactEmail: string;
   contactPhone: string;
   whatsappNumber?: string;
+  floatingWhatsAppEnabled?: boolean;
   address: string;
   address_ar?: string;
   theme?: ThemeSettings;
@@ -307,6 +308,7 @@ export interface PublicWebsiteSettingsData {
   contactEmail: string;
   contactPhone: string;
   whatsappNumber?: string;
+  floatingWhatsAppEnabled?: boolean;
   address: string;
   address_ar?: string;
   theme?: ThemeSettings;

@@ -299,6 +299,7 @@ export default function SettingsDashboardPage() {
         contactEmail: settings.contactEmail,
         contactPhone: settings.contactPhone,
         whatsappNumber: settings.whatsappNumber || "",
+        floatingWhatsAppEnabled: settings.floatingWhatsAppEnabled !== false,
         address: settings.address,
         address_ar: settings.address_ar || "",
       });
@@ -1284,6 +1285,26 @@ export default function SettingsDashboardPage() {
                     type="tel"
                     value={formData.whatsappNumber || ""}
                     onChange={handleInputChange}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="flex items-center justify-between md:col-span-2 p-4 border rounded-lg bg-muted/30">
+                  <div>
+                    <Label htmlFor="floatingWhatsAppEnabled" className="text-base font-medium">
+                      {formLang === "ar" ? "إظهار أيقونة الواتساب العائمة" : "Show Floating WhatsApp Button"}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {formLang === "ar"
+                        ? 'إظهار زر "هل تحتاج مساعدة؟" في جميع الصفحات'
+                        : 'Show the "Need help?" button on all pages'}
+                    </p>
+                  </div>
+                  <Switch
+                    id="floatingWhatsAppEnabled"
+                    checked={formData.floatingWhatsAppEnabled !== false}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev: any) => ({ ...prev, floatingWhatsAppEnabled: checked }))
+                    }
                     disabled={isLoading}
                   />
                 </div>

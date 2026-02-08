@@ -116,7 +116,9 @@ export default async function RootLayout({
             }}
           />
           {children}
-          <FloatingWhatsApp phoneNumber={data?.whatsappNumber || "201022944477"} />
+          {data?.floatingWhatsAppEnabled !== false && (
+            <FloatingWhatsApp phoneNumber={data?.whatsappNumber || "201022944477"} />
+          )}
         </Providers>
         {gaId && <LazyAnalytics gaId={gaId} />}
       </body>
