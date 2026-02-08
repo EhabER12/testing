@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { Check, BookOpen, Users, Award } from "lucide-react";
+import { Check, BookOpen, Users, Award, Video, CheckCircle, Star, Shield, Heart, Lightbulb, type LucideIcon } from "lucide-react";
 import { PublicWebsiteSettingsData } from "@/store/services/settingsService";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -40,7 +40,19 @@ const translations = {
   },
 };
 
-const icons = [BookOpen, Users, Award];
+const iconMap: Record<string, LucideIcon> = {
+  book: BookOpen,
+  users: Users,
+  award: Award,
+  video: Video,
+  check: CheckCircle,
+  star: Star,
+  shield: Shield,
+  heart: Heart,
+  lightbulb: Lightbulb,
+};
+
+const defaultIcons = [BookOpen, Users, Award];
 
 export function WhyGenoun({
   locale,
@@ -63,13 +75,13 @@ export function WhyGenoun({
   }
 
   const title = whyGenounSettings?.title?.[safeLocale as 'ar' | 'en'] || t.title;
-  const titleHighlight = whyGenounSettings?.subtitle?.[safeLocale as 'ar' | 'en'] || t.titleHighlight;
+  const titleHighlight = whyGenounSettings?.titleHighlight?.[safeLocale as 'ar' | 'en'] || t.titleHighlight;
   const subtitle = whyGenounSettings?.subtitle?.[safeLocale as 'ar' | 'en'] || t.subtitle;
 
   // Use features from settings or fallback to hardcoded
   const valuePropositions = whyGenounSettings?.features && whyGenounSettings.features.length > 0
     ? whyGenounSettings.features.map((feature, idx) => ({
-      icon: icons[idx % icons.length], // Cycle through available icons
+      icon: iconMap[feature.icon] || defaultIcons[idx % defaultIcons.length],
       title: feature.title[safeLocale as 'ar' | 'en'],
       description: feature.description[safeLocale as 'ar' | 'en'],
     }))

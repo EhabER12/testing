@@ -124,7 +124,7 @@ export default function HomeClient({
   const sections = [
     { key: 'hero', order: getSectionOrder('hero'), enabled: isSectionEnabled('hero'), component: <HeroSection locale={locale} settings={settings || undefined} /> },
     { key: 'authorityBar', order: settings?.authorityBar?.order ?? 1, enabled: settings?.authorityBar?.isEnabled !== false, component: <AuthorityBar locale={locale} settings={settings || undefined} /> },
-    { key: 'whyGenoun', order: settings?.whyGenounSettings?.order ?? 2, enabled: settings?.whyGenounSettings?.isEnabled !== false, component: <WhyGenoun locale={locale} /> },
+    { key: 'whyGenoun', order: settings?.whyGenounSettings?.order ?? 2, enabled: settings?.whyGenounSettings?.isEnabled !== false, component: <WhyGenoun locale={locale} settings={settings || undefined} /> },
     { key: 'services', order: getSectionOrder('services'), enabled: isSectionEnabled('services'), component: <ServicesSection locale={locale} settings={settings || undefined} /> },
     { key: 'about', order: getSectionOrder('about'), enabled: isSectionEnabled('about'), component: <MethodologySection locale={locale} /> },
     { key: 'stats', order: getSectionOrder('stats'), enabled: isSectionEnabled('stats'), component: <ResultsSection locale={locale} /> },

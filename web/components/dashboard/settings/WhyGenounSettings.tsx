@@ -22,6 +22,7 @@ interface WhyGenounFeature {
 interface WhyGenounSettings {
     isEnabled: boolean;
     title: { ar: string; en: string };
+    titleHighlight: { ar: string; en: string };
     subtitle: { ar: string; en: string };
     features: WhyGenounFeature[];
 }
@@ -40,6 +41,8 @@ const iconOptions = [
     { value: "check", label: "Check (صح)" },
     { value: "star", label: "Star (نجمة)" },
     { value: "shield", label: "Shield (حماية)" },
+    { value: "heart", label: "Heart (قلب)" },
+    { value: "lightbulb", label: "Lightbulb (فكرة)" },
     { value: "clock", label: "Clock (ساعة)" },
 ];
 
@@ -111,7 +114,7 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
                                     title: { ...settings.title, ar: e.target.value },
                                 })
                             }
-                            placeholder="لماذا جنون؟"
+                            placeholder="لماذا تختار"
                         />
                     </div>
                     <div className="space-y-2">
@@ -124,7 +127,37 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
                                     title: { ...settings.title, en: e.target.value },
                                 })
                             }
-                            placeholder="Why Genoun?"
+                            placeholder="Why Choose"
+                        />
+                    </div>
+                </div>
+
+                {/* Title Highlight (the colored part) */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label>Title Highlight (Arabic) - الجزء الملون</Label>
+                        <Input
+                            value={settings.titleHighlight?.ar || ""}
+                            onChange={(e) =>
+                                onChange({
+                                    ...settings,
+                                    titleHighlight: { ...settings.titleHighlight, ar: e.target.value },
+                                })
+                            }
+                            placeholder="منصة جنون"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Title Highlight (English) - Colored part</Label>
+                        <Input
+                            value={settings.titleHighlight?.en || ""}
+                            onChange={(e) =>
+                                onChange({
+                                    ...settings,
+                                    titleHighlight: { ...settings.titleHighlight, en: e.target.value },
+                                })
+                            }
+                            placeholder="Genoun Platform"
                         />
                     </div>
                 </div>

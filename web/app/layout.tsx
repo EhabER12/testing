@@ -6,7 +6,7 @@ import "../styles/nprogress.css";
 import { Providers } from "./providers";
 import { LazyAnalytics } from "@/components/analytics/LazyAnalytics";
 import { FloatingWhatsApp } from "@/components/ui/FloatingWhatsApp";
-import { NavigationProgress } from "@/components/ui/NavigationProgress";
+import { NavigationProgress } from "@/components/NavigationProgress";
 import { Zain } from "next/font/google";
 import { fetchSettings } from "@/lib/settings";
 
@@ -116,7 +116,7 @@ export default async function RootLayout({
             }}
           />
           {children}
-          <FloatingWhatsApp phoneNumber="201022944477" />
+          <FloatingWhatsApp phoneNumber={data?.whatsappNumber || "201022944477"} />
         </Providers>
         {gaId && <LazyAnalytics gaId={gaId} />}
       </body>

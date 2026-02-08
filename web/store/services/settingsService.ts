@@ -193,6 +193,7 @@ export interface WhyGenounFeature {
 export interface WhyGenounSettings {
   isEnabled: boolean;
   title: { ar: string; en: string };
+  titleHighlight: { ar: string; en: string };
   subtitle: { ar: string; en: string };
   order?: number;
   features: WhyGenounFeature[];

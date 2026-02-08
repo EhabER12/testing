@@ -203,7 +203,8 @@ export default function SettingsDashboardPage() {
 
   const [whyGenounSettings, setWhyGenounSettings] = useState<WhyGenounSettings>({
     isEnabled: true,
-    title: { ar: "لماذا جنون؟", en: "Why Genoun?" },
+    title: { ar: "لماذا تختار", en: "Why Choose" },
+    titleHighlight: { ar: "منصة جنون", en: "Genoun Platform" },
     subtitle: { ar: "منصة متكاملة لحفظ القرآن الكريم", en: "Complete platform for Quran memorization" },
     features: [],
   });
