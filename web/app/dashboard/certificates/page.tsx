@@ -1405,35 +1405,35 @@ export default function CertificatesPage() {
         open={bulkActionDialog.open}
         onOpenChange={(open) => setBulkActionDialog({ open, mode: null })}
       >
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-center">
               {isRtl ? "اختر طريقة الإصدار" : "Choose Issue Method"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-center">
               {isRtl
                 ? "اختر كيف تريد إصدار الشهادات للطلاب المحددين"
-                : "Choose how you want to issue certificates for the selected students"}
+                : "Choose how you want to issue certificates"}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-6">
+          <div className="grid gap-3 py-4">
             {/* Download PDFs Option */}
             <Button
               variant="outline"
-              className="h-auto p-4 justify-start gap-4 hover:bg-purple-50 hover:border-purple-300"
+              className="h-auto p-4 flex items-center gap-3 hover:bg-purple-50 hover:border-purple-300 w-full"
               onClick={() => handleGenerateCertificates("download")}
             >
-              <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-                <Download className="h-6 w-6 text-purple-600" />
+              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                <Download className="h-5 w-5 text-purple-600" />
               </div>
-              <div className={`text-${isRtl ? "right" : "left"}`}>
-                <div className="font-semibold text-base">
+              <div className={`flex-1 ${isRtl ? "text-right" : "text-left"}`}>
+                <div className="font-semibold text-sm">
                   {isRtl ? "تحميل الشهادات (PDF)" : "Download Certificates (PDF)"}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {isRtl
-                    ? "إصدار وتحميل ملفات PDF لجميع الشهادات"
-                    : "Issue and download PDF files for all certificates"}
+                    ? "إصدار وتحميل ملفات PDF"
+                    : "Issue and download PDF files"}
                 </div>
               </div>
             </Button>
@@ -1441,32 +1441,32 @@ export default function CertificatesPage() {
             {/* Export Sheet Option */}
             <Button
               variant="outline"
-              className="h-auto p-4 justify-start gap-4 hover:bg-green-50 hover:border-green-300"
+              className="h-auto p-4 flex items-center gap-3 hover:bg-green-50 hover:border-green-300 w-full"
               onClick={() => handleGenerateCertificates("export")}
             >
-              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                <FileSpreadsheet className="h-6 w-6 text-green-600" />
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                <FileSpreadsheet className="h-5 w-5 text-green-600" />
               </div>
-              <div className={`text-${isRtl ? "right" : "left"}`}>
-                <div className="font-semibold text-base">
+              <div className={`flex-1 ${isRtl ? "text-right" : "text-left"}`}>
+                <div className="font-semibold text-sm">
                   {isRtl ? "تصدير أرقام الشهادات (CSV)" : "Export Certificate Numbers (CSV)"}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {isRtl
-                    ? "إصدار الشهادات وتصدير شيت بأرقام الشهادات وأسماء الطلاب"
-                    : "Issue certificates and export a sheet with numbers and student names"}
+                    ? "تصدير شيت بأرقام الشهادات"
+                    : "Export sheet with certificate numbers"}
                 </div>
               </div>
             </Button>
 
-            <div className="text-xs text-muted-foreground text-center mt-2 p-3 bg-muted/50 rounded-lg">
-              <Info className="h-4 w-4 inline-block mr-1" />
+            <div className="text-xs text-muted-foreground text-center p-2 bg-muted/50 rounded-lg">
+              <Info className="h-3 w-3 inline-block mx-1" />
               {isRtl
-                ? "يمكن للطالب استخدام رقم الشهادة للحصول على شهادته من صفحة الشهادات العامة"
-                : "Students can use the certificate number to retrieve their certificate from the public certificates page"}
+                ? "يمكن للطالب استخدام رقم الشهادة للحصول عليها"
+                : "Students can use the certificate number to get their certificate"}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="sm:justify-center">
             <Button
               variant="outline"
               onClick={() => setBulkActionDialog({ open: false, mode: null })}
