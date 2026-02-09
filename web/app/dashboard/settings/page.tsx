@@ -40,6 +40,7 @@ import {
   WhyGenounFeature,
   FinanceSettings,
   ApiKeysSettings,
+  CoursesPageHeroSettings as CoursesPageHeroSettingsType,
 } from "@/store/services/settingsService";
 import { resetSettingsStatus } from "@/store/slices/settingsSlice";
 import { revalidateSettings } from "@/app/actions/settings";
@@ -73,6 +74,7 @@ import { AuthorityBarSettings as AuthorityBarSettingsComponent } from "@/compone
 import { ReviewsSectionSettings as ReviewsSectionSettingsComponent } from "@/components/dashboard/settings/ReviewsSectionSettings";
 import { WhyGenounSettings as WhyGenounSettingsComponent } from "@/components/dashboard/settings/WhyGenounSettings";
 import { ApiKeysSettings as ApiKeysSettingsComponent } from "@/components/dashboard/settings/ApiKeysSettings";
+import { CoursesPageHeroSettings as CoursesPageHeroSettingsComponent } from "@/components/dashboard/settings/CoursesPageHeroSettings";
 
 interface SettingsFormData extends Partial<WebsiteSettingsData> {
   logoFile?: File;
@@ -759,6 +761,9 @@ export default function SettingsDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="api-keys">
               {isRtl ? "مفاتيح API" : "API Keys"}
+            </TabsTrigger>
+            <TabsTrigger value="courses-hero">
+              {isRtl ? "صفحة الدورات" : "Courses Page"}
             </TabsTrigger>
             <TabsTrigger value="teacher-profit">
               {isRtl ? "أرباح المعلمين" : "Teacher Profit"}
@@ -2321,6 +2326,26 @@ export default function SettingsDashboardPage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Courses Page Hero Settings Tab */}
+          <TabsContent value="courses-hero" className="space-y-6">
+            <CoursesPageHeroSettingsComponent
+              settings={formData.coursesPageHero || {
+                isEnabled: true,
+                badge: { ar: "", en: "" },
+                title: { ar: "", en: "" },
+                subtitle: { ar: "", en: "" },
+                backgroundImage: "",
+              }}
+              onUpdate={(settings) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  coursesPageHero: settings,
+                }))
+              }
+              locale={formLang}
+            />
           </TabsContent>
         </Tabs>
 
