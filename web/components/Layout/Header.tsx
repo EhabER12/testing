@@ -30,6 +30,7 @@ import { RootState, AppDispatch } from "@/store";
 import { logout } from "@/store/services/authService";
 import { PublicWebsiteSettingsData } from "@/store/services/settingsService";
 import MarketingBanner from "./MarketingBanner";
+import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 
 interface HeaderProps {
   settings?: PublicWebsiteSettingsData | null;
@@ -230,7 +231,7 @@ export default function Header({ settings }: HeaderProps) {
           ))}
         </nav>
 
-        {/* Right Side: Language + Cart + Account */}
+        {/* Right Side: Language + Currency + Cart + Account */}
         <div className="flex items-center gap-4" suppressHydrationWarning>
           {/* Language Switcher */}
           <DropdownMenu>
@@ -265,6 +266,9 @@ export default function Header({ settings }: HeaderProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Currency Switcher */}
+          <CurrencySwitcher locale={locale} variant="minimal" />
 
           <div className="h-6 w-px bg-gray-200" aria-hidden="true" />
 
@@ -493,6 +497,14 @@ export default function Header({ settings }: HeaderProps) {
                   >
                     العربية
                   </button>
+                </div>
+
+                {/* Currency Switcher Mobile */}
+                <div className="mt-3">
+                  <p className="text-xs uppercase tracking-widest text-white/50 mb-2">
+                    {locale === "ar" ? "العملة" : "Currency"}
+                  </p>
+                  <CurrencySwitcher locale={locale} variant="default" className="w-full" />
                 </div>
               </nav>
             </SheetContent>
