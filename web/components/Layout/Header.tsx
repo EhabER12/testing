@@ -136,7 +136,7 @@ export default function Header({ settings }: HeaderProps) {
   const defaultNavItems = [
     { label: t.home, href: "/", anchor: false },
     { label: t.courses, href: "/courses", anchor: false, special: true },
-    { label: t.reviews, href: "/#reviews", anchor: true },
+    { label: t.reviews, href: "/reviews", anchor: false },
     {
       label: isRtl ? "من نحن" : "About Us",
       href: "/pages/about-us",
