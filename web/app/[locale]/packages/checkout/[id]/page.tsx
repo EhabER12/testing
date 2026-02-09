@@ -331,10 +331,6 @@ export default function PackageCheckoutPage() {
                   <span className="text-muted-foreground">{isRtl ? "المدة" : "Duration"}</span>
                   <span>{selectedPackage.duration.value} {getLocalizedText(selectedPackage.duration.unit)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{isRtl ? "النوع" : "Type"}</span>
-                  <span className="capitalize">{selectedPackage.type}</span>
-                </div>
                 
                 <Separator />
                 
