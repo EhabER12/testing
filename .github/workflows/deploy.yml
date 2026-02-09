@@ -47,8 +47,12 @@ jobs:
             echo "💾 Stashing local changes..."
             git stash --include-untracked
             
-            # Pull latest changes
-            git pull origin main
+            # Fetch latest changes
+            git fetch origin main
+            
+            # Reset to remote state (handles divergent branches)
+            echo "🔄 Resetting to remote state..."
+            git reset --hard origin/main
             
             # Try to apply stashed changes (don't fail if conflicts)
             echo "🔄 Applying stashed changes..."
