@@ -7,53 +7,54 @@ import {
   approveReview,
   rejectReview,
   getUserReviews,
+  getCourseReviews,
+  getUserCourseReview,
 } from "../controllers/reviewController.js";
 import { protect, authorize } from "../middlewares/authMiddleware.js";
 import { uploadMultiple } from "../middlewares/uploadMiddleware.js";
-import { validate } from "../middlewares/validationMiddleware.js";
-import {
-  createReviewSchema,
-  updateReviewSchema,
-  rejectReviewSchema,
-} from "../validations/reviewValidation.js";
 import { imagePathMiddleware } from "../middlewares/imagePathMiddleware.js";
 
 const router = express.Router();
 
+// Apply image path middleware
 router.use(imagePathMiddleware);
 
+// Public routes
 router.get("/", getAllReviews);
-router.get("/my-reviews", protect, getUserReviews);
+router.get("/course/:courseId", getCourseReviews);
 router.get("/:id", getReviewById);
+
+// Protected routes
+router.get("/my-reviews", protect, getUserReviews);
+router.get("/course/:courseId/my-review", protect, getUserCourseReview);
 
 router.post(
   "/",
+  protect,
   uploadMultiple("images", 5),
-  validate(createReviewSchema),
   createReview
 );
 
+// Admin routes
 router.put(
   "/:id",
   protect,
   authorize("admin", "moderator"),
   uploadMultiple("images", 5),
-  validate(updateReviewSchema),
   updateReview
 );
 
-router.post(
+router.patch(
   "/:id/approve",
   protect,
   authorize("admin", "moderator"),
   approveReview
 );
 
-router.post(
+router.patch(
   "/:id/reject",
   protect,
   authorize("admin", "moderator"),
-  validate(rejectReviewSchema),
   rejectReview
 );
 

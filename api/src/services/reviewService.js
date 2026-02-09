@@ -1,16 +1,16 @@
 import { ReviewRepository } from "../repositories/reviewRepository.js";
-// import { TripRepository } from "../repositories/tripRepository.js";
+import Course from "../models/courseModel.js";
 import { ApiError } from "../utils/apiError.js";
 import path from "path";
+import mongoose from "mongoose";
 
 export class ReviewService {
   constructor() {
     this.reviewRepository = new ReviewRepository();
-    // this.tripRepository = new TripRepository();
   }
 
   async getAllReviews(queryParams) {
-    const { page, limit, status, productId, serviceId } = queryParams;
+    const { page, limit, status, productId, serviceId, courseId } = queryParams;
 
     const filter = {};
 
@@ -26,15 +26,23 @@ export class ReviewService {
       filter.serviceId = serviceId;
     }
 
+    if (courseId) {
+      filter.courseId = courseId;
+    }
+
     if (queryParams.email) {
       filter.email = queryParams.email;
+    }
+
+    if (queryParams.userId) {
+      filter.userId = queryParams.userId;
     }
 
     const options = {
       page,
       limit,
       filter,
-      populate: "productId serviceId",
+      populate: "productId serviceId courseId userId",
     };
 
     return this.reviewRepository.findAll(options);
@@ -53,12 +61,6 @@ export class ReviewService {
   }
 
   async createReview(reviewData, images) {
-    // Check if product exists
-    // const product = await this.productRepository.findById(reviewData.productId);
-
-    // if (!product) {
-    //   throw new ApiError(404, "Product not found");
-    // }
     // Handle images if provided
     let imagePaths = [];
     if (images && images.length > 0) {
@@ -66,6 +68,33 @@ export class ReviewService {
         const filename = path.basename(image.path);
         return `uploads/${filename}`;
       });
+    }
+
+    // If it's a course review, check if user already reviewed this course
+    if (reviewData.courseId && reviewData.userId) {
+      const existingReview = await this.reviewRepository.findUserCourseReview(
+        reviewData.userId,
+        reviewData.courseId
+      );
+
+      if (existingReview) {
+        throw new ApiError(400, "You have already reviewed this course");
+      }
+
+      // Check if user is enrolled in the course
+      const course = await Course.findById(reviewData.courseId);
+      if (!course) {
+        throw new ApiError(404, "Course not found");
+      }
+
+      // Check if user has access to the course (enrolled or owns it)
+      const hasAccess = course.enrolledStudents?.some(
+        (student) => student.toString() === reviewData.userId.toString()
+      );
+
+      if (!hasAccess) {
+        throw new ApiError(403, "You must be enrolled in the course to review it");
+      }
     }
 
     // Create review
@@ -127,5 +156,34 @@ export class ReviewService {
 
     // Reject review
     return this.reviewRepository.reject(id, reason);
+  }
+
+  async getCourseReviews(courseId, options = {}) {
+    const { page = 1, limit = 10, status = "approved" } = options;
+
+    // Get reviews
+    const reviewsData = await this.reviewRepository.findByCourseId(courseId, {
+      page,
+      limit,
+      filter: { status },
+      populate: "userId",
+      sort: { createdAt: -1 },
+    });
+
+    // Get stats
+    const stats = await this.reviewRepository.getCourseStats(courseId);
+
+    return {
+      reviews: reviewsData.results,
+      pagination: reviewsData.pagination,
+      stats,
+    };
+  }
+
+  async getUserReview(userId, courseId) {
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(courseId)) {
+      return null;
+    }
+    return this.reviewRepository.findUserCourseReview(userId, courseId);
   }
 }

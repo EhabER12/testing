@@ -10,9 +10,22 @@ const reviewSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Service",
     },
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: function() {
+        return !!this.courseId; // Required for course reviews
+      },
+    },
     name: {
       type: String,
-      required: [true, "Name is required"],
+      required: function() {
+        return !this.userId; // Only required if no userId (anonymous reviews for products/services)
+      },
     },
     email: {
       type: String,
@@ -70,6 +83,8 @@ const reviewSchema = new mongoose.Schema(
 
 reviewSchema.index({ productId: 1, email: 1 });
 reviewSchema.index({ serviceId: 1, email: 1 });
+reviewSchema.index({ courseId: 1, userId: 1 }, { unique: true, sparse: true }); // One review per user per course
+reviewSchema.index({ status: 1 });
 
 const Review = mongoose.model("Review", reviewSchema);
 

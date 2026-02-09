@@ -8,13 +8,14 @@ const reviewService = new ReviewService();
 // @access  Public/Admin
 export const getAllReviews = async (req, res, next) => {
   try {
-    const { page, limit, status, productId, serviceId } = req.query;
+    const { page, limit, status, productId, serviceId, courseId } = req.query;
     const reviews = await reviewService.getAllReviews({
       page,
       limit,
       status,
       productId,
       serviceId,
+      courseId,
     });
 
     return ApiResponse.success(res, reviews);
@@ -120,6 +121,42 @@ export const rejectReview = async (req, res, next) => {
     const review = await reviewService.rejectReview(id, reason);
 
     return ApiResponse.success(res, review, "Review rejected successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get course reviews with stats
+// @route   GET /api/reviews/course/:courseId
+// @access  Public
+export const getCourseReviews = async (req, res, next) => {
+  try {
+    const { courseId } = req.params;
+    const { page, limit, status } = req.query;
+
+    const data = await reviewService.getCourseReviews(courseId, {
+      page,
+      limit,
+      status,
+    });
+
+    return ApiResponse.success(res, data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get user's review for a specific course
+// @route   GET /api/reviews/course/:courseId/my-review
+// @access  Private
+export const getUserCourseReview = async (req, res, next) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user._id;
+
+    const review = await reviewService.getUserReview(userId, courseId);
+
+    return ApiResponse.success(res, review);
   } catch (error) {
     next(error);
   }
