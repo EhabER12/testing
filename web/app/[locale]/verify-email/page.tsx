@@ -8,16 +8,16 @@ import axios from "@/lib/axios";
 import Link from "next/link";
 
 interface VerifyEmailPageProps {
-    params: {
+    params: Promise<{
         locale: string;
-    };
+    }>;
 }
 
-export default function VerifyEmailPage({ params }: VerifyEmailPageProps) {
+export default async function VerifyEmailPage({ params }: VerifyEmailPageProps) {
+    const { locale } = await params;
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
     const router = useRouter();
-    const locale = params.locale || "ar";
     const isRtl = locale === "ar";
 
     const [status, setStatus] = useState<"loading" | "success" | "error">("loading");

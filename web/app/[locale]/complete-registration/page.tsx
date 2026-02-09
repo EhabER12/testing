@@ -29,16 +29,16 @@ const formSchema = z.object({
 });
 
 interface CompleteRegistrationPageProps {
-    params: {
+    params: Promise<{
         locale: string;
-    };
+    }>;
 }
 
-export default function CompleteRegistrationPage({ params }: CompleteRegistrationPageProps) {
+export default async function CompleteRegistrationPage({ params }: CompleteRegistrationPageProps) {
+    const { locale } = await params;
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
     const router = useRouter();
-    const locale = params.locale || "ar";
     const isRtl = locale === "ar";
 
     const [isSuccess, setIsSuccess] = useState(false);
