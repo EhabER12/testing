@@ -45,6 +45,7 @@ import toast from "react-hot-toast";
 import { countries } from "@/constants/countries";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getCourseBySlug } from "@/store/services/courseService";
+import axiosInstance from "@/lib/axios";
 
 // Get localized text helper
 const getLocalizedText = (
@@ -89,6 +90,7 @@ export default function CourseCheckoutPage() {
     const [submitting, setSubmitting] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
     const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+    const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
 
     // Fetch course data
     useEffect(() => {
@@ -108,6 +110,11 @@ export default function CourseCheckoutPage() {
                 console.error("Failed to load payment methods:", err);
                 setPaymentMethods([]);
             });
+        // Fetch exchange rates from public settings
+        axiosInstance.get("/settings/public").then((res) => {
+            const rates = res.data?.data?.financeSettings?.exchangeRates;
+            if (rates) setExchangeRates(rates);
+        }).catch(() => {});
     }, [dispatch]);
 
     // Pre-fill form with user data when logged in
@@ -609,6 +616,24 @@ export default function CourseCheckoutPage() {
                                                         </p>
                                                     </div>
                                                 </label>
+                                                {selectedMethodId === "paypal" && currentCourse?.currency && currentCourse.currency !== "USD" && (
+                                                    <div className="px-4 pb-3">
+                                                        <div className="text-sm bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded-lg p-3 flex items-center gap-2">
+                                                            <span className="text-base">💱</span>
+                                                            <span>
+                                                                {(() => {
+                                                                    const price = currentCourse?.price || 0;
+                                                                    const curr = currentCourse?.currency || "EGP";
+                                                                    const rate = exchangeRates[curr] || 0;
+                                                                    const usdAmount = rate > 0 ? (price / rate).toFixed(2) : "...";
+                                                                    return isRtl
+                                                                        ? `سيتم تحويل ${price} ${curr} إلى $${usdAmount} USD عبر PayPal`
+                                                                        : `${price} ${curr} will be converted to $${usdAmount} USD via PayPal`;
+                                                                })()}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 

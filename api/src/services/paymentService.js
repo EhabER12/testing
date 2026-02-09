@@ -629,16 +629,27 @@ export class PaymentService {
         exchangeRates: exchangeRates // Pass exchange rates for currency conversion
       });
 
-      // Update payment with PayPal Order ID
+      // Get the actual amount sent to PayPal (after conversion)
+      const purchaseUnit = paypalOrder.purchase_units?.[0];
+      const paypalAmount = purchaseUnit?.amount?.value;
+      const paypalCurrency = purchaseUnit?.amount?.currency_code;
+
+      // Update payment with PayPal Order ID and conversion details
       await this.paymentRepository.update(payment._id, {
         "paymentDetails.paypalOrderId": paypalOrder.id,
-        "paymentDetails.approvalLink": paypalOrder.links.find(l => l.rel === "approve")?.href
+        "paymentDetails.approvalLink": paypalOrder.links.find(l => l.rel === "approve")?.href,
+        "paymentDetails.convertedAmount": paypalAmount ? parseFloat(paypalAmount) : amount,
+        "paymentDetails.convertedCurrency": paypalCurrency || currency,
+        "paymentDetails.originalAmount": amount,
+        "paymentDetails.originalCurrency": currency,
       });
 
       return {
         paymentId: payment._id,
         paypalOrderId: paypalOrder.id,
-        approvalUrl: paypalOrder.links.find(l => l.rel === "approve")?.href
+        approvalUrl: paypalOrder.links.find(l => l.rel === "approve")?.href,
+        convertedAmount: paypalAmount ? parseFloat(paypalAmount) : null,
+        convertedCurrency: paypalCurrency || "USD",
       };
 
     } catch (error) {

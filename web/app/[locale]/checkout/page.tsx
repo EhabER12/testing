@@ -55,6 +55,7 @@ import {
   markSessionConverted,
 } from "@/store/services/cartSessionService";
 import { useAuth } from "@/components/auth/auth-provider";
+import axiosInstance from "@/lib/axios";
 
 // Get localized text helper
 const getLocalizedText = (
@@ -99,12 +100,18 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [gateways, setGateways] = useState<any>({});
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
 
   // Initialize cart and fetch payment methods
   useEffect(() => {
     dispatch(initializeCart());
     dispatch(getManualPaymentMethodsThunk());
     dispatch(getPaymentGatewaysThunk()).unwrap().then(setGateways).catch(console.error);
+    // Fetch exchange rates from public settings
+    axiosInstance.get("/settings/public").then((res) => {
+      const rates = res.data?.data?.financeSettings?.exchangeRates;
+      if (rates) setExchangeRates(rates);
+    }).catch(() => {});
   }, [dispatch]);
 
   const total = calculateCartTotal(items);
@@ -726,6 +733,23 @@ export default function CheckoutPage() {
                             </p>
                           </div>
                         </label>
+                        {selectedMethodId === "paypal" && items[0]?.product?.currency && items[0].product.currency !== "USD" && (
+                          <div className="px-4 pb-3">
+                            <div className="text-sm bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded-lg p-3 flex items-center gap-2">
+                              <span className="text-base">💱</span>
+                              <span>
+                                {(() => {
+                                  const currency = items[0].product.currency;
+                                  const rate = exchangeRates[currency] || 0;
+                                  const usdAmount = rate > 0 ? (total / rate).toFixed(2) : "...";
+                                  return isRtl
+                                    ? `سيتم تحويل ${total} ${currency} إلى $${usdAmount} USD عبر PayPal`
+                                    : `${total} ${currency} will be converted to $${usdAmount} USD via PayPal`;
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 

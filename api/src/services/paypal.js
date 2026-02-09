@@ -47,46 +47,68 @@ export async function getAccessToken(config) {
 
 
 /**
- * Convert EGP to SAR for PayPal compatibility
- * PayPal handles SAR → USD conversion automatically with better rates
+ * Convert any currency to USD for PayPal
+ * Uses admin-configured exchange rates for direct conversion
  * @param {number} amount - Amount in original currency
  * @param {string} currency - Original currency (EGP, SAR, USD)
- * @param {object} exchangeRates - Exchange rates from settings
+ * @param {object} exchangeRates - Exchange rates from settings (how many units = 1 USD)
  * @returns {object} - { amount: number, currency: string, originalAmount: number, originalCurrency: string }
  */
 function convertToPayPalCurrency(amount, currency, exchangeRates = {}) {
-  // If already SAR or USD, no conversion needed
-  if (currency === "SAR" || currency === "USD") {
+  // If already USD, no conversion needed
+  if (currency === "USD") {
     return { 
       amount, 
-      currency, 
+      currency: "USD", 
       originalAmount: amount, 
       originalCurrency: currency 
     };
   }
 
-  // If EGP, convert to SAR
-  // PayPal will handle SAR → USD conversion automatically
+  // Convert EGP to USD directly
   if (currency === "EGP") {
-    // Default rate: 1 SAR = ~13.33 EGP (or EGP/SAR ratio)
-    // So: amount in EGP ÷ 13.33 = amount in SAR
-    const defaultEGPtoSAR = 13.33; // How many EGP = 1 SAR
-    const egpToSarRate = exchangeRates.EGPtoSAR || defaultEGPtoSAR;
+    const egpRate = exchangeRates.EGP || 50.0; // Default: 50 EGP = 1 USD
+    const convertedAmount = (amount / egpRate).toFixed(2);
     
-    const convertedAmount = (amount / egpToSarRate).toFixed(2);
-    
-    console.log(`💱 Currency Conversion: ${amount} ${currency} → ${convertedAmount} SAR (rate: ${egpToSarRate} EGP = 1 SAR)`);
+    console.log(`💱 Currency Conversion: ${amount} ${currency} → ${convertedAmount} USD (rate: ${egpRate} EGP = 1 USD)`);
     
     return {
       amount: parseFloat(convertedAmount),
-      currency: "SAR",
+      currency: "USD",
       originalAmount: amount,
       originalCurrency: currency
     };
   }
 
-  // Fallback: return as-is
-  console.warn(`⚠️ Unknown currency ${currency}, returning as-is`);
+  // Convert SAR to USD directly
+  if (currency === "SAR") {
+    const sarRate = exchangeRates.SAR || 3.75; // Default: 3.75 SAR = 1 USD
+    const convertedAmount = (amount / sarRate).toFixed(2);
+    
+    console.log(`💱 Currency Conversion: ${amount} ${currency} → ${convertedAmount} USD (rate: ${sarRate} SAR = 1 USD)`);
+    
+    return {
+      amount: parseFloat(convertedAmount),
+      currency: "USD",
+      originalAmount: amount,
+      originalCurrency: currency
+    };
+  }
+
+  // Fallback: try to find a rate for this currency, otherwise return as-is
+  if (exchangeRates[currency]) {
+    const rate = exchangeRates[currency];
+    const convertedAmount = (amount / rate).toFixed(2);
+    console.log(`💱 Currency Conversion: ${amount} ${currency} → ${convertedAmount} USD (rate: ${rate} ${currency} = 1 USD)`);
+    return {
+      amount: parseFloat(convertedAmount),
+      currency: "USD",
+      originalAmount: amount,
+      originalCurrency: currency
+    };
+  }
+
+  console.warn(`⚠️ Unknown currency ${currency} with no exchange rate, returning as-is`);
   return {
     amount,
     currency,

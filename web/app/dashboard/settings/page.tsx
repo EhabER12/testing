@@ -2105,11 +2105,11 @@ export default function SettingsDashboardPage() {
                     </div>
                   </div>
 
-                  {/* EGP to SAR Rate (for PayPal) */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-green-50 dark:bg-green-950">
+                  {/* EGP to SAR Rate (Legacy - no longer used) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-900 opacity-60">
                     <div className="space-y-2">
                       <Label htmlFor="rate-egp-sar">
-                        {isRtl ? "جنيه مصري → ريال سعودي" : "EGP → SAR (PayPal)"}
+                        {isRtl ? "جنيه مصري → ريال سعودي (قديم)" : "EGP → SAR (Legacy)"}
                       </Label>
                       <Input
                         id="rate-egp-sar"
@@ -2130,14 +2130,14 @@ export default function SettingsDashboardPage() {
                       />
                       <p className="text-xs text-muted-foreground">
                         {isRtl
-                          ? "كم جنيه مصري = 1 ريال سعودي (للتحويل في PayPal)"
-                          : "How many EGP = 1 SAR (for PayPal conversion)"}
+                          ? "لم يعد مستخدماً - التحويل يتم مباشرة إلى الدولار"
+                          : "No longer used - conversion goes directly to USD"}
                       </p>
                     </div>
-                    <div className="flex items-center justify-center text-sm text-green-800 dark:text-green-200">
+                    <div className="flex items-center justify-center text-sm text-muted-foreground">
                       {isRtl
-                        ? `${financeSettings.exchangeRates.EGPtoSAR || 13.33} جنيه = 1 ريال`
-                        : `${financeSettings.exchangeRates.EGPtoSAR || 13.33} EGP = 1 SAR`}
+                        ? "⚠️ التحويل الآن: العملة → دولار مباشرة"
+                        : "⚠️ Now converts: Currency → USD directly"}
                     </div>
                   </div>
 
@@ -2148,22 +2148,22 @@ export default function SettingsDashboardPage() {
                     </h4>
                     <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
                       <p className="font-semibold">
-                        {isRtl ? "طريقة التحويل الذكية:" : "Smart Conversion Method:"}
+                        {isRtl ? "التحويل المباشر إلى الدولار:" : "Direct USD Conversion:"}
                       </p>
                       <p>
                         {isRtl
-                          ? `• كورس سعره 500 جنيه مصري → ${(500 / (financeSettings.exchangeRates.EGPtoSAR || 13.33)).toFixed(2)} ريال سعودي`
-                          : `• Course 500 EGP → ${(500 / (financeSettings.exchangeRates.EGPtoSAR || 13.33)).toFixed(2)} SAR`}
+                          ? `• كورس سعره 500 جنيه مصري ÷ ${financeSettings.exchangeRates.EGP} = $${(500 / financeSettings.exchangeRates.EGP).toFixed(2)} USD`
+                          : `• Course 500 EGP ÷ ${financeSettings.exchangeRates.EGP} = $${(500 / financeSettings.exchangeRates.EGP).toFixed(2)} USD`}
                       </p>
                       <p>
                         {isRtl
-                          ? `• PayPal يحول ${(500 / (financeSettings.exchangeRates.EGPtoSAR || 13.33)).toFixed(2)} ريال إلى دولار تلقائياً بسعر مضبوط`
-                          : `• PayPal converts ${(500 / (financeSettings.exchangeRates.EGPtoSAR || 13.33)).toFixed(2)} SAR to USD automatically`}
+                          ? `• كورس سعره 100 ريال ÷ ${financeSettings.exchangeRates.SAR} = $${(100 / financeSettings.exchangeRates.SAR).toFixed(2)} USD`
+                          : `• Course 100 SAR ÷ ${financeSettings.exchangeRates.SAR} = $${(100 / financeSettings.exchangeRates.SAR).toFixed(2)} USD`}
                       </p>
                       <p className="pt-2 text-xs text-blue-600 dark:text-blue-300">
                         {isRtl
-                          ? "ℹ️ هذا أفضل من التحويل المباشر للدولار لأن PayPal يعطي سعر صرف جيد للريال"
-                          : "ℹ️ Better than direct USD conversion because PayPal has good SAR exchange rates"}
+                          ? "ℹ️ يتم تحويل السعر مباشرة إلى الدولار باستخدام أسعار الصرف أعلاه عند الدفع عبر PayPal"
+                          : "ℹ️ Prices are converted directly to USD using the exchange rates above when paying via PayPal"}
                       </p>
                     </div>
                   </div>
