@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { PriceDisplay } from "@/components/currency/PriceDisplay";
 
 export default function CoursePage() {
   const params = useParams();
@@ -332,9 +333,14 @@ export default function CoursePage() {
                     )}
                   </div>
                   <div className="p-6 space-y-4">
-                    {currentCourse.accessType === "paid" && (
+                    {currentCourse.accessType === "paid" && currentCourse.price && (
                       <div className="text-3xl font-bold text-genoun-green">
-                        {currentCourse.price} {isRtl ? (currentCourse.currency === 'EGP' ? 'ج.م' : currentCourse.currency) : currentCourse.currency}
+                        <PriceDisplay
+                          amount={currentCourse.price}
+                          currency={currentCourse.currency as "SAR" | "EGP" | "USD"}
+                          locale={isRtl ? "ar" : "en"}
+                          showOriginal={true}
+                        />
                       </div>
                     )}
                     {currentCourse.accessType === "byPackage" && !isEnrolled && (

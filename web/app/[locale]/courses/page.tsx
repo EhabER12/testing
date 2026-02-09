@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
+import { PriceDisplay } from "@/components/currency/PriceDisplay";
 import {
   Select,
   SelectContent,
@@ -301,9 +302,14 @@ export default function CoursesPage() {
                       ? isRtl
                         ? "سجل مجاناً"
                         : "Enroll Free"
-                      : course.price
-                        ? `${course.price} ${isRtl ? (course.currency === 'EGP' ? 'ج.م' : course.currency) : course.currency}`
-                        : isRtl
+                      : course.price ? (
+                        <PriceDisplay
+                          amount={course.price}
+                          currency={course.currency as "SAR" | "EGP" | "USD"}
+                          locale={isRtl ? "ar" : "en"}
+                          className="inline"
+                        />
+                      ) : isRtl
                           ? "عرض التفاصيل"
                           : "View Details"}
                   </Button>
