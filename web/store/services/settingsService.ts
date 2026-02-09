@@ -148,6 +148,14 @@ export interface HomepageCoursesSettings {
   buttonText: { ar: string; en: string };
 }
 
+export interface CoursesPageHeroSettings {
+  isEnabled: boolean;
+  badge: { ar: string; en: string };
+  title: { ar: string; en: string };
+  subtitle: { ar: string; en: string };
+  backgroundImage?: string;
+}
+
 export interface EmailSettings {
   enabled: boolean;
   host: string;
@@ -279,6 +287,7 @@ export interface WebsiteSettingsData {
   promoModal?: PromoModalSettings;
   homepageBanner?: HomepageBannerSettings;
   homepageCourses?: HomepageCoursesSettings;
+  coursesPageHero?: CoursesPageHeroSettings;
   authorityBar?: AuthorityBarSettings;
   reviewsSettings?: ReviewsSectionSettings;
   whyGenounSettings?: WhyGenounSettings;
@@ -319,6 +328,7 @@ export interface PublicWebsiteSettingsData {
   promoModal?: PromoModalSettings;
   homepageBanner?: HomepageBannerSettings;
   homepageCourses?: HomepageCoursesSettings;
+  coursesPageHero?: CoursesPageHeroSettings;
   authorityBar?: AuthorityBarSettings;
   reviewsSettings?: ReviewsSectionSettings;
   whyGenounSettings?: WhyGenounSettings;

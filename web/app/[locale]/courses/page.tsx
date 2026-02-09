@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getCourses } from "@/store/services/courseService";
 import { getCategories } from "@/store/slices/categorySlice";
+import { getPublicWebsiteSettingsThunk } from "@/store/services/settingsService";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,11 +47,20 @@ export default function CoursesPage() {
 
   const { courses, isLoading } = useAppSelector((state) => state.courses);
   const { categories } = useAppSelector((state) => state.categories);
+  const { publicSettings } = useAppSelector((state) => state.settings);
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedAccess, setSelectedAccess] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Get courses page hero settings
+  const heroSettings = publicSettings?.coursesPageHero;
+  const isHeroEnabled = heroSettings?.isEnabled !== false;
+  const heroBadge = heroSettings?.badge?.[isRtl ? "ar" : "en"] || (isRtl ? "دوراتنا التعليمية" : "Our Educational Courses");
+  const heroTitle = heroSettings?.title?.[isRtl ? "ar" : "en"] || (isRtl ? "ابدأ رحلتك في تحفيظ القرآن الكريم" : "Start Your Quran Memorization Journey");
+  const heroSubtitle = heroSettings?.subtitle?.[isRtl ? "ar" : "en"] || (isRtl ? "مع دوراتنا المتخصصة" : "With Our Specialized Courses");
+
 
   // Debounce search
   useEffect(() => {
@@ -69,6 +79,7 @@ export default function CoursesPage() {
 
     dispatch(getCourses(filters));
     dispatch(getCategories({ active: true }));
+    dispatch(getPublicWebsiteSettingsThunk());
   }, [dispatch, debouncedSearch, selectedCategory, selectedLevel, selectedAccess]);
 
   const getTextValue = (value: any): string => {
@@ -114,21 +125,43 @@ export default function CoursesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50" dir={isRtl ? "rtl" : "ltr"}>
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-genoun-green to-green-600 text-white py-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              {isRtl ? "دوراتنا التعليمية" : "Our Courses"}
-            </h1>
-            <p className="text-xl text-white/90">
-              {isRtl
-                ? "ابدأ رحلتك في تحفيظ القرآن الكريم مع دوراتنا المتخصصة"
-                : "Start your Quran memorization journey with our specialized courses"}
-            </p>
+      {/* Hero Section - Conditional */}
+      {isHeroEnabled && (
+        <div 
+          className="bg-gradient-to-r from-genoun-green to-green-600 text-white py-16"
+          style={
+            heroSettings?.backgroundImage
+              ? {
+                  backgroundImage: `linear-gradient(rgba(26, 71, 42, 0.9), rgba(26, 71, 42, 0.9)), url(${heroSettings.backgroundImage})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }
+              : undefined
+          }
+        >
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto text-center">
+              {/* Badge */}
+              {heroBadge && (
+                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
+                  <BookOpen className="w-5 h-5" />
+                  <span className="text-sm font-medium">{heroBadge}</span>
+                </div>
+              )}
+              
+              {/* Title */}
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                {heroTitle}
+              </h1>
+              
+              {/* Subtitle */}
+              <p className="text-xl text-white/90">
+                {heroSubtitle}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Filters */}
       <div className="container mx-auto px-4 py-8">

@@ -216,6 +216,30 @@ const homepageCoursesSchema = new mongoose.Schema({
   },
 });
 
+// Courses Page Hero Settings Schema
+const coursesPageHeroSchema = new mongoose.Schema({
+  isEnabled: {
+    type: Boolean,
+    default: true,
+  },
+  badge: {
+    ar: { type: String, default: "دوراتنا التعليمية" },
+    en: { type: String, default: "Our Educational Courses" },
+  },
+  title: {
+    ar: { type: String, default: "ابدأ رحلتك في تحفيظ القرآن الكريم" },
+    en: { type: String, default: "Start Your Quran Memorization Journey" },
+  },
+  subtitle: {
+    ar: { type: String, default: "مع دوراتنا المتخصصة" },
+    en: { type: String, default: "With Our Specialized Courses" },
+  },
+  backgroundImage: {
+    type: String,
+    default: "",
+  },
+});
+
 // Authority Bar Settings Schema (NEW - Platform Recognition Badges)
 const authorityBarSchema = new mongoose.Schema({
   isEnabled: {
@@ -684,6 +708,10 @@ const settingsSchema = new mongoose.Schema(
     },
     homepageCourses: {
       type: homepageCoursesSchema,
+      default: () => ({}),
+    },
+    coursesPageHero: {
+      type: coursesPageHeroSchema,
       default: () => ({}),
     },
     authorityBar: {
