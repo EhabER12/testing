@@ -43,20 +43,20 @@ jobs:
             echo "📥 Pulling latest changes..."
             cd /var/www/genoun-main
             
-            # Stash any local changes before pulling
-            echo "💾 Stashing local changes..."
-            git stash --include-untracked
+            # Clean any uncommitted changes and conflicts
+            echo "🧹 Cleaning working directory..."
+            git reset --hard HEAD
+            git clean -fd
             
             # Fetch latest changes
+            echo "📡 Fetching from remote..."
             git fetch origin main
             
             # Reset to remote state (handles divergent branches)
             echo "🔄 Resetting to remote state..."
             git reset --hard origin/main
             
-            # Try to apply stashed changes (don't fail if conflicts)
-            echo "🔄 Applying stashed changes..."
-            git stash pop || echo "⚠️ Stash conflicts detected, using remote version"
+            echo "✨ Working directory synced with remote"
           fi
           
           # Install backend dependencies
