@@ -2,6 +2,7 @@ import express from "express";
 import {
   getAllPayments,
   getPaymentById,
+  getPaymentStatus,
   getUserPaymentHistory,
   createManualPayment,
   createCustomerManualPayment,
@@ -27,6 +28,7 @@ const router = express.Router();
 
 router.get("/", protect, authorize("admin", "moderator"), getAllPayments);
 router.get("/history", protect, getUserPaymentHistory);
+router.get("/status/:id", getPaymentStatus); // Public - for payment result pages
 router.get(
   "/statistics/revenue",
   protect,

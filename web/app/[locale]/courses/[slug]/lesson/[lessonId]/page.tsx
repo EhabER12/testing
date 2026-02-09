@@ -56,6 +56,7 @@ export default function LessonPage() {
   const courseSections = (currentCourse as any)?.sections || [];
   const [currentLesson, setCurrentLesson] = useState<any>(null);
   const [currentSection, setCurrentSection] = useState<any>(null);
+  const [accessChecked, setAccessChecked] = useState(false);
 
   // Fetch course data
   useEffect(() => {
@@ -79,6 +80,41 @@ export default function LessonPage() {
       dispatch(getUserProgress(courseId));
     }
   }, [dispatch, currentCourse?.id, currentCourse?._id, user]);
+
+  // Access guard: redirect non-enrolled users on paid/package courses
+  useEffect(() => {
+    if (!currentCourse || courseLoading) return;
+
+    const accessType = (currentCourse as any)?.accessType;
+    const isEnrolled = !!(currentCourse as any)?.userProgress;
+
+    // Free courses: always allow
+    if (accessType === "free") {
+      setAccessChecked(true);
+      return;
+    }
+
+    // Not logged in on a paid/package course: redirect to login
+    if (!user) {
+      router.replace(`/${locale}/login`);
+      return;
+    }
+
+    // Paid or package course: check enrollment
+    if ((accessType === "paid" || accessType === "byPackage") && !isEnrolled) {
+      toast({
+        title: isRtl ? "غير مسجل" : "Not Enrolled",
+        description: isRtl
+          ? "يجب التسجيل في الدورة أولاً للوصول إلى الدروس"
+          : "You must enroll in this course first to access lessons",
+        variant: "destructive",
+      });
+      router.replace(`/${locale}/courses/${slug}`);
+      return;
+    }
+
+    setAccessChecked(true);
+  }, [currentCourse, courseLoading, user, locale, slug, router, toast, isRtl]);
 
   // Find current lesson
   useEffect(() => {
@@ -249,7 +285,7 @@ export default function LessonPage() {
     router.push(`/${locale}/courses/${slug}/quiz/${quizId}`);
   };
 
-  if (courseLoading) {
+  if (courseLoading || !accessChecked) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-16 w-16 animate-spin rounded-full border-4 border-genoun-green border-t-transparent"></div>

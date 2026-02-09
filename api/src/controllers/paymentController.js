@@ -48,6 +48,29 @@ export const getUserPaymentHistory = async (req, res, next) => {
   }
 };
 
+// @desc    Get payment status (public - for redirect pages)
+// @route   GET /api/payments/status/:id
+// @access  Public (returns limited data)
+export const getPaymentStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const payment = await paymentService.getPaymentById(id);
+
+    // Return only status-related fields (no sensitive data)
+    return ApiResponse.success(res, {
+      id: payment.id || payment._id,
+      status: payment.status,
+      amount: payment.amount,
+      currency: payment.currency,
+      paymentMethod: payment.paymentMethod,
+      merchantOrderId: payment.merchantOrderId,
+      createdAt: payment.createdAt,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get payment by ID
 // @route   GET /api/payments/:id
 // @access  Private/Admin

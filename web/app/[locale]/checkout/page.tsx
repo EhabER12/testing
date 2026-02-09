@@ -271,8 +271,11 @@ export default function CheckoutPage() {
       }
       // 2. Kashier (Payment Sessions API v3)
       else if (selectedMethodId === "cashier") {
+        const mainItem = items[0];
+        const cashierProductId = mainItem?.product?.id || (mainItem?.product as any)?._id;
         const response = await dispatch(createCashierPaymentThunk({
           amount: total,
+          productId: cashierProductId,
           currency: items[0]?.product?.currency || "EGP",
           customer: {
             name: formData.name,
@@ -284,6 +287,8 @@ export default function CheckoutPage() {
         if (response.checkoutUrl) {
           window.location.href = response.checkoutUrl;
           return;
+        } else {
+          throw new Error(isRtl ? "فشل في إنشاء جلسة الدفع" : "Failed to create payment session");
         }
       }
       // 3. Manual Payment (Existing Logic)

@@ -266,7 +266,7 @@ export default function CourseCheckoutPage() {
             else if (selectedMethodId === "cashier") {
                 const response = await dispatch(createCashierPaymentThunk({
                     amount: currentCourse?.price || 0,
-                    currency: "EGP",
+                    currency: currentCourse?.currency || "EGP",
                     courseId,
                     customer: {
                         name: formData.name,
@@ -278,6 +278,8 @@ export default function CourseCheckoutPage() {
                 if (response.checkoutUrl) {
                     window.location.href = response.checkoutUrl;
                     return;
+                } else {
+                    throw new Error(isRtl ? "فشل في إنشاء جلسة الدفع" : "Failed to create payment session");
                 }
             }
             // 3. Manual

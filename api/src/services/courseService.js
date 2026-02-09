@@ -113,6 +113,10 @@ export class CourseService {
 
     logger.info('Sections found', { courseId: course._id, sectionsCount: sections.length, showUnpublished });
 
+    // For paid/package courses, strip sensitive content (videoUrl, resources) for non-enrolled users
+    const shouldStripContent = !isEnrolled && !showUnpublished && 
+      (course.accessType === 'paid' || course.accessType === 'byPackage');
+
     const sectionsWithItems = await Promise.all(
       sections.map(async (section) => {
         const lessonQuery = { sectionId: section._id };
@@ -132,9 +136,22 @@ export class CourseService {
           quizzesCount: quizzes.length 
         });
 
+        // Strip video URLs and resources for non-enrolled users on paid courses
+        const sanitizedLessons = shouldStripContent
+          ? lessons.map(lesson => {
+              const obj = lesson.toObject();
+              return {
+                ...obj,
+                videoUrl: undefined,
+                videoSource: obj.videoSource ? 'hidden' : undefined,
+                resources: [],
+              };
+            })
+          : lessons;
+
         return {
           ...section.toObject(),
-          lessons,
+          lessons: sanitizedLessons,
           quizzes,
         };
       })

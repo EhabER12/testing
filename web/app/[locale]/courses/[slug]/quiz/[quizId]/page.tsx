@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getCourseBySlug } from "@/store/services/courseService";
@@ -10,11 +10,13 @@ import QuizPlayer from "@/components/courses/QuizPlayer";
 import CourseSidebar from "@/components/courses/CourseSidebar";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ChevronLeft, ArrowRight, ArrowLeft, BookOpen } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function QuizPage() {
   const params = useParams();
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { toast } = useToast();
   const locale = params.locale as string;
   const slug = params.slug as string;
   const quizId = params.quizId as string;
@@ -22,6 +24,7 @@ export default function QuizPage() {
 
   const { currentCourse, isLoading: courseLoading } = useAppSelector((state) => state.courses);
   const { user } = useAppSelector((state) => state.auth);
+  const [accessChecked, setAccessChecked] = useState(false);
 
   // Fetch data
   useEffect(() => {
@@ -36,7 +39,39 @@ export default function QuizPage() {
     }
   }, [dispatch, currentCourse?.id, currentCourse?._id, user]);
 
-  if (courseLoading) {
+  // Access guard: redirect non-enrolled users on paid/package courses
+  useEffect(() => {
+    if (!currentCourse || courseLoading) return;
+
+    const accessType = (currentCourse as any)?.accessType;
+    const isEnrolled = !!(currentCourse as any)?.userProgress;
+
+    if (accessType === "free") {
+      setAccessChecked(true);
+      return;
+    }
+
+    if (!user) {
+      router.replace(`/${locale}/login`);
+      return;
+    }
+
+    if ((accessType === "paid" || accessType === "byPackage") && !isEnrolled) {
+      toast({
+        title: isRtl ? "غير مسجل" : "Not Enrolled",
+        description: isRtl
+          ? "يجب التسجيل في الدورة أولاً للوصول إلى الاختبارات"
+          : "You must enroll in this course first to access quizzes",
+        variant: "destructive",
+      });
+      router.replace(`/${locale}/courses/${slug}`);
+      return;
+    }
+
+    setAccessChecked(true);
+  }, [currentCourse, courseLoading, user, locale, slug, router, toast, isRtl]);
+
+  if (courseLoading || !accessChecked) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-16 w-16 animate-spin rounded-full border-4 border-genoun-green border-t-transparent"></div>
