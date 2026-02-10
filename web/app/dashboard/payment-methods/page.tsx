@@ -209,11 +209,11 @@ export default function PaymentMethodsPage() {
                     provider: "cashier" as const,
                     displayName: {
                         ar: "كاشير",
-                        en: "Cashier",
+                        en: "Kashier",
                     },
                     description: {
                         ar: "الدفع عبر كاشير",
-                        en: "Pay with Cashier (Kashier)",
+                        en: "Pay with Kashier",
                     },
                     order: 2,
                 };

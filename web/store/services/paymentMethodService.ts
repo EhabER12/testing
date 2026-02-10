@@ -86,8 +86,10 @@ export const createPaymentMethodThunk = createAsyncThunk<
         const response = await axiosInstance.post("/payment-methods", data);
         return response.data.data;
     } catch (error: any) {
+        console.error("🚫 createPaymentMethodThunk error:", error.response?.data);
         const message =
-            (error.response && error.response.data && error.response.data.message) ||
+            error.response?.data?.error?.message ||
+            error.response?.data?.message ||
             error.message ||
             error.toString();
         return thunkAPI.rejectWithValue(message);
