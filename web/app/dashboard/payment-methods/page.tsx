@@ -98,6 +98,9 @@ export default function PaymentMethodsPage() {
                     id: cashierMethod._id,
                     isActive: cashierMethod.isActive,
                     mode: cashierMethod.mode,
+                    credentials: cashierMethod.credentials,
+                    config: cashierMethod.config,
+                    fullObject: cashierMethod,
                 });
                 setCashier(cashierMethod);
                 setCashierForm({
