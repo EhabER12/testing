@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, CreditCard, CheckCircle2, XCircle, Info } from "lucide-react";
+import { Loader2, CreditCard, CheckCircle2, XCircle, Info, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -45,6 +45,11 @@ export default function PaymentMethodsPage() {
         redirectUrl: "",
         isActive: false,
     });
+
+    // Password visibility state
+    const [showPayPalSecret, setShowPayPalSecret] = useState(false);
+    const [showApiKey, setShowApiKey] = useState(false);
+    const [showSecretKey, setShowSecretKey] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -353,15 +358,25 @@ export default function PaymentMethodsPage() {
                                 {/* Client Secret */}
                                 <div className="space-y-2">
                                     <Label htmlFor="paypal-client-secret">Client Secret</Label>
-                                    <Input
-                                        id="paypal-client-secret"
-                                        type="password"
-                                        value={paypalForm.clientSecret}
-                                        onChange={(e) =>
-                                            setPaypalForm({ ...paypalForm, clientSecret: e.target.value })
-                                        }
-                                        placeholder="Enter PayPal Client Secret"
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            id="paypal-client-secret"
+                                            type={showPayPalSecret ? "text" : "password"}
+                                            value={paypalForm.clientSecret}
+                                            onChange={(e) =>
+                                                setPaypalForm({ ...paypalForm, clientSecret: e.target.value })
+                                            }
+                                            placeholder="Enter PayPal Client Secret"
+                                            className="pr-10"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPayPalSecret(!showPayPalSecret)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                        >
+                                            {showPayPalSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Webhook ID */}
@@ -489,16 +504,26 @@ export default function PaymentMethodsPage() {
                                 {/* API Key */}
                                 <div className="space-y-2">
                                     <Label htmlFor="cashier-api-key">API Key *</Label>
-                                    <Input
-                                        id="cashier-api-key"
-                                        type="password"
-                                        value={cashierForm.paymentApiKey}
-                                        onChange={(e) =>
-                                            setCashierForm({ ...cashierForm, paymentApiKey: e.target.value })
-                                        }
-                                        placeholder="Enter your API Key"
-                                        required
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            id="cashier-api-key"
+                                            type={showApiKey ? "text" : "password"}
+                                            value={cashierForm.paymentApiKey}
+                                            onChange={(e) =>
+                                                setCashierForm({ ...cashierForm, paymentApiKey: e.target.value })
+                                            }
+                                            placeholder="Enter your API Key"
+                                            required
+                                            className="pr-10"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowApiKey(!showApiKey)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                        >
+                                            {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
                                     <p className="text-xs text-muted-foreground">
                                         API Key for authenticating payment requests
                                     </p>
@@ -507,16 +532,26 @@ export default function PaymentMethodsPage() {
                                 {/* Secret Key */}
                                 <div className="space-y-2">
                                     <Label htmlFor="cashier-secret">Secret Key *</Label>
-                                    <Input
-                                        id="cashier-secret"
-                                        type="password"
-                                        value={cashierForm.secretKey}
-                                        onChange={(e) =>
-                                            setCashierForm({ ...cashierForm, secretKey: e.target.value })
-                                        }
-                                        placeholder="Enter your Secret Key"
-                                        required
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            id="cashier-secret"
+                                            type={showSecretKey ? "text" : "password"}
+                                            value={cashierForm.secretKey}
+                                            onChange={(e) =>
+                                                setCashierForm({ ...cashierForm, secretKey: e.target.value })
+                                            }
+                                            placeholder="Enter your Secret Key"
+                                            required
+                                            className="pr-10"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowSecretKey(!showSecretKey)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                        >
+                                            {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
                                     <p className="text-xs text-muted-foreground">
                                         Secret Key for webhook signature verification
                                     </p>
