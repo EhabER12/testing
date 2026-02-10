@@ -111,7 +111,10 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
                             onChange={(e) =>
                                 onChange({
                                     ...settings,
-                                    title: { ...settings.title, ar: e.target.value },
+                                    title: {
+                                        ar: e.target.value,
+                                        en: settings.title?.en || ""
+                                    },
                                 })
                             }
                             placeholder="لماذا تختار"
@@ -124,7 +127,10 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
                             onChange={(e) =>
                                 onChange({
                                     ...settings,
-                                    title: { ...settings.title, en: e.target.value },
+                                    title: {
+                                        ar: settings.title?.ar || "",
+                                        en: e.target.value
+                                    },
                                 })
                             }
                             placeholder="Why Choose"
@@ -141,7 +147,10 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
                             onChange={(e) =>
                                 onChange({
                                     ...settings,
-                                    titleHighlight: { ...settings.titleHighlight, ar: e.target.value },
+                                    titleHighlight: {
+                                        ar: e.target.value,
+                                        en: settings.titleHighlight?.en || ""
+                                    },
                                 })
                             }
                             placeholder="منصة جنون"
@@ -154,7 +163,10 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
                             onChange={(e) =>
                                 onChange({
                                     ...settings,
-                                    titleHighlight: { ...settings.titleHighlight, en: e.target.value },
+                                    titleHighlight: {
+                                        ar: settings.titleHighlight?.ar || "",
+                                        en: e.target.value
+                                    },
                                 })
                             }
                             placeholder="Genoun Platform"
@@ -171,7 +183,10 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
                             onChange={(e) =>
                                 onChange({
                                     ...settings,
-                                    subtitle: { ...settings.subtitle, ar: e.target.value },
+                                    subtitle: {
+                                        ar: e.target.value,
+                                        en: settings.subtitle?.en || ""
+                                    },
                                 })
                             }
                             placeholder="منصة متكاملة لحفظ القرآن الكريم"
@@ -184,7 +199,10 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
                             onChange={(e) =>
                                 onChange({
                                     ...settings,
-                                    subtitle: { ...settings.subtitle, en: e.target.value },
+                                    subtitle: {
+                                        ar: settings.subtitle?.ar || "",
+                                        en: e.target.value
+                                    },
                                 })
                             }
                             placeholder="Complete platform for Quran memorization"
@@ -247,8 +265,8 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
                                                     value={feature.title?.ar || ""}
                                                     onChange={(e) =>
                                                         updateFeature(index, "title", {
-                                                            ...feature.title,
                                                             ar: e.target.value,
+                                                            en: feature.title?.en || ""
                                                         })
                                                     }
                                                     placeholder="عنوان الميزة"
@@ -260,8 +278,8 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
                                                     value={feature.title?.en || ""}
                                                     onChange={(e) =>
                                                         updateFeature(index, "title", {
-                                                            ...feature.title,
-                                                            en: e.target.value,
+                                                            ar: feature.title?.ar || "",
+                                                            en: e.target.value
                                                         })
                                                     }
                                                     placeholder="Feature title"
@@ -277,8 +295,8 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
                                                     value={feature.description?.ar || ""}
                                                     onChange={(e) =>
                                                         updateFeature(index, "description", {
-                                                            ...feature.description,
                                                             ar: e.target.value,
+                                                            en: feature.description?.en || ""
                                                         })
                                                     }
                                                     placeholder="وصف الميزة"
@@ -291,8 +309,8 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
                                                     value={feature.description?.en || ""}
                                                     onChange={(e) =>
                                                         updateFeature(index, "description", {
-                                                            ...feature.description,
-                                                            en: e.target.value,
+                                                            ar: feature.description?.ar || "",
+                                                            en: e.target.value
                                                         })
                                                     }
                                                     placeholder="Feature description"
