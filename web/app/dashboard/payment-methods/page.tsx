@@ -63,9 +63,17 @@ export default function PaymentMethodsPage() {
 
             if (getIsMounted && !getIsMounted()) return;
 
+            console.log("📦 All payment methods loaded:", result.length);
+            console.log("   Providers:", result.map(m => m.provider).join(", "));
+
             // Find PayPal and Cashier
             const paypalMethod = result.find((m) => m.provider === "paypal");
             const cashierMethod = result.find((m) => m.provider === "cashier");
+
+            console.log("🔍 Looking for cashier... Found:", !!cashierMethod);
+            if (!cashierMethod) {
+                console.log("⚠️  Kashier NOT found in database! Available providers:", result.map(m => m.provider));
+            }
 
             if (paypalMethod) {
                 setPaypal(paypalMethod);
@@ -99,6 +107,7 @@ export default function PaymentMethodsPage() {
                 console.log("ℹ️  No existing Kashier found - you can create a new one");
             }
         } catch (error: any) {
+            console.error("❌ Error loading payment methods:", error);
             toast.error(error?.message || "Failed to load payment methods");
         } finally {
             if (!getIsMounted || getIsMounted()) {
