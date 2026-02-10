@@ -182,13 +182,19 @@ export interface AuthorityBarSettings {
 
 // Reviews Section Settings (NEW)
 export interface ReviewsSectionSettings {
-  isEnabled: boolean;
-  title: { ar: string; en: string };
-  subtitle: { ar: string; en: string };
+  isEnabled?: boolean;
+  title?: { ar: string; en: string };
+  subtitle?: { ar: string; en: string };
   order?: number;
-  showRating: boolean;
-  showDate: boolean;
-  displayCount: number;
+  showRating?: boolean;
+  showDate?: boolean;
+  displayCount?: number;
+  useFakeReviews?: boolean;
+  fakeReviews?: Array<{
+    name: string;
+    comment: string;
+    rating: number;
+  }>;
 }
 
 // Why Genoun Settings (NEW)

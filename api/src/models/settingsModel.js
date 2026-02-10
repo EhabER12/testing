@@ -295,6 +295,15 @@ const reviewsSectionSchema = new mongoose.Schema({
     min: 1,
     max: 20,
   },
+  useFakeReviews: {
+    type: Boolean,
+    default: false,
+  },
+  fakeReviews: [{
+    name: { type: String, default: "" },
+    comment: { type: String, default: "" },
+    rating: { type: Number, default: 5, min: 1, max: 5 },
+  }],
 }, { _id: false });
 
 // Why Genoun Section Settings Schema (NEW - Features/Value Proposition)

@@ -28,9 +28,26 @@ export const ReviewsSection = forwardRef<HTMLDivElement, ReviewsSectionProps>(
       return null;
     }
 
-    // Safeguard: ensure reviews is an array
-    if (!reviews || !Array.isArray(reviews) || reviews.length === 0)
+    // Determine which reviews to use
+    let reviewsToDisplay: Review[] = [];
+
+    // Prioritize real reviews if available
+    if (reviews && Array.isArray(reviews) && reviews.length > 0) {
+      reviewsToDisplay = reviews;
+    }
+    // Otherwise use fake reviews if enabled
+    else if (reviewSettings?.useFakeReviews && reviewSettings?.fakeReviews && reviewSettings.fakeReviews.length > 0) {
+      reviewsToDisplay = reviewSettings.fakeReviews.map((fr, index) => ({
+        id: `fake-${index}`,
+        name: fr.name || "Demo User",
+        comment: fr.comment || "Great service!",
+        rating: fr.rating || 5
+      }));
+    }
+    // If no reviews at all, hide section
+    else {
       return null;
+    }
 
     // Use settings or fallback to defaults
     const title = reviewSettings?.title?.[locale as 'ar' | 'en'] || (locale === 'ar' ? 'آراء العملاء' : 'Client Reviews');
@@ -39,7 +56,7 @@ export const ReviewsSection = forwardRef<HTMLDivElement, ReviewsSectionProps>(
     const showRating = reviewSettings?.showRating ?? true;
 
     // Limit reviews to display count from settings
-    const displayedReviews = reviews.slice(0, displayCount);
+    const displayedReviews = reviewsToDisplay.slice(0, displayCount);
 
     return (
       <section
