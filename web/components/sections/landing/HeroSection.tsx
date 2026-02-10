@@ -405,10 +405,14 @@ export function HeroSection({
               </div>
               <div>
                 <div className="text-white font-bold text-xl sm:text-2xl">
-                  {t("statsProjects")}
+                  {settings?.heroStats?.enabled
+                    ? settings.heroStats.projects.value
+                    : t("statsProjects")}
                 </div>
                 <div className="text-white/50 text-xs sm:text-sm">
-                  {t("statsProjectsLabel")}
+                  {settings?.heroStats?.enabled
+                    ? (isRtl ? settings.heroStats.projects.label.ar : settings.heroStats.projects.label.en)
+                    : t("statsProjectsLabel")}
                 </div>
               </div>
             </div>
@@ -420,10 +424,14 @@ export function HeroSection({
               </div>
               <div>
                 <div className="text-white font-bold text-xl sm:text-2xl">
-                  {t("statsGrowth")}
+                  {settings?.heroStats?.enabled
+                    ? settings.heroStats.growth.value
+                    : t("statsGrowth")}
                 </div>
                 <div className="text-white/50 text-xs sm:text-sm">
-                  {t("statsGrowthLabel")}
+                  {settings?.heroStats?.enabled
+                    ? (isRtl ? settings.heroStats.growth.label.ar : settings.heroStats.growth.label.en)
+                    : t("statsGrowthLabel")}
                 </div>
               </div>
             </div>
@@ -435,10 +443,14 @@ export function HeroSection({
               </div>
               <div>
                 <div className="text-white font-bold text-xl sm:text-2xl">
-                  {t("statsCountries")}
+                  {settings?.heroStats?.enabled
+                    ? settings.heroStats.countries.value
+                    : t("statsCountries")}
                 </div>
                 <div className="text-white/50 text-xs sm:text-sm">
-                  {t("statsCountriesLabel")}
+                  {settings?.heroStats?.enabled
+                    ? (isRtl ? settings.heroStats.countries.label.ar : settings.heroStats.countries.label.en)
+                    : t("statsCountriesLabel")}
                 </div>
               </div>
             </div>

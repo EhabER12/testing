@@ -611,6 +611,36 @@ const subscriptionTeacherSchema = new mongoose.Schema(
   { _id: true }
 );
 
+// Hero Stats Schema (for Hero Section statistics bar)
+const heroStatsSchema = new mongoose.Schema({
+  enabled: {
+    type: Boolean,
+    default: false, // Use translation keys as fallback by default
+  },
+  projects: {
+    value: { type: String, default: "+1000" },
+    label: {
+      ar: { type: String, default: "ختمة" },
+      en: { type: String, default: "Projects" },
+    },
+  },
+  growth: {
+    value: { type: String, default: "+250" },
+    label: {
+      ar: { type: String, default: "طالب جديد" },
+      en: { type: String, default: "New Students" },
+    },
+  },
+  countries: {
+    value: { type: String, default: "6" },
+    label: {
+      ar: { type: String, default: "دول" },
+      en: { type: String, default: "Countries" },
+    },
+  },
+}, { _id: false });
+
+
 const settingsSchema = new mongoose.Schema(
   {
     siteName: {
@@ -786,6 +816,15 @@ const settingsSchema = new mongoose.Schema(
     subscriptionTeachers: {
       type: [subscriptionTeacherSchema],
       default: () => [],
+    },
+    heroStats: {
+      type: heroStatsSchema,
+      default: () => ({
+        enabled: false,
+        projects: { value: "+1000", label: { ar: "ختمة", en: "Projects" } },
+        growth: { value: "+250", label: { ar: "طالب جديد", en: "New Students" } },
+        countries: { value: "6", label: { ar: "دول", en: "Countries" } },
+      }),
     },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,

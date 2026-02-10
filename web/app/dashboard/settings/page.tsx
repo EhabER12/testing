@@ -41,6 +41,7 @@ import {
   FinanceSettings,
   ApiKeysSettings,
   CoursesPageHeroSettings as CoursesPageHeroSettingsType,
+  HeroStatsSettings as HeroStatsSettingsType,
 } from "@/store/services/settingsService";
 import { resetSettingsStatus } from "@/store/slices/settingsSlice";
 import { revalidateSettings } from "@/app/actions/settings";
@@ -75,6 +76,7 @@ import { ReviewsSectionSettings as ReviewsSectionSettingsComponent } from "@/com
 import { WhyGenounSettings as WhyGenounSettingsComponent } from "@/components/dashboard/settings/WhyGenounSettings";
 import { ApiKeysSettings as ApiKeysSettingsComponent } from "@/components/dashboard/settings/ApiKeysSettings";
 import { CoursesPageHeroSettings as CoursesPageHeroSettingsComponent } from "@/components/dashboard/settings/CoursesPageHeroSettings";
+import { HeroStatsSettings as HeroStatsSettingsComponent } from "@/components/dashboard/settings/HeroStatsSettings";
 
 interface SettingsFormData extends Partial<WebsiteSettingsData> {
   logoFile?: File;
@@ -239,6 +241,13 @@ export default function SettingsDashboardPage() {
       defaultPercentage: 35,
       lastUpdated: new Date(),
     });
+
+  const [heroStats, setHeroStats] = useState<HeroStatsSettingsType>({
+    enabled: false,
+    projects: { value: "+1000", label: { ar: "ختمة", en: "Projects" } },
+    growth: { value: "+250", label: { ar: "طالب جديد", en: "New Students" } },
+    countries: { value: "6", label: { ar: "دول", en: "Countries" } },
+  });
 
   // All available platforms
   const allPlatforms = [
@@ -419,6 +428,9 @@ export default function SettingsDashboardPage() {
             : new Date(),
         });
       }
+      if (settings.heroStats) {
+        setHeroStats(settings.heroStats);
+      }
     }
   }, [settings]);
 
@@ -587,18 +599,19 @@ export default function SettingsDashboardPage() {
         googleCloudCredentials: apiKeys.googleCloudCredentials,
         // lastUpdated will be set by backend automatically
       },
-        teacherProfitSettings: {
-          enabled: teacherProfitSettings.enabled,
-          courseSalesPercentage: teacherProfitSettings.courseSalesPercentage,
-          subscriptionPercentage: teacherProfitSettings.subscriptionPercentage,
-          // lastUpdated will be set by backend automatically
-        },
-        subscriptionStudentProfitSettings: {
-          enabled: subscriptionStudentProfitSettings.enabled,
-          defaultPercentage: subscriptionStudentProfitSettings.defaultPercentage,
-          // lastUpdated will be set by backend automatically
-        },
-      };
+      teacherProfitSettings: {
+        enabled: teacherProfitSettings.enabled,
+        courseSalesPercentage: teacherProfitSettings.courseSalesPercentage,
+        subscriptionPercentage: teacherProfitSettings.subscriptionPercentage,
+        // lastUpdated will be set by backend automatically
+      },
+      subscriptionStudentProfitSettings: {
+        enabled: subscriptionStudentProfitSettings.enabled,
+        defaultPercentage: subscriptionStudentProfitSettings.defaultPercentage,
+        // lastUpdated will be set by backend automatically
+      },
+      heroStats,
+    };
 
     const hasFiles =
       !!formData.logoFile ||
@@ -767,6 +780,9 @@ export default function SettingsDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="teacher-profit">
               {isRtl ? "أرباح المعلمين" : "Teacher Profit"}
+            </TabsTrigger>
+            <TabsTrigger value="hero-stats">
+              {isRtl ? "إحصائيات Hero Section" : "Hero Stats"}
             </TabsTrigger>
           </TabsList>
 
@@ -1233,9 +1249,9 @@ export default function SettingsDashboardPage() {
                   </Button>
                 </div>
               </CardContent>
-              </Card>
+            </Card>
 
-            </TabsContent>
+          </TabsContent>
 
           <TabsContent value="contact" className="space-y-6">
             {/* Contact Information Card */}
@@ -2349,8 +2365,17 @@ export default function SettingsDashboardPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Save Button - Hide for tabs with their own save (AI Articles, Marketing) */}
-        {activeTab !== "ai-articles" && activeTab !== "marketing" && (
+        {/* Hero Stats Settings Tab */}
+        <TabsContent value="hero-stats">
+          <HeroStatsSettingsComponent
+            heroStats={heroStats}
+            setHeroStats={setHeroStats}
+            isRtl={isRtl}
+          />
+        </TabsContent>
+
+        {/* Save Button */}
+        {activeTab !== "ai-articles" && (
           <div className="sticky bottom-0 z-10 flex justify-end bg-background p-4 border-t mt-6 -mx-6 px-6 shadow-sm">
             <Button
               type="submit"

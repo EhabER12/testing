@@ -260,6 +260,20 @@ export interface PromoModalSettings {
   showOnce: boolean;
 }
 
+// Hero Stats Settings (for Hero Section statistics bar)
+export interface HeroStatItem {
+  value: string;
+  label: { ar: string; en: string };
+}
+
+export interface HeroStatsSettings {
+  enabled: boolean;
+  projects: HeroStatItem;
+  growth: HeroStatItem;
+  countries: HeroStatItem;
+}
+
+
 export interface WebsiteSettingsData {
   whatsappConnected: boolean;
   whatsappQrCode?: string;
@@ -297,6 +311,7 @@ export interface WebsiteSettingsData {
   teacherProfitSettings?: TeacherProfitSettings;
   subscriptionStudentProfitSettings?: SubscriptionStudentProfitSettings;
   subscriptionTeachers?: SubscriptionTeacher[];
+  heroStats?: HeroStatsSettings;
   updatedBy?: string;
   createdAt: string;
   updatedAt: string;
@@ -333,6 +348,7 @@ export interface PublicWebsiteSettingsData {
   reviewsSettings?: ReviewsSectionSettings;
   whyGenounSettings?: WhyGenounSettings;
   financeSettings?: FinanceSettings;
+  heroStats?: HeroStatsSettings;
   // Excluded: _id, whatsappConnected, updatedBy, createdAt, updatedAt, __v, notifications, paymentGateways
 }
 
