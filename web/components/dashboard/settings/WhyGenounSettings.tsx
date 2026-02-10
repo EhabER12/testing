@@ -67,14 +67,15 @@ export function WhyGenounSettings({ settings, onChange, lang }: WhyGenounSetting
     };
 
     const updateFeature = (index: number, field: "icon" | "title" | "description", value: any) => {
-        const newFeatures = [...settings.features];
-        if (field === "icon") {
-            newFeatures[index].icon = value;
-        } else if (field === "title") {
-            newFeatures[index].title = value;
-        } else {
-            newFeatures[index].description = value;
-        }
+        const newFeatures = settings.features.map((feature, i) => {
+            if (i !== index) return feature;
+
+            // Create a new object instead of mutating
+            return {
+                ...feature,
+                [field]: value
+            };
+        });
         onChange({ ...settings, features: newFeatures });
     };
 
