@@ -17,18 +17,12 @@ const paymentMethodSchema = new mongoose.Schema(
             en: String,
         },
         credentials: {
-            // PayPal
-            clientId: String,
-            clientSecret: String,
-            webhookId: String,
-
-            // Kashier (Payment Sessions API v3)
-            mid: String, // Merchant ID
-            paymentApiKey: String, // API Key for authentication
-            secretKey: String, // Secret Key for webhook verification
-
-            // Stripe (future)
-            publishableKey: String,
+            type: mongoose.Schema.Types.Mixed,
+            default: {},
+            // Flexible structure to accommodate different payment providers:
+            // PayPal: { clientId, clientSecret, webhookId }
+            // Kashier: { mid, paymentApiKey, secretKey }
+            // Stripe: { publishableKey, secretKey }
         },
         mode: {
             type: String,
@@ -36,16 +30,11 @@ const paymentMethodSchema = new mongoose.Schema(
             default: "sandbox",
         },
         config: {
-            // PayPal
-            returnUrl: String,
-            cancelUrl: String,
-
-            // Kashier - Removed deprecated fields
-            // Note: Payment Sessions API v3 doesn't need these URLs
-            // Webhooks are configured via serverWebhook parameter in API call
-            // Redirects are configured via merchantRedirect parameter
-            webhookUrl: String, // Optional: For reference only
-            redirectUrl: String, // Optional: For reference only
+            type: mongoose.Schema.Types.Mixed,
+            default: {},
+            // Flexible structure for different providers:
+            // PayPal: { returnUrl, cancelUrl }
+            // Kashier: { webhookUrl, redirectUrl }
         },
         isActive: {
             type: Boolean,
