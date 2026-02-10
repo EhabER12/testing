@@ -127,15 +127,15 @@ export default function CoursesPage() {
     <div className="min-h-screen bg-gray-50" dir={isRtl ? "rtl" : "ltr"}>
       {/* Hero Section - Conditional */}
       {isHeroEnabled && (
-        <div 
+        <div
           className="bg-gradient-to-r from-genoun-green to-green-600 text-white py-16"
           style={
             heroSettings?.backgroundImage
               ? {
-                  backgroundImage: `linear-gradient(rgba(26, 71, 42, 0.9), rgba(26, 71, 42, 0.9)), url(${heroSettings.backgroundImage})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }
+                backgroundImage: `linear-gradient(rgba(26, 71, 42, 0.9), rgba(26, 71, 42, 0.9)), url(${heroSettings.backgroundImage})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
               : undefined
           }
         >
@@ -148,12 +148,12 @@ export default function CoursesPage() {
                   <span className="text-sm font-medium">{heroBadge}</span>
                 </div>
               )}
-              
+
               {/* Title */}
               <h1 className="text-4xl md:text-5xl font-bold mb-4">
                 {heroTitle}
               </h1>
-              
+
               {/* Subtitle */}
               <p className="text-xl text-white/90">
                 {heroSubtitle}
@@ -239,11 +239,11 @@ export default function CoursesPage() {
             {filteredCourses.map((course) => (
               <Card
                 key={course.id || course._id}
-                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 shadow-md"
                 onClick={() => handleCourseClick((course as any).slug)}
               >
                 {/* Course Thumbnail */}
-                <div className="relative h-48 bg-gray-200">
+                <div className="relative h-56 bg-gray-200">
                   {course.thumbnail ? (
                     <Image
                       src={course.thumbnail}
@@ -257,12 +257,12 @@ export default function CoursesPage() {
                     </div>
                   )}
                   {/* Access Type Badge */}
-                  <div className="absolute top-2 right-2">
+                  <div className={`absolute top-3 ${isRtl ? 'left-3' : 'right-3'}`}>
                     <Badge
                       className={
                         course.accessType === "free"
-                          ? "bg-green-500"
-                          : "bg-blue-500"
+                          ? "bg-green-500 hover:bg-green-600"
+                          : "bg-blue-500 hover:bg-blue-600"
                       }
                     >
                       {getAccessTypeText(course.accessType)}
@@ -270,62 +270,78 @@ export default function CoursesPage() {
                   </div>
                 </div>
 
-                <CardHeader>
-                  <CardTitle className="line-clamp-2">
+                <CardHeader className="pb-3">
+                  {/* Title */}
+                  <CardTitle className="line-clamp-2 text-lg font-bold mb-1">
                     {getTextValue(course.title)}
                   </CardTitle>
-                  <CardDescription className="line-clamp-2">
+
+                  {/* Description */}
+                  <CardDescription className="line-clamp-2 text-sm">
                     {getTextValue(course.description)}
                   </CardDescription>
+
+                  {/* Instructor */}
+                  {course.instructorId && (
+                    <p className="text-sm text-gray-700 mt-2">
+                      {getTextValue(course.instructorId.fullName)}
+                    </p>
+                  )}
                 </CardHeader>
 
-                <CardContent>
-                  <div className="space-y-3">
-                    {/* Instructor */}
-                    {course.instructorId && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Users className="h-4 w-4 mr-2" />
-                        {getTextValue(course.instructorId.fullName)}
-                      </div>
+                <CardContent className="space-y-3">
+                  {/* Rating */}
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-1 text-amber-500">
+                      <Star className="h-4 w-4 fill-current" />
+                      <span className="font-semibold">
+                        {course.stats?.averageRating?.toFixed(1) || "4.5"}
+                      </span>
+                    </div>
+                    <span className="text-gray-500">
+                      ({course.stats?.totalReviews || 0})
+                    </span>
+                  </div>
+
+                  {/* Stats in one line */}
+                  <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
+                    {course.duration && (
+                      <>
+                        <span className="font-medium">{course.duration} {isRtl ? "ساعة" : "total hours"}</span>
+                        <span>•</span>
+                      </>
                     )}
+                    <span className="font-medium">
+                      {course.contentStats?.lessonsCount || 0} {isRtl ? "محاضرة" : "lectures"}
+                    </span>
+                    {course.level && (
+                      <>
+                        <span>•</span>
+                        <span className="font-medium">{getLevelText(course.level)}</span>
+                      </>
+                    )}
+                  </div>
 
-                    {/* Duration & Level */}
-                    <div className="flex items-center justify-between text-sm">
-                      {course.duration && (
-                        <div className="flex items-center text-gray-600">
-                          <Clock className="h-4 w-4 mr-2" />
-                          {course.duration} {isRtl ? "ساعة" : "hours"}
-                        </div>
-                      )}
-                      {course.level && (
-                        <div className="flex items-center">
-                          <TrendingUp className="h-4 w-4 mr-2 text-genoun-green" />
-                          <span className="text-gray-700">
-                            {getLevelText(course.level)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Stats */}
-                    <div className="flex items-center justify-between pt-3 border-t">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        {course.contentStats?.lessonsCount || 0}{" "}
-                        {isRtl ? "درس" : "lessons"}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Users className="h-4 w-4 mr-2" />
-                        {course.stats?.enrolledCount || 0}{" "}
-                        {isRtl ? "طالب" : "students"}
-                      </div>
-                    </div>
+                  {/* Price */}
+                  <div className="text-2xl font-bold text-gray-900 pt-2">
+                    {course.accessType === "free" ? (
+                      <span className="text-green-600">{isRtl ? "مجاني" : "Free"}</span>
+                    ) : course.price ? (
+                      <PriceDisplay
+                        amount={course.price}
+                        currency={course.currency as "SAR" | "EGP" | "USD"}
+                        locale={isRtl ? "ar" : "en"}
+                        className="inline"
+                      />
+                    ) : (
+                      <span className="text-gray-600 text-base">{isRtl ? "السعر غير محدد" : "Price not set"}</span>
+                    )}
                   </div>
                 </CardContent>
 
-                <CardFooter>
+                <CardFooter className="pt-0">
                   <Button
-                    className="w-full bg-genoun-green hover:bg-genoun-green/90"
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-md hover:shadow-lg transition-all"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleCourseClick((course as any).slug);
@@ -335,16 +351,9 @@ export default function CoursesPage() {
                       ? isRtl
                         ? "سجل مجاناً"
                         : "Enroll Free"
-                      : course.price ? (
-                        <PriceDisplay
-                          amount={course.price}
-                          currency={course.currency as "SAR" | "EGP" | "USD"}
-                          locale={isRtl ? "ar" : "en"}
-                          className="inline"
-                        />
-                      ) : isRtl
-                          ? "عرض التفاصيل"
-                          : "View Details"}
+                      : isRtl
+                        ? "أضف للسلة"
+                        : "Add to cart"}
                   </Button>
                 </CardFooter>
               </Card>
