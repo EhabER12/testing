@@ -304,8 +304,12 @@ const whyGenounSchema = new mongoose.Schema({
     default: true,
   },
   title: {
-    ar: { type: String, default: "لماذا جنون؟" },
-    en: { type: String, default: "Why Genoun?" },
+    ar: { type: String, default: "لماذا تختار" },
+    en: { type: String, default: "Why Choose" },
+  },
+  titleHighlight: {
+    ar: { type: String, default: "منصة جنون" },
+    en: { type: String, default: "Genoun Platform" },
   },
   subtitle: {
     ar: { type: String, default: "منصة متكاملة لحفظ القرآن الكريم" },
@@ -770,7 +774,8 @@ const settingsSchema = new mongoose.Schema(
       type: whyGenounSchema,
       default: () => ({
         isEnabled: true,
-        title: { ar: "لماذا جنون؟", en: "Why Genoun?" },
+        title: { ar: "لماذا تختار", en: "Why Choose" },
+        titleHighlight: { ar: "منصة جنون", en: "Genoun Platform" },
         subtitle: { ar: "منصة متكاملة لحفظ القرآن الكريم", en: "Complete platform for Quran memorization" },
         features: []
       }),
