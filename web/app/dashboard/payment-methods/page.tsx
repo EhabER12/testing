@@ -197,6 +197,7 @@ export default function PaymentMethodsPage() {
 
             if (cashier) {
                 // Update existing Kashier method
+                console.log("🔄 Updating Kashier payment method:", cashier._id, paymentData);
                 await dispatch(
                     updatePaymentMethodThunk({ id: cashier._id, data: paymentData })
                 ).unwrap();
@@ -216,12 +217,19 @@ export default function PaymentMethodsPage() {
                     },
                     order: 2,
                 };
+                console.log("➕ Creating new Kashier payment method:", JSON.stringify(createData, null, 2));
                 await dispatch(createPaymentMethodThunk(createData)).unwrap();
                 toast.success("Cashier configuration created successfully");
             }
 
             await loadPaymentMethods();
         } catch (error: any) {
+            console.error("❌ Cashier submit error:", {
+                message: error?.message,
+                response: error?.response,
+                data: error?.response?.data,
+                full: error,
+            });
             toast.error(error?.message || "Failed to save Cashier configuration");
         } finally {
             setSaving(false);
@@ -395,9 +403,9 @@ export default function PaymentMethodsPage() {
                             <CardTitle>Kashier Configuration (Payment Sessions API v3)</CardTitle>
                             <CardDescription>
                                 Configure your Kashier payment gateway. Get your credentials from{" "}
-                                <a 
-                                    href="https://merchant.kashier.io" 
-                                    target="_blank" 
+                                <a
+                                    href="https://merchant.kashier.io"
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-primary hover:underline"
                                 >

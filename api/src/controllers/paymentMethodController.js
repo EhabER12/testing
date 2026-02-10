@@ -57,9 +57,17 @@ export const getPaymentMethodById = async (req, res, next) => {
 // @access  Private/Admin
 export const createPaymentMethod = async (req, res, next) => {
     try {
+        console.log("📝 Creating payment method with data:", JSON.stringify(req.body, null, 2));
         const method = await PaymentMethod.create(req.body);
+        console.log("✅ Payment method created successfully:", method._id);
         return ApiResponse.success(res, method, "Payment method created successfully", 201);
     } catch (error) {
+        console.error("❌ Error creating payment method:", {
+            name: error.name,
+            message: error.message,
+            code: error.code,
+            errors: error.errors,
+        });
         if (error.code === 11000) {
             return next(new ApiError(400, "Payment method already exists"));
         }
