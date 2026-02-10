@@ -321,9 +321,11 @@ export default function CoursesPage() {
                       </>
                     )}
                   </div>
+                </CardContent>
 
+                <CardFooter className="pt-4 pb-4 flex items-center justify-between gap-4">
                   {/* Price */}
-                  <div className="text-2xl font-bold text-gray-900 pt-2">
+                  <div className="text-2xl font-bold text-gray-900">
                     {course.accessType === "free" ? (
                       <span className="text-green-600">{isRtl ? "مجاني" : "Free"}</span>
                     ) : course.price ? (
@@ -337,11 +339,10 @@ export default function CoursesPage() {
                       <span className="text-gray-600 text-base">{isRtl ? "السعر غير محدد" : "Price not set"}</span>
                     )}
                   </div>
-                </CardContent>
 
-                <CardFooter className="pt-0">
+                  {/* Add to cart button */}
                   <Button
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-md hover:shadow-lg transition-all"
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-2 shadow-md hover:shadow-lg transition-all border border-purple-600 whitespace-nowrap"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleCourseClick((course as any).slug);
