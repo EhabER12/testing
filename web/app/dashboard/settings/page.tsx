@@ -2363,16 +2363,16 @@ export default function SettingsDashboardPage() {
               locale={formLang}
             />
           </TabsContent>
-        </Tabs>
 
-        {/* Hero Stats Settings Tab */}
-        <TabsContent value="hero-stats">
-          <HeroStatsSettingsComponent
-            heroStats={heroStats}
-            setHeroStats={setHeroStats}
-            isRtl={isRtl}
-          />
-        </TabsContent>
+          {/* Hero Stats Settings Tab */}
+          <TabsContent value="hero-stats">
+            <HeroStatsSettingsComponent
+              heroStats={heroStats}
+              setHeroStats={setHeroStats}
+              isRtl={isRtl}
+            />
+          </TabsContent>
+        </Tabs>
 
         {/* Save Button */}
         {activeTab !== "ai-articles" && (
