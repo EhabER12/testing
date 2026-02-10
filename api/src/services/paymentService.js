@@ -467,24 +467,8 @@ export class PaymentService {
         }
       }
 
-      // Send Confirmation Email
-      if (billingInfo?.email) {
-        try {
-          await emailTemplateService.sendTemplatedEmail(
-            billingInfo.email,
-            "order_confirmation",
-            {
-              name: billingInfo.name || "Customer",
-              orderId: merchantOrderId,
-              amount: billingInfo.amount || 0,
-              currency: currency || billingInfo.currency || "SAR",
-              year: new Date().getFullYear(),
-              dashboardUrl: (process.env.CLIENT_URL || "http://localhost:3000") + "/dashboard"
-            },
-            "ar"
-          );
-        } catch (e) { logger.error("Email error", e) }
-      }
+      // Email notification will be sent when admin approves the payment (changes status to "success")
+      // See updatePaymentStatus method for email logic
 
       return payment;
     } catch (error) {

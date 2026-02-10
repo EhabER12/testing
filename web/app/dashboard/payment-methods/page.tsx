@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, CreditCard, CheckCircle2, XCircle, Info, Eye, EyeOff } from "lucide-react";
+import { Loader2, CreditCard, CheckCircle2, XCircle, Info, Eye, EyeOff, Save, Plus, RotateCcw } from "lucide-react";
 import toast from "react-hot-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -300,12 +300,44 @@ export default function PaymentMethodsPage() {
                 <TabsContent value="paypal">
                     <Card>
                         <CardHeader>
-                            <CardTitle>PayPal Configuration</CardTitle>
+                            <CardTitle>
+                                PayPal Configuration {paypal && <span className="text-sm font-normal text-muted-foreground">(Editing)</span>}
+                            </CardTitle>
                             <CardDescription>
-                                Configure your PayPal payment gateway settings
+                                {paypal
+                                    ? "Update your existing PayPal payment gateway settings"
+                                    : "Configure your PayPal payment gateway settings"
+                                }
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
+                            {/* Status Banner */}
+                            {paypal ? (
+                                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <p className="text-sm font-medium text-green-800">
+                                        ✅ Existing configuration found
+                                        {paypal.updatedAt && (
+                                            <span className="text-green-600 font-normal">
+                                                {" • Last updated: "}
+                                                {new Date(paypal.updatedAt).toLocaleString('en-US', {
+                                                    year: 'numeric',
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })}
+                                            </span>
+                                        )}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <p className="text-sm font-medium text-blue-800">
+                                        ℹ️ No configuration found. Fill the form below to create one.
+                                    </p>
+                                </div>
+                            )}
+
                             <form onSubmit={handlePayPalSubmit} className="space-y-6">
                                 {/* Active Toggle */}
                                 <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -418,10 +450,30 @@ export default function PaymentMethodsPage() {
                                     />
                                 </div>
 
-                                <Button type="submit" disabled={saving}>
-                                    {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                    {paypal ? "Save PayPal Configuration" : "Create PayPal Configuration"}
-                                </Button>
+                                <div className="flex gap-3">
+                                    <Button type="submit" disabled={saving} className="flex-1">
+                                        {saving ? (
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        ) : paypal ? (
+                                            <Save className="w-4 h-4 mr-2" />
+                                        ) : (
+                                            <Plus className="w-4 h-4 mr-2" />
+                                        )}
+                                        {paypal ? "Update PayPal Configuration" : "Create PayPal Configuration"}
+                                    </Button>
+
+                                    {paypal && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => loadPaymentMethods()}
+                                            disabled={saving}
+                                            title="Reset to saved values"
+                                        >
+                                            <RotateCcw className="w-4 h-4" />
+                                        </Button>
+                                    )}
+                                </div>
                             </form>
                         </CardContent>
                     </Card>
@@ -431,9 +483,14 @@ export default function PaymentMethodsPage() {
                 <TabsContent value="cashier">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Kashier Configuration (Payment Sessions API v3)</CardTitle>
+                            <CardTitle>
+                                Kashier Configuration (Payment Sessions API v3) {cashier && <span className="text-sm font-normal text-muted-foreground">(Editing)</span>}
+                            </CardTitle>
                             <CardDescription>
-                                Configure your Kashier payment gateway. Get your credentials from{" "}
+                                {cashier
+                                    ? "Update your existing Kashier payment gateway. Get your credentials from"
+                                    : "Configure your Kashier payment gateway. Get your credentials from"
+                                }{" "}
                                 <a
                                     href="https://merchant.kashier.io"
                                     target="_blank"
@@ -445,6 +502,33 @@ export default function PaymentMethodsPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
+                            {/* Status Banner */}
+                            {cashier ? (
+                                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <p className="text-sm font-medium text-green-800">
+                                        ✅ Existing configuration found
+                                        {cashier.updatedAt && (
+                                            <span className="text-green-600 font-normal">
+                                                {" • Last updated: "}
+                                                {new Date(cashier.updatedAt).toLocaleString('en-US', {
+                                                    year: 'numeric',
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })}
+                                            </span>
+                                        )}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <p className="text-sm font-medium text-blue-800">
+                                        ℹ️ No configuration found. Fill the form below to create one.
+                                    </p>
+                                </div>
+                            )}
+
                             <form onSubmit={handleCashierSubmit} className="space-y-6">
                                 {/* Active Toggle */}
                                 <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -601,10 +685,30 @@ export default function PaymentMethodsPage() {
                                     </ol>
                                 </div>
 
-                                <Button type="submit" disabled={saving} className="w-full">
-                                    {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                    {cashier ? "Save Kashier Configuration" : "Create Kashier Configuration"}
-                                </Button>
+                                <div className="flex gap-3">
+                                    <Button type="submit" disabled={saving} className="flex-1">
+                                        {saving ? (
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        ) : cashier ? (
+                                            <Save className="w-4 h-4 mr-2" />
+                                        ) : (
+                                            <Plus className="w-4 h-4 mr-2" />
+                                        )}
+                                        {cashier ? "Update Kashier Configuration" : "Create Kashier Configuration"}
+                                    </Button>
+
+                                    {cashier && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => loadPaymentMethods()}
+                                            disabled={saving}
+                                            title="Reset to saved values"
+                                        >
+                                            <RotateCcw className="w-4 h-4" />
+                                        </Button>
+                                    )}
+                                </div>
                             </form>
                         </CardContent>
                     </Card>
