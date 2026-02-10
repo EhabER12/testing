@@ -151,9 +151,9 @@ export class PaymentService {
     // If status changed to success, send notification and create finance entry
     if (status === "success" && payment.status !== "success") {
       // Determine locale from payment details or default to 'ar'
-      const paymentLocale = payment.paymentDetails?.locale || 
-                           payment.billingInfo?.locale || 
-                           (payment.currency === "USD" ? "en" : "ar");
+      const paymentLocale = payment.paymentDetails?.locale ||
+        payment.billingInfo?.locale ||
+        (payment.currency === "USD" ? "en" : "ar");
 
       // Send email notification using template
       try {
@@ -196,7 +196,7 @@ export class PaymentService {
       // Auto-enroll student in course if this is a course payment
       // Check both courseId (new) and productId (legacy) for backward compatibility
       const paymentCourseId = payment.courseId || payment.productId;
-      
+
       logger.info("Checking for course enrollment", {
         paymentId: payment._id,
         courseId: payment.courseId,
@@ -205,34 +205,34 @@ export class PaymentService {
         userId: payment.userId,
         metadata: payment.metadata
       });
-      
+
       if (paymentCourseId && payment.userId) {
         try {
           const Course = (await import("../models/courseModel.js")).default;
           const course = await Course.findById(paymentCourseId);
-          
+
           logger.info("Course lookup result", {
             paymentCourseId,
             courseFound: !!course,
             courseTitle: course?.title?.en || course?.title?.ar
           });
-          
+
           // Only auto-enroll if it's actually a course (not a product)
           if (course) {
             const { CourseService } = await import("./courseService.js");
             const courseService = new CourseService();
             // Skip payment check since we're calling this after payment success
             await courseService.enrollStudent(paymentCourseId, payment.userId, true);
-            logger.info("Student auto-enrolled in course after payment", { 
-              userId: payment.userId, 
+            logger.info("Student auto-enrolled in course after payment", {
+              userId: payment.userId,
               courseId: paymentCourseId,
-              paymentId: payment._id 
+              paymentId: payment._id
             });
           } else {
             logger.info("No course found for payment - might be a product", { paymentCourseId });
           }
         } catch (enrollError) {
-          logger.error("Failed to auto-enroll student in course", { 
+          logger.error("Failed to auto-enroll student in course", {
             error: enrollError.message,
             stack: enrollError.stack,
             userId: payment.userId,
@@ -710,10 +710,10 @@ export class PaymentService {
 
         // Update payment status to success
         await this.updatePaymentStatus(
-          payment._id, 
-          "success", 
-          null, 
-          null, 
+          payment._id,
+          "success",
+          null,
+          null,
           `PayPal Capture Completed - Capture ID: ${captureId}`
         );
 
@@ -747,7 +747,7 @@ export class PaymentService {
   async handlePaypalWebhook(payload, headers = {}) {
     try {
       const config = await this.getGatewayConfig("paypal");
-      
+
       // Verify webhook signature if headers provided
       if (headers && headers["paypal-transmission-sig"]) {
         try {
@@ -787,13 +787,13 @@ export class PaymentService {
         // Try to find and update payment by PayPal order ID
         if (orderId) {
           const payment = await Payment.findOne({ "paymentDetails.paypalOrderId": orderId });
-          
+
           if (payment && payment.status !== "success") {
             await this.updatePaymentStatus(
-              payment._id, 
-              "success", 
-              null, 
-              null, 
+              payment._id,
+              "success",
+              null,
+              null,
               `PayPal Webhook: Capture ${captureId} completed`
             );
             console.log(`✅ Payment ${payment._id} marked as success via webhook`);
@@ -805,13 +805,13 @@ export class PaymentService {
 
         if (orderId) {
           const payment = await Payment.findOne({ "paymentDetails.paypalOrderId": orderId });
-          
+
           if (payment && payment.status === "pending") {
             await this.updatePaymentStatus(
-              payment._id, 
-              "failed", 
-              "Payment denied by PayPal", 
-              null, 
+              payment._id,
+              "failed",
+              "Payment denied by PayPal",
+              null,
               `PayPal Webhook: Payment denied`
             );
           }
@@ -840,8 +840,17 @@ export class PaymentService {
 
     // Get base URL for webhooks and redirects
     const settings = await this.settingsRepository.getSettings();
-    const baseUrl = settings.siteSettings?.siteUrl || process.env.SITE_URL || "http://localhost:3000";
-    const apiBaseUrl = settings.siteSettings?.apiUrl || process.env.API_URL || "http://localhost:5000";
+    const baseUrl = settings.siteSettings?.siteUrl || process.env.SITE_URL || process.env.CLIENT_URL || "https://med-side.net";
+    const apiBaseUrl = settings.siteSettings?.apiUrl || process.env.API_URL || "https://api.med-side.net";
+
+    console.log("🔧 Kashier URL Configuration:", {
+      siteUrl: settings.siteSettings?.siteUrl,
+      apiUrl: settings.siteSettings?.apiUrl,
+      baseUrl,
+      apiBaseUrl,
+      merchantRedirect: `${baseUrl}/payment/result`,
+      serverWebhook: `${apiBaseUrl}/api/payments/kashier/webhook`,
+    });
 
     const paymentData = {
       userId,
@@ -934,7 +943,7 @@ export class PaymentService {
 
     // Parse webhook payload
     const webhookData = kashierService.parseWebhookPayload(payload);
-    
+
     console.log("📥 Kashier webhook received:", {
       sessionId: webhookData.sessionId,
       merchantOrderId: webhookData.merchantOrderId,
@@ -1004,7 +1013,7 @@ export class PaymentService {
   // Keep old callback handler for backward compatibility (deprecated)
   async handleCashierCallback(payload) {
     console.warn("⚠️ Using deprecated Cashier callback handler. Please migrate to webhook handler.");
-    
+
     const config = await this.getGatewayConfig("cashier");
     const { merchantOrderId } = payload;
 
