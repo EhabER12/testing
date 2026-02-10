@@ -78,7 +78,7 @@ export const SectionOrderSettings: React.FC<SectionOrderSettingsProps> = ({
       key: 'authorityBar',
       label: allSectionLabels.authorityBar,
       order: authorityBar.order ?? 1,
-      isEnabled: authorityBar.isEnabled,
+      isEnabled: authorityBar.isEnabled ?? true,
       type: 'authority',
     });
 
@@ -87,7 +87,7 @@ export const SectionOrderSettings: React.FC<SectionOrderSettingsProps> = ({
       key: 'testimonials',
       label: allSectionLabels.testimonials,
       order: reviewsSettings.order ?? 6,
-      isEnabled: reviewsSettings.isEnabled,
+      isEnabled: reviewsSettings.isEnabled ?? true,
       type: 'reviews',
     });
 
@@ -96,7 +96,7 @@ export const SectionOrderSettings: React.FC<SectionOrderSettingsProps> = ({
       key: 'whyGenoun',
       label: allSectionLabels.whyGenoun,
       order: whyGenounSettings.order ?? 2,
-      isEnabled: whyGenounSettings.isEnabled,
+      isEnabled: whyGenounSettings.isEnabled ?? true,
       type: 'whyGenoun',
     });
 
@@ -112,15 +112,15 @@ export const SectionOrderSettings: React.FC<SectionOrderSettingsProps> = ({
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    
+
     if (draggedIndex === null || draggedIndex === index) return;
 
     const newOrdered = [...orderedSections];
     const draggedItem = newOrdered[draggedIndex];
-    
+
     newOrdered.splice(draggedIndex, 1);
     newOrdered.splice(index, 0, draggedItem);
-    
+
     setOrderedSections(newOrdered);
     setDraggedIndex(index);
   };
@@ -201,7 +201,7 @@ export const SectionOrderSettings: React.FC<SectionOrderSettingsProps> = ({
 
     const newOrdered = [...orderedSections];
     newOrdered[index].order = newOrder;
-    
+
     newOrdered.sort((a, b) => a.order - b.order);
     setOrderedSections(newOrdered);
     applyOrderChanges(newOrdered);
