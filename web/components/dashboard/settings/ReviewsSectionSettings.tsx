@@ -9,12 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2 } from "lucide-react";
 
 interface ReviewsSectionSettings {
-    isEnabled: boolean;
-    title: { ar: string; en: string };
-    subtitle: { ar: string; en: string };
-    showRating: boolean;
-    showDate: boolean;
-    displayCount: number;
+    isEnabled?: boolean;
+    title?: { ar: string; en: string };
+    subtitle?: { ar: string; en: string };
+    showRating?: boolean;
+    showDate?: boolean;
+    displayCount?: number;
     useFakeReviews?: boolean;
     fakeReviews?: Array<{
         name: string;
@@ -87,7 +87,10 @@ export function ReviewsSectionSettings({ settings, onChange, lang }: ReviewsSect
                             onChange={(e) =>
                                 onChange({
                                     ...settings,
-                                    title: { ...settings.title, ar: e.target.value },
+                                    title: {
+                                        ar: e.target.value,
+                                        en: settings.title?.en || ""
+                                    },
                                 })
                             }
                             placeholder="آراء طلابنا"
@@ -100,7 +103,10 @@ export function ReviewsSectionSettings({ settings, onChange, lang }: ReviewsSect
                             onChange={(e) =>
                                 onChange({
                                     ...settings,
-                                    title: { ...settings.title, en: e.target.value },
+                                    title: {
+                                        ar: settings.title?.ar || "",
+                                        en: e.target.value
+                                    },
                                 })
                             }
                             placeholder="Student Reviews"
@@ -117,7 +123,10 @@ export function ReviewsSectionSettings({ settings, onChange, lang }: ReviewsSect
                             onChange={(e) =>
                                 onChange({
                                     ...settings,
-                                    subtitle: { ...settings.subtitle, ar: e.target.value },
+                                    subtitle: {
+                                        ar: e.target.value,
+                                        en: settings.subtitle?.en || ""
+                                    },
                                 })
                             }
                             placeholder="ماذا يقول طلابنا عنا"
@@ -130,7 +139,10 @@ export function ReviewsSectionSettings({ settings, onChange, lang }: ReviewsSect
                             onChange={(e) =>
                                 onChange({
                                     ...settings,
-                                    subtitle: { ...settings.subtitle, en: e.target.value },
+                                    subtitle: {
+                                        ar: settings.subtitle?.ar || "",
+                                        en: e.target.value
+                                    },
                                 })
                             }
                             placeholder="What our students say about us"
