@@ -5,7 +5,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Star } from "lucide-react";
+import { Star, Lock } from "lucide-react";
 import axiosInstance from "@/lib/axios";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -13,13 +13,18 @@ interface CourseReviewFormProps {
   courseId: string;
   onReviewSubmitted?: () => void;
   existingReview?: any;
+  isEnrolled: boolean;
+  locale: "ar" | "en";
 }
 
 export function CourseReviewForm({
   courseId,
   onReviewSubmitted,
   existingReview,
+  isEnrolled,
+  locale,
 }: CourseReviewFormProps) {
+  const isRtl = locale === "ar";
   const { userData } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(existingReview?.rating || 0);
@@ -89,6 +94,31 @@ export function CourseReviewForm({
     }
   };
 
+  // Check if user is enrolled
+  if (!isEnrolled) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center">
+              <Lock className="h-8 w-8 text-gray-400" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">
+                {isRtl ? "يجب عليك الاشتراك أولاً" : "You must enroll first"}
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                {isRtl
+                  ? "يجب الاشتراك في الكورس لتتمكن من كتابة تقييم"
+                  : "You need to enroll in this course before you can write a review"}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (existingReview) {
     return (
       <Card>
@@ -101,11 +131,10 @@ export function CourseReviewForm({
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star
                   key={star}
-                  className={`h-5 w-5 ${
-                    star <= existingReview.rating
+                  className={`h-5 w-5 ${star <= existingReview.rating
                       ? "fill-yellow-400 text-yellow-400"
                       : "text-gray-300"
-                  }`}
+                    }`}
                 />
               ))}
             </div>
@@ -139,11 +168,10 @@ export function CourseReviewForm({
                   className="focus:outline-none"
                 >
                   <Star
-                    className={`h-8 w-8 transition-colors ${
-                      star <= (hoverRating || rating)
+                    className={`h-8 w-8 transition-colors ${star <= (hoverRating || rating)
                         ? "fill-yellow-400 text-yellow-400"
                         : "text-gray-300"
-                    }`}
+                      }`}
                   />
                 </button>
               ))}

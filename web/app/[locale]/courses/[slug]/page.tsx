@@ -33,10 +33,13 @@ import {
   Award,
   Lock,
   CheckCircle,
+  Star,
 } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { PriceDisplay } from "@/components/currency/PriceDisplay";
+import { CourseReviewForm } from "@/components/courses/CourseReviewForm";
+import { CourseReviewsList } from "@/components/courses/CourseReviewsList";
 
 export default function CoursePage() {
   const params = useParams();
@@ -74,7 +77,7 @@ export default function CoursePage() {
     if (user && courseId) {
       // Get user progress
       dispatch(getUserProgress(courseId));
-      
+
       // Get subscriptions if not already loaded
       if (mySubscriptions.length === 0) {
         dispatch(getMySubscriptions());
@@ -193,7 +196,7 @@ export default function CoursePage() {
     0
   );
   const totalItems = totalLessons + totalQuizzes;
-  
+
   // Check if user is enrolled by checking userProgress
   const isEnrolled = !!currentCourse?.userProgress;
   const userProgress = currentCourse?.userProgress;
@@ -259,12 +262,12 @@ export default function CoursePage() {
                       ? "مبتدئ"
                       : "Beginner"
                     : currentCourse.level === "intermediate"
-                    ? isRtl
-                      ? "متوسط"
-                      : "Intermediate"
-                    : isRtl
-                    ? "متقدم"
-                    : "Advanced"}
+                      ? isRtl
+                        ? "متوسط"
+                        : "Intermediate"
+                      : isRtl
+                        ? "متقدم"
+                        : "Advanced"}
                 </Badge>
                 {currentCourse.accessType === "free" && (
                   <Badge
@@ -311,6 +314,17 @@ export default function CoursePage() {
                     </span>
                   </div>
                 )}
+                {currentCourse.stats?.averageRating && currentCourse.stats.averageRating > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                    <span className="font-semibold">
+                      {currentCourse.stats.averageRating.toFixed(1)}
+                    </span>
+                    <span className="text-white/80">
+                      ({currentCourse.stats.totalReviews || 0} {isRtl ? "تقييم" : "reviews"})
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -347,8 +361,8 @@ export default function CoursePage() {
                       <div className="text-sm font-semibold text-genoun-green bg-genoun-green/5 p-3 rounded-lg flex items-center gap-2">
                         <Lock className="h-4 w-4" />
                         <span>
-                          {isRtl 
-                            ? "متاحة لمشتركي البرامج" 
+                          {isRtl
+                            ? "متاحة لمشتركي البرامج"
                             : "Available for program subscribers"}
                         </span>
                       </div>
@@ -361,7 +375,7 @@ export default function CoursePage() {
                         disabled={totalLessons === 0}
                       >
                         <PlayCircle className={`h-5 w-5 ${isRtl ? "ml-2" : "mr-2"}`} />
-                        {totalLessons === 0 
+                        {totalLessons === 0
                           ? (isRtl ? "لا توجد دروس بعد" : "No lessons yet")
                           : (isRtl ? "ابدأ الدورة" : "Start Course")}
                       </Button>
@@ -451,7 +465,7 @@ export default function CoursePage() {
                             {section.lessons?.map((lesson: any, lessonIndex: number) => {
                               const lessonId = lesson.id || lesson._id;
                               const isCompleted = userProgress?.completedLessons?.includes(lessonId);
-                              
+
                               return (
                                 <button
                                   key={lessonId || lessonIndex}
@@ -461,9 +475,8 @@ export default function CoursePage() {
                                     }
                                   }}
                                   disabled={!isEnrolled || !lessonId}
-                                  className={`w-full flex items-center justify-between border rounded p-3 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-left ${
-                                    isCompleted ? "bg-green-50/30 border-green-100" : ""
-                                  }`}
+                                  className={`w-full flex items-center justify-between border rounded p-3 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-left ${isCompleted ? "bg-green-50/30 border-green-100" : ""
+                                    }`}
                                 >
                                   <div className="flex items-center gap-3">
                                     {isCompleted ? (
@@ -478,9 +491,8 @@ export default function CoursePage() {
                                       </p>
                                       <p className="text-xs text-gray-500">
                                         {lesson.duration
-                                          ? `${lesson.duration} ${
-                                              isRtl ? "دقيقة" : "min"
-                                            }`
+                                          ? `${lesson.duration} ${isRtl ? "دقيقة" : "min"
+                                          }`
                                           : ""}
                                       </p>
                                     </div>
@@ -493,12 +505,12 @@ export default function CoursePage() {
                                 </button>
                               );
                             })}
-                            
+
                             {/* Quizzes */}
                             {section.quizzes?.map((quiz: any, quizIndex: number) => {
                               const quizId = quiz.id || quiz._id;
                               const isCompleted = userProgress?.completedQuizzes?.includes(quizId);
-                              
+
                               return (
                                 <button
                                   key={quizId || quizIndex}
@@ -508,9 +520,8 @@ export default function CoursePage() {
                                     }
                                   }}
                                   disabled={!isEnrolled || !quizId}
-                                  className={`w-full flex items-center justify-between border rounded p-3 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-left ${
-                                    isCompleted ? "bg-green-50/30 border-green-100" : ""
-                                  }`}
+                                  className={`w-full flex items-center justify-between border rounded p-3 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-left ${isCompleted ? "bg-green-50/30 border-green-100" : ""
+                                    }`}
                                 >
                                   <div className="flex items-center gap-3">
                                     {isCompleted ? (
@@ -546,6 +557,45 @@ export default function CoursePage() {
                     );
                   })}
                 </Accordion>
+              </CardContent>
+            </Card>
+
+            {/* Reviews Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-yellow-500" />
+                  {isRtl ? "التقييمات" : "Reviews"}
+                </CardTitle>
+                <CardDescription>
+                  {isRtl
+                    ? "شارك تجربتك مع هذه الدورة"
+                    : "Share your experience with this course"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Review Form */}
+                <CourseReviewForm
+                  courseId={(currentCourse.id || currentCourse._id) as string}
+                  isEnrolled={isEnrolled}
+                  locale={locale as "ar" | "en"}
+                  onReviewSubmitted={() => {
+                    // Refresh the page to show updated reviews
+                    window.location.reload();
+                  }}
+                />
+
+                {/* Divider */}
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold mb-4">
+                    {isRtl ? "جميع التقييمات" : "All Reviews"}
+                  </h3>
+                  {/* Reviews List */}
+                  <CourseReviewsList
+                    courseId={(currentCourse.id || currentCourse._id) as string}
+                    locale={locale as "ar" | "en"}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -622,8 +672,8 @@ export default function CoursePage() {
                         ? "جاري التنزيل..."
                         : "Downloading..."
                       : isRtl
-                      ? "تنزيل الشهادة"
-                      : "Download Certificate"}
+                        ? "تنزيل الشهادة"
+                        : "Download Certificate"}
                   </Button>
                 </CardContent>
               </Card>
