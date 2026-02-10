@@ -81,6 +81,11 @@ export default function PaymentMethodsPage() {
             }
 
             if (cashierMethod) {
+                console.log("✅ Found existing Kashier payment method:", {
+                    id: cashierMethod._id,
+                    isActive: cashierMethod.isActive,
+                    mode: cashierMethod.mode,
+                });
                 setCashier(cashierMethod);
                 setCashierForm({
                     mid: cashierMethod.credentials?.mid || "",
@@ -90,6 +95,8 @@ export default function PaymentMethodsPage() {
                     redirectUrl: cashierMethod.config?.redirectUrl || "",
                     isActive: cashierMethod.isActive,
                 });
+            } else {
+                console.log("ℹ️  No existing Kashier found - you can create a new one");
             }
         } catch (error: any) {
             toast.error(error?.message || "Failed to load payment methods");
