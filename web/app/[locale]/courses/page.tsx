@@ -323,9 +323,9 @@ export default function CoursesPage() {
                   </div>
                 </CardContent>
 
-                <CardFooter className="pt-4 pb-4 flex items-center justify-between gap-4">
+                <CardFooter className="pt-4 pb-4 flex items-center justify-between gap-3 sm:gap-4">
                   {/* Price */}
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-base sm:text-xl md:text-2xl font-bold text-gray-900 whitespace-nowrap shrink-0 leading-none">
                     {course.accessType === "free" ? (
                       <span className="text-green-600">{isRtl ? "مجاني" : "Free"}</span>
                     ) : course.price ? (
@@ -333,7 +333,7 @@ export default function CoursesPage() {
                         amount={course.price}
                         currency={course.currency as "SAR" | "EGP" | "USD"}
                         locale={isRtl ? "ar" : "en"}
-                        className="inline"
+                        className="whitespace-nowrap leading-none"
                       />
                     ) : (
                       <span className="text-gray-600 text-base">{isRtl ? "السعر غير محدد" : "Price not set"}</span>
