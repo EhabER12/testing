@@ -4,6 +4,7 @@ import Course from "../models/courseModel.js";
 import User from "../models/userModel.js";
 import Progress from "../models/progressModel.js";
 import Quiz from "../models/quizModel.js";
+import QuizAttempt from "../models/quizAttemptModel.js";
 import quizService from "./quizService.js";
 import notificationService from "./notificationService.js";
 import pdfGenerationService from "./pdfGenerationService.js";
@@ -25,10 +26,22 @@ class CertificateService {
   }
 
   // Issue certificate to a single user (Course or Package)
-  async issueCertificate(userId, courseId, issuerUserId, overrideEligibility = false, manualTemplateId = null, packageId = null, studentMemberId = null, studentNameOverride = null) {
+  async issueCertificate(
+    userId,
+    courseId,
+    issuerUserId,
+    overrideEligibility = false,
+    manualTemplateId = null,
+    packageId = null,
+    studentMemberId = null,
+    studentNameOverride = null,
+    quizId = null,
+    certificateMetadata = null
+  ) {
     console.log('=== ISSUE CERTIFICATE REQUEST ===');
     console.log('userId:', userId);
     console.log('courseId:', courseId);
+    console.log('quizId:', quizId);
     console.log('packageId:', packageId);
     console.log('studentMemberId:', studentMemberId);
     console.log('================================');
@@ -60,6 +73,10 @@ class CertificateService {
       // For course users, check by userId + courseId
       query.userId = userId;
       query.courseId = courseId;
+    } else if (userId && quizId) {
+      // For quiz users, check by userId + quizId
+      query.userId = userId;
+      query.quizId = quizId;
     } else if (userId && packageId) {
       // For package users, check by userId + packageId
       query.userId = userId;
@@ -160,6 +177,7 @@ class CertificateService {
     }
 
     const course = courseId ? await Course.findById(courseId) : null;
+    const quiz = quizId ? await Quiz.findById(quizId) : null;
     const pkg = packageId ? await Package.findById(packageId) : null;
 
     // Debug: Log fetched course/package data
@@ -170,13 +188,15 @@ class CertificateService {
     console.log('course title:', course?.title);
     console.log('package found:', !!pkg);
     console.log('package name:', pkg?.name);
+    console.log('quiz found:', !!quiz);
+    console.log('quiz title:', quiz?.title);
     console.log('================================');
 
     if (!user && !studentMember) {
       throw new Error("Recipient (User/Student) not found");
     }
-    if (!course && !pkg && !sheetNameFromStudent) {
-      throw new Error("Source (Course/Package/Sheet) not found");
+    if (!course && !pkg && !sheetNameFromStudent && !quiz) {
+      throw new Error("Source (Course/Package/Sheet/Quiz) not found");
     }
 
     // Determine Names (allow override)
@@ -219,14 +239,21 @@ class CertificateService {
       const sheetTemplate = await CertificateTemplate.findOne({ sheetName: sheetNameFromStudent });
       if (sheetTemplate) templateId = sheetTemplate._id;
     }
+    if (!templateId && quiz) {
+      const quizTemplate = await CertificateTemplate.findOne({
+        quizId: quiz._id,
+        isActive: true,
+      }).sort({ isDefault: -1, createdAt: -1 });
+      if (quizTemplate) templateId = quizTemplate._id;
+    }
 
     // Prepare certificate data
     const courseNameAr = course
       ? course.title?.ar
-      : (pkg ? pkg.name?.ar : (sheetNameFromStudent || "Certificate"));
+      : (pkg ? pkg.name?.ar : (quiz ? quiz.title?.ar : (sheetNameFromStudent || "Certificate")));
     const courseNameEn = course
       ? course.title?.en
-      : (pkg ? pkg.name?.en : (sheetNameFromStudent || "Certificate"));
+      : (pkg ? pkg.name?.en : (quiz ? quiz.title?.en : (sheetNameFromStudent || "Certificate")));
 
     console.log('=== CREATING CERTIFICATE WITH DATA ===');
     console.log('studentNameAr:', studentNameAr);
@@ -242,6 +269,7 @@ class CertificateService {
         studentMemberId: studentMemberId || undefined,
         courseId,
         packageId,
+        quizId,
         sheetName: sheetNameFromStudent || undefined,
         certificateNumber,
         studentName: {
@@ -256,6 +284,7 @@ class CertificateService {
         issuedBy: issuerUserId,
         status: "issued",
         templateId,
+        metadata: certificateMetadata || undefined,
       });
     } catch (createErr) {
       // Handle duplicate key error (E11000)
@@ -267,6 +296,7 @@ class CertificateService {
         const retryQuery = {};
         if (studentMemberId) retryQuery.studentMemberId = studentMemberId;
         if (userId) retryQuery.userId = userId;
+        if (quizId) retryQuery.quizId = quizId;
         
         certificate = await Certificate.findOne(retryQuery)
           .sort({ createdAt: -1 }); // Get the most recent one
@@ -314,6 +344,59 @@ class CertificateService {
     }
 
     return certificate;
+  }
+
+  // Issue certificate for a quiz (user must pass and template must be linked to quiz)
+  async issueQuizCertificate(userId, quizId, issuerUserId) {
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+    if (!quizId) {
+      throw new Error("Quiz ID is required");
+    }
+
+    const quiz = await Quiz.findById(quizId).select("title isPublished");
+    if (!quiz) {
+      throw new Error("Quiz not found");
+    }
+    if (!quiz.isPublished) {
+      throw new Error("Quiz is not published");
+    }
+
+    const bestPassedAttempt = await QuizAttempt.findOne({
+      userId,
+      quizId,
+      passed: true,
+    }).sort({ score: -1, completedAt: -1 });
+
+    if (!bestPassedAttempt) {
+      throw new Error("You must pass this quiz before claiming its certificate");
+    }
+
+    const linkedTemplate = await CertificateTemplate.findOne({
+      quizId,
+      isActive: true,
+    }).sort({ isDefault: -1, createdAt: -1 });
+
+    if (!linkedTemplate) {
+      throw new Error("No certificate template is linked to this quiz");
+    }
+
+    return this.issueCertificate(
+      userId,
+      null,
+      issuerUserId,
+      true,
+      linkedTemplate._id,
+      null,
+      null,
+      null,
+      quizId,
+      {
+        examScore: bestPassedAttempt.score,
+        completionDate: bestPassedAttempt.completedAt || bestPassedAttempt.createdAt,
+      }
+    );
   }
 
   // Bulk issue certificates
@@ -453,6 +536,8 @@ class CertificateService {
     const certificate = await Certificate.findById(certificateId)
       .populate("userId", "fullName email avatar")
       .populate("courseId", "title slug thumbnail certificateSettings")
+      .populate("packageId", "name")
+      .populate("quizId", "title slug")
       .populate("issuedBy", "fullName");
 
     if (!certificate) {
@@ -466,7 +551,8 @@ class CertificateService {
   async verifyCertificate(certificateNumber) {
     const certificate = await Certificate.findOne({ certificateNumber })
       .populate("userId", "fullName")
-      .populate("courseId", "title certificateSettings");
+      .populate("courseId", "title certificateSettings")
+      .populate("quizId", "title slug");
 
     if (!certificate) {
       throw new Error("Certificate not found");
@@ -499,6 +585,7 @@ class CertificateService {
       status: "issued"
     })
       .populate("courseId", "title slug thumbnail certificateSettings")
+      .populate("quizId", "title slug")
       .sort({ issuedAt: -1 });
 
     if (certificates.length === 0) {
@@ -516,6 +603,7 @@ class CertificateService {
         id: cert._id,
         certificateNumber: cert.certificateNumber,
         course: cert.courseId,
+        quiz: cert.quizId,
         issuedAt: cert.issuedAt,
         studentName: cert.studentName,
         pdfUrl: cert.pdfUrl,
@@ -528,6 +616,7 @@ class CertificateService {
   async getUserCertificates(userId) {
     const certificates = await Certificate.find({ userId })
       .populate("courseId", "title slug thumbnail certificateSettings")
+      .populate("quizId", "title slug")
       .sort({ issuedAt: -1 });
 
     return certificates;
@@ -656,6 +745,7 @@ class CertificateService {
     const certificate = await Certificate.findById(certificateId)
       .populate("userId", "fullName")
       .populate("courseId", "title certificateSettings")
+      .populate("quizId", "title slug")
       .populate("packageId", "name");  // Add package populate
 
     if (!certificate) {
@@ -670,6 +760,7 @@ class CertificateService {
     console.log('certificate.courseName:', JSON.stringify(certificate.courseName));
     console.log('certificate.userId:', certificate.userId ? { _id: certificate.userId._id, fullName: certificate.userId.fullName } : null);
     console.log('certificate.courseId:', certificate.courseId ? { _id: certificate.courseId._id, title: certificate.courseId.title } : null);
+    console.log('certificate.quizId:', certificate.quizId ? { _id: certificate.quizId._id, title: certificate.quizId.title } : null);
     console.log('certificate.packageId:', certificate.packageId ? { _id: certificate.packageId._id, name: certificate.packageId.name } : null);
     console.log('==============================');
 
@@ -709,6 +800,16 @@ class CertificateService {
       if (template) {
         certificate.templateId = template._id;
         console.log(`Found template linked to sheet ${certificate.sheetName}: ${template.name}`);
+      }
+    }
+
+    // 2d. Try to find template linked directly to the quiz
+    if (!template && certificate.quizId) {
+      const quizIdStr = certificate.quizId._id || certificate.quizId;
+      template = await CertificateTemplate.findOne({ quizId: quizIdStr }).lean();
+      if (template) {
+        certificate.templateId = template._id;
+        console.log(`Found template linked to quiz ${quizIdStr}: ${template.name}`);
       }
     }
 
@@ -784,6 +885,13 @@ class CertificateService {
         en: certificate.courseId.title.en || certificate.courseId.title.ar || ''
       };
       console.log('Using fresh course name from populated course:', JSON.stringify(courseNameData));
+    } else if (certificate.quizId && certificate.quizId.title) {
+      // Use fresh data from populated quiz
+      courseNameData = {
+        ar: certificate.quizId.title.ar || certificate.quizId.title.en || '',
+        en: certificate.quizId.title.en || certificate.quizId.title.ar || ''
+      };
+      console.log('Using fresh quiz name from populated quiz:', JSON.stringify(courseNameData));
     } else if (certificate.packageId && certificate.packageId.name) {
       // Use fresh data from populated package
       courseNameData = {
@@ -907,6 +1015,9 @@ class CertificateService {
     if (!cleanedData.courseId || cleanedData.courseId === '' || cleanedData.courseId === 'none') {
       delete cleanedData.courseId;
     }
+    if (!cleanedData.quizId || cleanedData.quizId === '' || cleanedData.quizId === 'none') {
+      delete cleanedData.quizId;
+    }
     if (!cleanedData.sheetName || cleanedData.sheetName === '' || cleanedData.sheetName === 'none') {
       delete cleanedData.sheetName;
     }
@@ -954,6 +1065,10 @@ class CertificateService {
     if (updates.courseId === '' || updates.courseId === null || updates.courseId === 'none') {
       template.courseId = undefined;
       delete updates.courseId;
+    }
+    if (updates.quizId === '' || updates.quizId === null || updates.quizId === 'none') {
+      template.quizId = undefined;
+      delete updates.quizId;
     }
     if (updates.sheetName === '' || updates.sheetName === null || updates.sheetName === 'none') {
       template.sheetName = undefined;

@@ -16,6 +16,12 @@ export interface Certificate {
     _id?: string;
     title: BilingualText;
   };
+  quizId?: {
+    id: string;
+    _id?: string;
+    title: BilingualText;
+    slug?: string;
+  };
   packageId?: {
     id: string;
     _id?: string;
@@ -65,6 +71,8 @@ export interface CertificateTemplate {
   _id?: string;
   id: string;
   name: string;
+  courseId?: string; // Linked course
+  quizId?: string; // Linked quiz
   packageId?: string; // Linked package
   sheetName?: string; // Linked sheet name
   description?: string;
@@ -96,7 +104,7 @@ export interface CertificateTemplate {
 // Issue certificate
 export const issueCertificate = createAsyncThunk(
   "certificates/issue",
-  async (data: { userId?: string; studentMemberId?: string; courseId?: string; packageId?: string; templateId?: string; studentName?: { ar?: string; en?: string } | string }, { rejectWithValue }) => {
+  async (data: { userId?: string; studentMemberId?: string; courseId?: string; packageId?: string; quizId?: string; templateId?: string; studentName?: { ar?: string; en?: string } | string }, { rejectWithValue }) => {
     try {
       console.log('Issuing certificate with data:', data);
       const response = await axios.post("/certificates/issue", data);
@@ -277,6 +285,23 @@ export const claimCertificate = createAsyncThunk(
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to claim certificate"
+      );
+    }
+  }
+);
+
+// Claim quiz certificate
+export const claimQuizCertificate = createAsyncThunk(
+  "certificates/claimQuiz",
+  async (quizId: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.post("/certificates/claim", { quizId });
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.error?.message ||
+          error.response?.data?.message ||
+          "Failed to claim quiz certificate"
       );
     }
   }

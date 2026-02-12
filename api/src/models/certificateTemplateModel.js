@@ -47,6 +47,12 @@ const certificateTemplateSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
     },
+    // Linked Quiz (Optional)
+    quizId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Quiz",
+      index: true,
+    },
     // Linked Sheet Name (Optional)
     sheetName: {
       type: String,

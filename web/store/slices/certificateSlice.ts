@@ -15,6 +15,7 @@ import {
   getMyCertificates,
   getMyCertificatesEligibility,
   claimCertificate,
+  claimQuizCertificate,
   Certificate,
   CertificateTemplate,
 } from "../services/certificateService";
@@ -300,6 +301,22 @@ const certificateSlice = createSlice({
         }
       })
       .addCase(claimCertificate.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.isSuccess = false;
+      })
+      // Claim quiz certificate
+      .addCase(claimQuizCertificate.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+        state.isSuccess = false;
+      })
+      .addCase(claimQuizCertificate.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isSuccess = true;
+        state.certificates.unshift(action.payload);
+      })
+      .addCase(claimQuizCertificate.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
         state.isSuccess = false;

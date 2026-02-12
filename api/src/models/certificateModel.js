@@ -17,7 +17,7 @@ const certificateSchema = new mongoose.Schema(
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
-      required: function () { return !this.packageId && !this.sheetName; }, // Required if no packageId or sheetName
+      required: function () { return !this.packageId && !this.sheetName && !this.quizId; }, // Required if no package/sheet/quiz
       index: true,
     },
     packageId: {
@@ -27,6 +27,11 @@ const certificateSchema = new mongoose.Schema(
     },
     sheetName: {
       type: String,
+      index: true,
+    },
+    quizId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Quiz",
       index: true,
     },
 
@@ -188,6 +193,18 @@ certificateSchema.index(
   }
 );
 
+// For quiz certificates with userId
+certificateSchema.index(
+  { userId: 1, quizId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      quizId: { $exists: true, $ne: null },
+      userId: { $exists: true, $ne: null },
+    },
+  }
+);
+
 // Pre-save: Generate certificate number if not provided
 certificateSchema.pre("save", function (next) {
   if (!this.certificateNumber) {
@@ -219,7 +236,8 @@ certificateSchema.statics.verifyByNumber = async function (certificateNumber) {
     status: "issued",
   })
     .populate("userId", "name email")
-    .populate("courseId", "title");
+    .populate("courseId", "title")
+    .populate("quizId", "title slug");
 
   return certificate;
 };

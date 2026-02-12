@@ -14,6 +14,7 @@ import {
 } from "@/store/services/certificateService";
 import { getPackages } from "@/store/services/packageService";
 import { getCourses } from "@/store/services/courseService";
+import { getQuizzes } from "@/store/services/quizService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,6 +84,7 @@ export default function CertificateDesignerPage() {
     name: string;
     packageId?: string;
     courseId?: string;
+    quizId?: string;
     sheetName?: string;
     backgroundImage: string;
     width: number;
@@ -101,6 +103,7 @@ export default function CertificateDesignerPage() {
     name: "",
     packageId: "",
     courseId: "",
+    quizId: "",
     sheetName: "",
     backgroundImage: "",
     width: 1200,
@@ -127,11 +130,13 @@ export default function CertificateDesignerPage() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const { packages } = useAppSelector((state) => state.packages);
   const { courses } = useAppSelector((state) => state.courses);
+  const { quizzes } = useAppSelector((state) => state.quizzes);
 
   useEffect(() => {
     dispatch(getAllTemplates());
     dispatch(getPackages());
     dispatch(getCourses({}));
+    dispatch(getQuizzes());
   }, [dispatch]);
 
   // Default placeholder values for fallback
@@ -163,7 +168,11 @@ export default function CertificateDesignerPage() {
     setDesign({
       name: template.name,
       packageId: template.packageId || "",
-      courseId: (template as any).courseId || "",
+      courseId: typeof template.courseId === "string" ? template.courseId : "",
+      quizId:
+        typeof template.quizId === "string"
+          ? template.quizId
+          : (template.quizId as any)?.id || (template.quizId as any)?._id || "",
       sheetName: (template as any).sheetName || "",
       backgroundImage: template.backgroundImage,
       width: template.width,
@@ -187,6 +196,7 @@ export default function CertificateDesignerPage() {
       name: design.name || "",
       packageId: "",
       courseId: "",
+      quizId: "",
       sheetName: "",
       backgroundImage: "",
       width: 1200,
@@ -347,6 +357,9 @@ export default function CertificateDesignerPage() {
     }
     if (!cleanedData.courseId || cleanedData.courseId === "none") {
       delete cleanedData.courseId;
+    }
+    if (!cleanedData.quizId || cleanedData.quizId === "none") {
+      delete cleanedData.quizId;
     }
     if (!cleanedData.sheetName || cleanedData.sheetName === "none") {
       delete cleanedData.sheetName;
@@ -563,6 +576,7 @@ export default function CertificateDesignerPage() {
                 <CardTitle className="text-lg">{template.name}</CardTitle>
                 <CardDescription>
                   {template.width}x{template.height} px
+                  {template.quizId ? ` • ${isRtl ? "اختبار مرتبط" : "Linked Quiz"}` : ""}
                   {template.sheetName ? ` • ${isRtl ? "الشيت" : "Sheet"}: ${template.sheetName}` : ""}
                 </CardDescription>
               </CardHeader>
@@ -635,6 +649,29 @@ export default function CertificateDesignerPage() {
                         {isRtl ? course.title?.ar : course.title?.en}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{isRtl ? "ربط باختبار (اختياري)" : "Link to Quiz (Optional)"}</Label>
+                <Select
+                  value={design.quizId || "none"}
+                  onValueChange={(val) => setDesign({ ...design, quizId: val === "none" ? "" : val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={isRtl ? "اختر اختبار..." : "Select quiz..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{isRtl ? "بدون ربط" : "No Link"}</SelectItem>
+                    {quizzes &&
+                      quizzes
+                        .filter((quiz: any) => quiz && (quiz.id || quiz._id) && String(quiz.id || quiz._id) !== "")
+                        .map((quiz: any) => (
+                          <SelectItem key={quiz.id || quiz._id} value={String(quiz.id || quiz._id)}>
+                            {isRtl ? quiz.title?.ar || quiz.title?.en : quiz.title?.en || quiz.title?.ar}
+                          </SelectItem>
+                        ))}
                   </SelectContent>
                 </Select>
               </div>

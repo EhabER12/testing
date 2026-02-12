@@ -10,6 +10,7 @@ import {
   Quiz,
   QuizAttempt,
 } from "@/store/services/quizService";
+import { claimQuizCertificate } from "@/store/services/certificateService";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,6 +30,7 @@ import {
   Trophy,
   LogIn,
   UserPlus,
+  Award,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Progress } from "@/components/ui/progress";
@@ -55,6 +57,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
   const [currentQuestionIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [isClaimingCertificate, setIsClaimingCertificate] = useState(false);
 
   useEffect(() => {
     if (quizId) {
@@ -130,6 +133,33 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const handleClaimQuizCertificate = async () => {
+    if (!currentQuiz || !user) return;
+
+    try {
+      setIsClaimingCertificate(true);
+      const certificate = await dispatch(
+        claimQuizCertificate((currentQuiz.id || currentQuiz._id) as string)
+      ).unwrap();
+
+      if (certificate?.certificateNumber) {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+        const downloadUrl = `${apiUrl}/certificates/download/${certificate.certificateNumber}`;
+        window.open(downloadUrl, "_blank");
+      }
+
+      toast.success(
+        isRtl ? "تم استخراج شهادة الاختبار بنجاح" : "Quiz certificate issued successfully"
+      );
+    } catch (error: any) {
+      toast.error(
+        error || (isRtl ? "فشل استخراج شهادة الاختبار" : "Failed to issue quiz certificate")
+      );
+    } finally {
+      setIsClaimingCertificate(false);
+    }
+  };
+
   if (isLoading && !currentQuiz) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -143,7 +173,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
   if (gameState === "start") {
     const requiresLogin = !user && !!currentQuiz.requiresRegistration;
     const redirectPath = currentQuiz.linkedTo === "general" && currentQuiz.slug
-      ? `/quizzes/p/${currentQuiz.slug}`
+      ? `/${locale}/quizzes/p/${currentQuiz.slug}`
       : "";
 
     return (
@@ -394,6 +424,21 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
               <Button onClick={handleStart} variant="outline" className="h-12">
                 <RotateCcw className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
                 {isRtl ? "إعادة المحاولة" : "Try Again"}
+              </Button>
+            )}
+            {passed && user && (
+              <Button
+                onClick={handleClaimQuizCertificate}
+                variant="outline"
+                className="h-12 border-genoun-green text-genoun-green hover:bg-genoun-green/10"
+                disabled={isClaimingCertificate}
+              >
+                {isClaimingCertificate ? (
+                  <div className={`h-4 w-4 animate-spin rounded-full border-2 border-genoun-green border-t-transparent ${isRtl ? "ml-2" : "mr-2"}`} />
+                ) : (
+                  <Award className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+                )}
+                {isRtl ? "استخراج شهادة الاختبار" : "Get Quiz Certificate"}
               </Button>
             )}
             <Button onClick={() => setGameState("start")} className="h-12 bg-genoun-green hover:bg-genoun-green/90">

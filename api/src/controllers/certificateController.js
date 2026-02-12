@@ -7,17 +7,19 @@ import CertificateTemplate from "../models/certificateTemplateModel.js";
 // Get all certificates (Admin)
 export const getAllCertificates = async (req, res, next) => {
   try {
-    const { status, courseId, userId } = req.query;
+    const { status, courseId, quizId, userId } = req.query;
 
     const query = {};
     if (status) query.status = status;
     if (courseId) query.courseId = courseId;
+    if (quizId) query.quizId = quizId;
     if (userId) query.userId = userId;
 
     const certificates = await Certificate.find(query)
       .populate("userId", "fullName email avatar")
       .populate("studentMemberId", "governorate name")
       .populate("courseId", "title slug thumbnail certificateSettings")
+      .populate("quizId", "title slug")
       .populate("packageId", "name")
       .populate("issuedBy", "fullName")
       .sort({ issuedAt: -1 });
@@ -43,7 +45,7 @@ export const getAllCertificates = async (req, res, next) => {
 // Issue certificate to a user
 export const issueCertificate = async (req, res, next) => {
   try {
-    const { userId, studentMemberId, courseId, packageId, templateId, studentName } = req.body;
+    const { userId, studentMemberId, courseId, packageId, quizId, templateId, studentName } = req.body;
     const issuerUserId = req.user._id;
 
     // Determine if this is for a course or package
@@ -58,7 +60,8 @@ export const issueCertificate = async (req, res, next) => {
       templateId, // Pass manual template ID
       targetPackageId, // packageId (can be null for course certificates)
       studentMemberId || null, // Pass studentMemberId if provided
-      studentName || null // Optional override for student name
+      studentName || null, // Optional override for student name
+      quizId || null
     );
 
     res.status(201).json({
@@ -269,15 +272,31 @@ export const getMyCertificatesEligibility = async (req, res, next) => {
 // Claim certificate (Student)
 export const claimCertificate = async (req, res, next) => {
   try {
-    const { courseId } = req.body;
+    const { courseId, quizId } = req.body;
     const userId = req.user._id;
 
-    const certificate = await certificateService.issueCertificate(
-      userId,
-      courseId,
-      userId,
-      false // Verify eligibility
-    );
+    if (!courseId && !quizId) {
+      return res.status(400).json({
+        success: false,
+        message: "courseId or quizId is required",
+      });
+    }
+
+    let certificate;
+    if (quizId) {
+      certificate = await certificateService.issueQuizCertificate(
+        userId,
+        quizId,
+        userId
+      );
+    } else {
+      certificate = await certificateService.issueCertificate(
+        userId,
+        courseId,
+        userId,
+        false // Verify eligibility
+      );
+    }
 
     res.status(201).json({
       success: true,

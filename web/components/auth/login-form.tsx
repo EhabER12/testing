@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useTransition, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { login } from "@/store/services/authService";
 import { reset } from "@/store/slices/authSlice";
@@ -36,8 +36,16 @@ export function LoginForm() {
   const t = useTranslations("auth.login");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const dispatch = useAppDispatch();
   const { isLoading, isError, message } = useAppSelector((state) => state.auth);
+  const redirect = searchParams.get("redirect");
+  const localePrefix = pathname?.split("/")[1] || "ar";
+  const safeRedirect =
+    redirect && redirect.startsWith("/") && !redirect.startsWith("//")
+      ? redirect
+      : null;
 
   // Reset error state on mount to prevent hydration mismatch
   useEffect(() => {
@@ -68,14 +76,14 @@ export function LoginForm() {
               router.push("/dashboard");
             } else {
               // Pending teacher - show pending message
-              router.push("/login?message=teacher_pending");
+              router.push(`/${localePrefix}/login?message=teacher_pending`);
             }
           } else if (userRole === "admin" || userRole === "moderator") {
             // Admin/Moderator - go to dashboard
             router.push("/dashboard");
           } else {
-            // Regular user - go to homepage
-            router.push("/ar");
+            // Regular user - redirect back if requested
+            router.push(safeRedirect || `/${localePrefix}`);
           }
         }, 100);
       } catch (error) {
