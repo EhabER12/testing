@@ -586,8 +586,8 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
                 {formData.linkedTo === "general" && (
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5 text-amber-700">
-                      <Label>{isRtl ? "ÙŠØªØ·Ù„Ø¨ Ø§Ù„ØªØ³Ø¬ÙŠÙ„" : "Require Registration"}</Label>
-                      <p className="text-xs text-amber-600">{isRtl ? "Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø¥Ø¬Ø±Ø§Ø¡ Ø§Ù„Ø§Ø®ØªØ¨Ø§Ø± ÙƒØ¶ÙŠÙ Ø¹Ù†Ø¯ ØªÙØ¹ÙŠÙ„ Ù‡Ø°Ø§ Ø§Ù„Ø®ÙŠØ§Ø±" : "Guests must log in before taking this quiz"}</p>
+                      <Label>{isRtl ? "\u064a\u062a\u0637\u0644\u0628 \u0627\u0644\u062a\u0633\u062c\u064a\u0644" : "Require Registration"}</Label>
+                      <p className="text-xs text-amber-600">{isRtl ? "\u0644\u0627 \u064a\u0645\u0643\u0646 \u0625\u062c\u0631\u0627\u0621 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0643\u0636\u064a\u0641 \u0639\u0646\u062f \u062a\u0641\u0639\u064a\u0644 \u0647\u0630\u0627 \u0627\u0644\u062e\u064a\u0627\u0631" : "Guests must log in before taking this quiz"}</p>
                     </div>
                     <Switch checked={formData.requiresRegistration} onCheckedChange={(v) => setFormData({ ...formData, requiresRegistration: v })} />
                   </div>
