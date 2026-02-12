@@ -92,6 +92,7 @@ export class AuthService {
     }
 
     // Only generate tokens if verification is skipped
+    await this.sendStudentWelcomeEmail(user);
     const tokens = generateTokenPair(user._id);
 
     return {
@@ -128,6 +129,33 @@ export class AuthService {
     } catch (error) {
       logger.error("Failed to send verification email using template", { error: error.message, userId: user._id });
       // Fallback to basic email if template fails (optional)
+    }
+  }
+
+  async sendStudentWelcomeEmail(user, lang = "ar") {
+    if (!user || user.role !== "user") return;
+
+    const baseUrl = process.env.CLIENT_URL || process.env.WEBSITE_URL || "";
+    const loginUrl = `${baseUrl}/login`;
+
+    try {
+      await emailTemplateService.sendTemplatedEmail(
+        user.email,
+        "student_welcome",
+        {
+          name: user.fullName?.ar || user.fullName?.en || "Student",
+          loginUrl,
+          year: new Date().getFullYear(),
+        },
+        lang
+      );
+      logger.info("Student welcome email sent", { userId: user._id, email: user.email });
+    } catch (error) {
+      // Don't block auth flow if this email fails
+      logger.warn("Failed to send student welcome email", {
+        userId: user._id,
+        error: error.message,
+      });
     }
   }
 
@@ -228,6 +256,7 @@ export class AuthService {
     user.emailVerificationToken = undefined;
     user.emailVerificationExpires = undefined;
     await user.save();
+    await this.sendStudentWelcomeEmail(user);
 
     logger.info("Email verified", { userId: user._id, email: user.email });
 
@@ -417,6 +446,7 @@ export class AuthService {
     user.verificationTokenExpire = undefined;
 
     await user.save();
+    await this.sendStudentWelcomeEmail(user);
 
     const tokens = generateTokenPair(user._id);
 
