@@ -41,7 +41,8 @@ router.put(
       'promoModal', 'homepageBanner', 'homepageCourses', 'emailSettings',
       'authorityBar', 'reviewsSettings', 'whyGenounSettings',
       'headerDisplay', 'marketingBanners', 'notifications', 'paymentGateways',
-      'financeSettings', 'apiKeys', 'teacherProfitSettings', 'subscriptionStudentProfitSettings'
+      'financeSettings', 'apiKeys', 'teacherProfitSettings',
+      'subscriptionStudentProfitSettings', 'heroStats'
     ];
 
     fieldsToparse.forEach(field => {

@@ -158,6 +158,15 @@ export function HeroSection({
   };
 
   const backgroundImageUrl = getBackgroundImageUrl();
+  const satisfiedStudentsValue = settings?.heroStats?.satisfiedStudents?.value;
+  const satisfiedStudentsLabel = isRtl
+    ? settings?.heroStats?.satisfiedStudents?.label?.ar
+    : settings?.heroStats?.satisfiedStudents?.label?.en;
+  const satisfiedStudentsText =
+    settings?.heroStats?.enabled &&
+    (satisfiedStudentsValue || satisfiedStudentsLabel)
+      ? [satisfiedStudentsValue, satisfiedStudentsLabel].filter(Boolean).join(" ")
+      : t("clients");
 
   return (
     <section
@@ -302,7 +311,7 @@ export function HeroSection({
                     {t("rating")}
                   </span>
                 </div>
-                <p className="text-white/60 text-sm">{t("clients")}</p>
+                <p className="text-white/60 text-sm">{satisfiedStudentsText}</p>
               </div>
             </div>
           </div>

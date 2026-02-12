@@ -651,6 +651,13 @@ const heroStatsSchema = new mongoose.Schema({
       en: { type: String, default: "Countries" },
     },
   },
+  satisfiedStudents: {
+    value: { type: String, default: "+500" },
+    label: {
+      ar: { type: String, default: "طالب راضٍ" },
+      en: { type: String, default: "Happy Students" },
+    },
+  },
 }, { _id: false });
 
 
@@ -838,6 +845,10 @@ const settingsSchema = new mongoose.Schema(
         projects: { value: "+1000", label: { ar: "ختمة", en: "Projects" } },
         growth: { value: "+250", label: { ar: "طالب جديد", en: "New Students" } },
         countries: { value: "6", label: { ar: "دول", en: "Countries" } },
+        satisfiedStudents: {
+          value: "+500",
+          label: { ar: "طالب راضٍ", en: "Happy Students" },
+        },
       }),
     },
     updatedBy: {

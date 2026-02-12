@@ -277,6 +277,7 @@ export interface HeroStatsSettings {
   projects: HeroStatItem;
   growth: HeroStatItem;
   countries: HeroStatItem;
+  satisfiedStudents: HeroStatItem;
 }
 
 

@@ -247,6 +247,10 @@ export default function SettingsDashboardPage() {
     projects: { value: "+1000", label: { ar: "ختمة", en: "Projects" } },
     growth: { value: "+250", label: { ar: "طالب جديد", en: "New Students" } },
     countries: { value: "6", label: { ar: "دول", en: "Countries" } },
+    satisfiedStudents: {
+      value: "+500",
+      label: { ar: "طالب راضٍ", en: "Happy Students" },
+    },
   });
 
   // All available platforms
@@ -429,7 +433,43 @@ export default function SettingsDashboardPage() {
         });
       }
       if (settings.heroStats) {
-        setHeroStats(settings.heroStats);
+        const savedHeroStats = settings.heroStats;
+        setHeroStats((prev) => ({
+          ...prev,
+          ...savedHeroStats,
+          projects: {
+            ...prev.projects,
+            ...savedHeroStats.projects,
+            label: {
+              ...prev.projects.label,
+              ...savedHeroStats.projects?.label,
+            },
+          },
+          growth: {
+            ...prev.growth,
+            ...savedHeroStats.growth,
+            label: {
+              ...prev.growth.label,
+              ...savedHeroStats.growth?.label,
+            },
+          },
+          countries: {
+            ...prev.countries,
+            ...savedHeroStats.countries,
+            label: {
+              ...prev.countries.label,
+              ...savedHeroStats.countries?.label,
+            },
+          },
+          satisfiedStudents: {
+            ...prev.satisfiedStudents,
+            ...savedHeroStats.satisfiedStudents,
+            label: {
+              ...prev.satisfiedStudents.label,
+              ...savedHeroStats.satisfiedStudents?.label,
+            },
+          },
+        }));
       }
     }
   }, [settings]);

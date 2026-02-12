@@ -134,6 +134,7 @@ export class SettingsService {
       "apiKeys",
       "subscriptionTeachers",
       "subscriptionStudentProfitSettings",
+      "heroStats",
     ];
     for (const field of jsonFields) {
       if (typeof settingsData[field] === "string") {

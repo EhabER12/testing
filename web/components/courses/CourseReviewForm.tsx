@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useAppSelector } from "@/store/hooks";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,16 +27,18 @@ export function CourseReviewForm({
 }: CourseReviewFormProps) {
   const isRtl = locale === "ar";
   const { userData } = useAuth();
+  const { user } = useAppSelector((state) => state.auth);
   const { toast } = useToast();
   const [rating, setRating] = useState(existingReview?.rating || 0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState(existingReview?.comment || "");
   const [submitting, setSubmitting] = useState(false);
+  const userId = userData?.id || (user as any)?.id || (user as any)?._id;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!userData) {
+    if (!userId) {
       toast({
         title: "Error",
         description: "You must be logged in to submit a review",
@@ -67,7 +70,7 @@ export function CourseReviewForm({
     try {
       await axiosInstance.post("/reviews", {
         courseId,
-        userId: userData.id,
+        userId,
         rating,
         comment,
       });
@@ -86,7 +89,10 @@ export function CourseReviewForm({
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to submit review",
+        description:
+          error.response?.data?.error?.message ||
+          error.response?.data?.message ||
+          "Failed to submit review",
         variant: "destructive",
       });
     } finally {

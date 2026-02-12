@@ -11,7 +11,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Briefcase, TrendingUp, Globe } from "lucide-react";
+import { Briefcase, TrendingUp, Globe, Users } from "lucide-react";
 import { HeroStatsSettings as HeroStatsSettingsType } from "@/store/services/settingsService";
 
 interface HeroStatsSettingsProps {
@@ -221,6 +221,73 @@ export function HeroStatsSettings({
                                     })
                                 }
                                 placeholder="Countries"
+                                disabled={!heroStats.enabled}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Satisfied Students Stat */}
+                <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h4 className="font-semibold flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        {isRtl ? "الطلاب الراضون / Satisfied Students" : "Satisfied Students / الطلاب الراضون"}
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <Label>{isRtl ? "القيمة" : "Value"}</Label>
+                            <Input
+                                value={heroStats.satisfiedStudents.value}
+                                onChange={(e) =>
+                                    setHeroStats({
+                                        ...heroStats,
+                                        satisfiedStudents: {
+                                            ...heroStats.satisfiedStudents,
+                                            value: e.target.value,
+                                        },
+                                    })
+                                }
+                                placeholder="+500"
+                                disabled={!heroStats.enabled}
+                            />
+                        </div>
+                        <div>
+                            <Label>{isRtl ? "النص (عربي)" : "Label (Arabic)"}</Label>
+                            <Input
+                                value={heroStats.satisfiedStudents.label.ar}
+                                onChange={(e) =>
+                                    setHeroStats({
+                                        ...heroStats,
+                                        satisfiedStudents: {
+                                            ...heroStats.satisfiedStudents,
+                                            label: {
+                                                ...heroStats.satisfiedStudents.label,
+                                                ar: e.target.value,
+                                            },
+                                        },
+                                    })
+                                }
+                                placeholder="طالب راضٍ"
+                                disabled={!heroStats.enabled}
+                            />
+                        </div>
+                        <div>
+                            <Label>{isRtl ? "النص (English)" : "Label (English)"}</Label>
+                            <Input
+                                value={heroStats.satisfiedStudents.label.en}
+                                onChange={(e) =>
+                                    setHeroStats({
+                                        ...heroStats,
+                                        satisfiedStudents: {
+                                            ...heroStats.satisfiedStudents,
+                                            label: {
+                                                ...heroStats.satisfiedStudents.label,
+                                                en: e.target.value,
+                                            },
+                                        },
+                                    })
+                                }
+                                placeholder="Happy Students"
                                 disabled={!heroStats.enabled}
                             />
                         </div>

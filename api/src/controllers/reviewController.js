@@ -63,7 +63,10 @@ export const getReviewById = async (req, res, next) => {
 // @access  Public
 export const createReview = async (req, res, next) => {
   try {
-    const reviewData = req.body;
+    const reviewData = {
+      ...req.body,
+      userId: req.user?._id,
+    };
     const images = req.files;
 
     const review = await reviewService.createReview(reviewData, images);
