@@ -22,6 +22,7 @@ export interface Quiz {
   linkedTo: "course" | "section" | "general";
   slug?: string;
   isPublic?: boolean;
+  requiresRegistration?: boolean;
   questions: QuizQuestion[];
   passingScore: number;
   attemptsAllowed: number | null;
@@ -54,6 +55,7 @@ export interface CreateQuizData {
   shuffleQuestions?: boolean;
   showCorrectAnswers?: boolean;
   isRequiredForCertificate?: boolean;
+  requiresRegistration?: boolean;
   isPublished?: boolean;
 }
 

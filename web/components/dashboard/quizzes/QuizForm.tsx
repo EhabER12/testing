@@ -78,6 +78,7 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
     shuffleQuestions: false,
     showCorrectAnswers: true,
     isRequiredForCertificate: false,
+    requiresRegistration: false,
     isPublished: false,
   });
 
@@ -102,6 +103,7 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
         shuffleQuestions: !!initialData.shuffleQuestions,
         showCorrectAnswers: !!initialData.showCorrectAnswers,
         isRequiredForCertificate: !!initialData.isRequiredForCertificate,
+        requiresRegistration: !!initialData.requiresRegistration,
         isPublished: !!initialData.isPublished,
       });
       setQuestions(initialData.questions || []);
@@ -580,6 +582,16 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
                   </div>
                   <Switch checked={formData.showCorrectAnswers} onCheckedChange={(v) => setFormData({ ...formData, showCorrectAnswers: v })} />
                 </div>
+
+                {formData.linkedTo === "general" && (
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5 text-amber-700">
+                      <Label>{isRtl ? "ÙŠØªØ·Ù„Ø¨ Ø§Ù„ØªØ³Ø¬ÙŠÙ„" : "Require Registration"}</Label>
+                      <p className="text-xs text-amber-600">{isRtl ? "Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø¥Ø¬Ø±Ø§Ø¡ Ø§Ù„Ø§Ø®ØªØ¨Ø§Ø± ÙƒØ¶ÙŠÙ Ø¹Ù†Ø¯ ØªÙØ¹ÙŠÙ„ Ù‡Ø°Ø§ Ø§Ù„Ø®ÙŠØ§Ø±" : "Guests must log in before taking this quiz"}</p>
+                    </div>
+                    <Switch checked={formData.requiresRegistration} onCheckedChange={(v) => setFormData({ ...formData, requiresRegistration: v })} />
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5 text-blue-600">

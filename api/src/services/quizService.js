@@ -247,6 +247,11 @@ class QuizService {
       throw new Error("Quiz is not published yet");
     }
 
+    // Guest attempts are allowed only for general quizzes that do not require registration
+    if (!userId && (quiz.linkedTo !== "general" || quiz.requiresRegistration)) {
+      throw new Error("Authentication required to take this quiz");
+    }
+
     // Check previous attempts (only for registered users)
     let attemptsCount = 0;
     if (userId) {

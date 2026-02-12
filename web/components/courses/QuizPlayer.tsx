@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   getQuiz,
@@ -26,6 +27,8 @@ import {
   ChevronLeft,
   RotateCcw,
   Trophy,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Progress } from "@/components/ui/progress";
@@ -40,6 +43,7 @@ interface QuizPlayerProps {
 
 export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerProps) {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const isRtl = locale === "ar";
   
   const { currentQuiz, bestAttempt, lastAttempt, isLoading, isSubmitting } = useAppSelector(
@@ -92,6 +96,10 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
 
   const handleSubmit = async () => {
     if (!currentQuiz) return;
+    if (!user && currentQuiz.requiresRegistration) {
+      toast.error(isRtl ? "يجب تسجيل الدخول أولًا لإجراء هذا الاختبار" : "Please log in before taking this quiz");
+      return;
+    }
 
     const formattedAnswers = currentQuiz.questions.map((q) => {
       const qId = (q as any).id || q._id;
@@ -133,6 +141,11 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
   if (!currentQuiz) return null;
 
   if (gameState === "start") {
+    const requiresLogin = !user && !!currentQuiz.requiresRegistration;
+    const redirectPath = currentQuiz.linkedTo === "general" && currentQuiz.slug
+      ? `/quizzes/p/${currentQuiz.slug}`
+      : "";
+
     return (
       <Card className="max-w-2xl mx-auto">
         <CardHeader className="text-center">
@@ -171,15 +184,42 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
             </div>
           ) : (
             <div className="space-y-4">
-              {!user && currentQuiz.linkedTo === "general" && (
+              {requiresLogin ? (
+                <div className="bg-amber-50 p-3 rounded-lg flex items-center gap-3 text-amber-800 border border-amber-100 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  <p>{isRtl ? "هذا الاختبار يتطلب التسجيل. سجّل دخولك أولًا للبدء." : "This quiz requires registration. Please log in to start."}</p>
+                </div>
+              ) : (
+                !user && currentQuiz.linkedTo === "general" && (
                 <div className="bg-blue-50 p-3 rounded-lg flex items-center gap-3 text-blue-800 border border-blue-100 text-sm">
                   <AlertCircle className="h-4 w-4" />
                   <p>{isRtl ? "ستتمكن من إجراء الاختبار كضيف، لكن لن يتم حفظ نتائجك في حساب." : "You can take the quiz as a guest, but your results won't be saved to an account."}</p>
                 </div>
+                )
               )}
-              <Button onClick={handleStart} className="w-full bg-genoun-green hover:bg-genoun-green/90 h-12 text-lg">
-                {isRtl ? "ابدأ الاختبار" : "Start Quiz"}
-              </Button>
+              {requiresLogin ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Button
+                    onClick={() => router.push(`/${locale}/login${redirectPath ? `?redirect=${encodeURIComponent(redirectPath)}` : ""}`)}
+                    className="h-12"
+                  >
+                    <LogIn className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+                    {isRtl ? "تسجيل الدخول" : "Log In"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/${locale}/register`)}
+                    className="h-12"
+                  >
+                    <UserPlus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+                    {isRtl ? "إنشاء حساب" : "Create Account"}
+                  </Button>
+                </div>
+              ) : (
+                <Button onClick={handleStart} className="w-full bg-genoun-green hover:bg-genoun-green/90 h-12 text-lg">
+                  {isRtl ? "ابدأ الاختبار" : "Start Quiz"}
+                </Button>
+              )}
             </div>
           )}
         </CardContent>

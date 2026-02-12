@@ -79,6 +79,10 @@ const quizSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    requiresRegistration: {
+      type: Boolean,
+      default: false,
+    },
 
     // Settings
     passingScore: {

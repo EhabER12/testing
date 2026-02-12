@@ -169,6 +169,21 @@ export const submitQuizAttempt = async (req, res, next) => {
       });
     }
 
+    const quiz = await Quiz.findById(quizId).select("linkedTo requiresRegistration");
+    if (!quiz) {
+      return res.status(404).json({
+        success: false,
+        message: "Quiz not found",
+      });
+    }
+
+    if (!req.user && (quiz.linkedTo !== "general" || quiz.requiresRegistration)) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required to take this quiz",
+      });
+    }
+
     const attempt = await quizService.submitQuizAttempt(
       req.user?._id,
       quizId,
