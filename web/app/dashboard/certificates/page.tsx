@@ -17,7 +17,11 @@ import {
 } from "@/store/services/certificateService";
 import { getCourses } from "@/store/services/courseService";
 import { getAllUsers } from "@/store/services/userService";
-import { getStudentMembers, importStudentMembers } from "@/store/services/studentMemberService";
+import {
+  getStudentMembers,
+  importStudentMembers,
+  deleteStudentMember,
+} from "@/store/services/studentMemberService";
 import { resetStatus } from "@/store/slices/certificateSlice";
 import { isAuthenticated, isAdmin, isModerator } from "@/store/services/authService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
@@ -104,6 +108,7 @@ export default function CertificatesPage() {
   const [bulkGovernorate, setBulkGovernorate] = useState<string>("all");
   const [bulkTeacher, setBulkTeacher] = useState<string>("all");
   const [bulkSheet, setBulkSheet] = useState<string>("all");
+  const [sheetDeleteLoading, setSheetDeleteLoading] = useState<string | null>(null);
   const [issueDialog, setIssueDialog] = useState({
     open: false,
     userId: "",
@@ -484,6 +489,92 @@ export default function CertificatesPage() {
       toast.error(typeof err === "string" ? err : "Import failed");
     } finally {
       setImportLoading(false);
+    }
+  };
+
+  const handleDeleteSheet = async (sheetName: string) => {
+    const normalizedSheet = (sheetName || "").trim();
+    if (!normalizedSheet || normalizedSheet === "all") {
+      toast.error(isRtl ? "اختر شيت أولاً" : "Select a sheet first");
+      return;
+    }
+
+    const studentsInSheet = studentMembers.filter(
+      (s) => (s.sheetName || "").trim() === normalizedSheet
+    );
+    const certificatesInSheet = certificates.filter(
+      (c) => (c.sheetName || "").trim() === normalizedSheet
+    );
+
+    if (studentsInSheet.length === 0 && certificatesInSheet.length === 0) {
+      toast.error(
+        isRtl
+          ? "لا توجد بيانات مرتبطة بهذا الشيت"
+          : "No data found for this sheet"
+      );
+      return;
+    }
+
+    const confirmed = confirm(
+      isRtl
+        ? `سيتم حذف الشيت "${normalizedSheet}" بالكامل، بما في ذلك ${studentsInSheet.length} طالب و${certificatesInSheet.length} شهادة. لا يمكن التراجع. هل تريد المتابعة؟`
+        : `This will permanently delete sheet "${normalizedSheet}" with ${studentsInSheet.length} students and ${certificatesInSheet.length} certificates. This cannot be undone. Continue?`
+    );
+
+    if (!confirmed) return;
+
+    setSheetDeleteLoading(normalizedSheet);
+    let deletedStudents = 0;
+    let deletedCertificates = 0;
+    let failedOps = 0;
+
+    try {
+      for (const cert of certificatesInSheet) {
+        const certId = cert.id || cert._id;
+        if (!certId) continue;
+        try {
+          await dispatch(deleteCertificate(certId)).unwrap();
+          deletedCertificates += 1;
+        } catch (err) {
+          failedOps += 1;
+          console.error("Failed to delete certificate from sheet", certId, err);
+        }
+      }
+
+      for (const student of studentsInSheet) {
+        const studentId = student.id || student._id;
+        if (!studentId) continue;
+        try {
+          await dispatch(deleteStudentMember(studentId)).unwrap();
+          deletedStudents += 1;
+        } catch (err) {
+          failedOps += 1;
+          console.error("Failed to delete student from sheet", studentId, err);
+        }
+      }
+
+      await Promise.all([
+        dispatch(getStudentMembers()).unwrap(),
+        dispatch(getCertificates()).unwrap(),
+      ]);
+
+      setBulkSheet("all");
+
+      toast.success(
+        isRtl
+          ? `تم حذف الشيت: ${deletedStudents} طالب و${deletedCertificates} شهادة`
+          : `Sheet deleted: ${deletedStudents} students and ${deletedCertificates} certificates`
+      );
+
+      if (failedOps > 0) {
+        toast.error(
+          isRtl
+            ? `حدثت ${failedOps} عملية فاشلة أثناء الحذف`
+            : `${failedOps} delete operations failed`
+        );
+      }
+    } finally {
+      setSheetDeleteLoading(null);
     }
   };
 
@@ -1065,6 +1156,18 @@ export default function CertificatesPage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  {bulkSheet !== "all" && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleDeleteSheet(bulkSheet)}
+                      disabled={sheetDeleteLoading === bulkSheet}
+                    >
+                      <Trash2 className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+                      {sheetDeleteLoading === bulkSheet
+                        ? (isRtl ? "جاري الحذف..." : "Deleting...")
+                        : (isRtl ? "حذف الشيت بالكامل" : "Delete Full Sheet")}
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     onClick={() => {
