@@ -315,16 +315,22 @@ export const cancelPayment = async (req, res, next) => {
 // @access  Private
 export const createPaypalPayment = async (req, res, next) => {
   try {
-    const { courseId, amount, currency = "USD", locale, billingInfo } = req.body;
+    const { courseId, productId, amount, currency = "USD", locale, billingInfo } = req.body;
     const userId = req.user?._id; // Optional - may be undefined for guest checkout
 
-    if (!courseId || !amount) {
-      return next(new ApiError(400, "Course ID and amount are required"));
+    if (!courseId && !productId) {
+      return next(new ApiError(400, "Course ID or Product ID is required"));
+    }
+
+    // Amount is optional for course checkout (server calculates it from DB).
+    if (!courseId && (!amount || Number(amount) <= 0)) {
+      return next(new ApiError(400, "Valid amount is required"));
     }
 
     const payment = await paymentService.createPaypalPayment({
       userId,
       courseId,
+      productId,
       amount,
       currency,
       locale,
@@ -400,8 +406,13 @@ export const createCashierPayment = async (req, res, next) => {
     const userId = req.user?._id;
     const user = req.user;
 
-    if ((!courseId && !productId) || !amount) {
-      return next(new ApiError(400, "Course ID/Product ID and amount are required"));
+    if (!courseId && !productId) {
+      return next(new ApiError(400, "Course ID or Product ID is required"));
+    }
+
+    // Amount is optional for course checkout (server calculates it from DB).
+    if (!courseId && (!amount || Number(amount) <= 0)) {
+      return next(new ApiError(400, "Valid amount is required"));
     }
 
     // Determine customer info (use provided customer object or logged in user)

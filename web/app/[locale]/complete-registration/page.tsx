@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,14 +28,9 @@ const formSchema = z.object({
     path: ["confirmPassword"],
 });
 
-interface CompleteRegistrationPageProps {
-    params: Promise<{
-        locale: string;
-    }>;
-}
-
-export default async function CompleteRegistrationPage({ params }: CompleteRegistrationPageProps) {
-    const { locale } = await params;
+export default function CompleteRegistrationPage() {
+    const params = useParams<{ locale: string }>();
+    const locale = params?.locale || "ar";
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
     const router = useRouter();

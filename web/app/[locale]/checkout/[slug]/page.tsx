@@ -253,7 +253,6 @@ export default function CourseCheckoutPage() {
             // 1. PayPal
             if (selectedMethodId === "paypal") {
                 const response = await dispatch(createPaypalPaymentThunk({
-                    amount: payableAmount,
                     currency: selectedCurrency,
                     courseId,
                     locale,
@@ -278,7 +277,6 @@ export default function CourseCheckoutPage() {
             // 2. Kashier (Payment Sessions API v3)
             else if (selectedMethodId === "cashier") {
                 const response = await dispatch(createCashierPaymentThunk({
-                    amount: payableAmount,
                     currency: selectedCurrency,
                     courseId,
                     customer: {
@@ -326,7 +324,6 @@ export default function CourseCheckoutPage() {
                         address: formData.address || "",
                         city: formData.city || "",
                         country: formData.country,
-                        amount: payableAmount,
                         items: [
                             {
                                 productId: courseId,
@@ -336,7 +333,6 @@ export default function CourseCheckoutPage() {
                             },
                         ],
                     },
-                    amount: payableAmount,
                     currency: selectedCurrency,
                     // Add course-specific metadata
                     metadata: {

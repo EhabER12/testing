@@ -8,6 +8,7 @@ import User from "../models/userModel.js";
 import CartSession from "../models/cartSessionModel.js";
 import Product from "../models/productModel.js";
 import Service from "../models/serviceModel.js";
+import Course from "../models/courseModel.js";
 import logger from "../utils/logger.js";
 import * as paypalClient from "./paypal.js";
 import { kashierService } from "./cashierService.js";
@@ -19,6 +20,85 @@ export class PaymentService {
     this.settingsRepository = new SettingsRepository();
     this.emailService = new EmailService();
     this.financeService = new FinanceService();
+  }
+
+  normalizeCurrency(currency, fallback = "EGP") {
+    const allowedCurrencies = ["EGP", "SAR", "USD"];
+    if (currency && allowedCurrencies.includes(currency)) {
+      return currency;
+    }
+    return fallback;
+  }
+
+  getExchangeRatesMap(settings) {
+    return {
+      USD: Number(settings?.financeSettings?.exchangeRates?.USD) || 1,
+      SAR: Number(settings?.financeSettings?.exchangeRates?.SAR) || 3.75,
+      EGP: Number(settings?.financeSettings?.exchangeRates?.EGP) || 50,
+    };
+  }
+
+  convertAmount(amount, fromCurrency, toCurrency, exchangeRates) {
+    if (fromCurrency === toCurrency) {
+      return Math.round(Number(amount) * 100) / 100;
+    }
+
+    const fromRate = Number(exchangeRates?.[fromCurrency]);
+    const toRate = Number(exchangeRates?.[toCurrency]);
+
+    if (!fromRate || !toRate) {
+      throw new ApiError(400, "Invalid currency conversion rates");
+    }
+
+    const amountInUsd = Number(amount) / fromRate;
+    const converted = amountInUsd * toRate;
+    return Math.round(converted * 100) / 100;
+  }
+
+  async resolveCoursePricing(courseId, requestedCurrency) {
+    const course = await Course.findById(courseId).select("title price currency accessType");
+    if (!course) {
+      throw new ApiError(404, "Course not found");
+    }
+
+    if (course.accessType === "free") {
+      throw new ApiError(400, "This course is free and does not require payment");
+    }
+
+    if (course.accessType === "byPackage") {
+      throw new ApiError(400, "This course is only available through a package");
+    }
+
+    const baseAmount = Number(course.price || 0);
+    if (!Number.isFinite(baseAmount) || baseAmount <= 0) {
+      throw new ApiError(400, "Invalid course price");
+    }
+
+    const courseCurrency = this.normalizeCurrency(course.currency, "EGP");
+    const targetCurrency = this.normalizeCurrency(requestedCurrency, courseCurrency);
+
+    if (courseCurrency === targetCurrency) {
+      return {
+        amount: Math.round(baseAmount * 100) / 100,
+        currency: targetCurrency,
+        course,
+      };
+    }
+
+    const settings = await this.settingsRepository.getSettings();
+    const exchangeRates = this.getExchangeRatesMap(settings);
+    const convertedAmount = this.convertAmount(
+      baseAmount,
+      courseCurrency,
+      targetCurrency,
+      exchangeRates
+    );
+
+    return {
+      amount: convertedAmount,
+      currency: targetCurrency,
+      course,
+    };
   }
 
   async getAllPayments(queryParams) {
@@ -399,6 +479,33 @@ export class PaymentService {
         throw new ApiError(400, "Payment proof is required for this method");
       }
 
+      const requestedCurrency = this.normalizeCurrency(
+        currency || billingInfo?.currency,
+        "EGP"
+      );
+      let resolvedAmount = Number(billingInfo?.amount || 0);
+      let resolvedCurrency = requestedCurrency;
+      let resolvedItems = Array.isArray(billingInfo?.items) ? billingInfo.items : [];
+
+      // For course checkout, always trust DB price and backend conversion only.
+      if (courseId && !productId && !serviceId && !packageId) {
+        const coursePricing = await this.resolveCoursePricing(courseId, requestedCurrency);
+        resolvedAmount = coursePricing.amount;
+        resolvedCurrency = coursePricing.currency;
+        resolvedItems = [
+          {
+            productId: courseId,
+            name: coursePricing.course?.title?.en || coursePricing.course?.title?.ar || "Course",
+            price: resolvedAmount,
+            quantity: 1,
+          },
+        ];
+      }
+
+      if (!Number.isFinite(resolvedAmount) || resolvedAmount <= 0) {
+        throw new ApiError(400, "Invalid payment amount");
+      }
+
       // Generate Title and Merchant ID
       const titleString = typeof manualMethod.title === "object"
         ? manualMethod.title.en || manualMethod.title.ar || "Manual"
@@ -414,8 +521,8 @@ export class PaymentService {
         serviceId,
         packageId,
         studentMemberId,
-        amount: billingInfo.amount || 0,
-        currency: currency || billingInfo.currency || "EGP",
+        amount: resolvedAmount,
+        currency: resolvedCurrency,
         status: "pending",
         paymentMethod: titleString || "Manual",
         manualPaymentMethodId,
@@ -424,7 +531,7 @@ export class PaymentService {
         pricingTier: {
           tierId: pricingTierId,
           people: 1,
-          pricePerPerson: billingInfo.amount || 0,
+          pricePerPerson: resolvedAmount,
           label: packageId ? "Package Subscription" : "Manual Payment",
         },
         paymentDetails: {
@@ -432,7 +539,7 @@ export class PaymentService {
           methodTitle: titleString || "Manual",
           requiresAttachment: manualMethod?.requiresAttachment || false,
           instructions: manualMethod?.instructions || "",
-          items: billingInfo.items || [],
+          items: resolvedItems,
         },
         billingInfo: {
           ...billingInfo,
@@ -565,14 +672,28 @@ export class PaymentService {
   async createPaypalPayment({ userId, courseId, productId, serviceId, amount, currency, locale, billingInfo }) {
     const config = await this.getGatewayConfig("paypal");
 
+    let resolvedAmount = Number(amount || 0);
+    let resolvedCurrency = this.normalizeCurrency(currency || "USD", "USD");
+
+    // For course checkout, always resolve price from DB.
+    if (courseId && !productId && !serviceId) {
+      const coursePricing = await this.resolveCoursePricing(courseId, resolvedCurrency);
+      resolvedAmount = coursePricing.amount;
+      resolvedCurrency = coursePricing.currency;
+    }
+
+    if (!Number.isFinite(resolvedAmount) || resolvedAmount <= 0) {
+      throw new ApiError(400, "Invalid payment amount");
+    }
+
     // Get exchange rates from settings
     const settings = await this.settingsRepository.getSettings();
-    const exchangeRates = settings.financeSettings?.exchangeRates || {};
+    const exchangeRates = this.getExchangeRatesMap(settings);
 
     // Debug logging
     console.log("💱 PayPal Payment Request:", {
-      amount,
-      currency,
+      amount: resolvedAmount,
+      currency: resolvedCurrency,
       financeSettingsExists: !!settings.financeSettings,
       exchangeRates,
     });
@@ -589,8 +710,8 @@ export class PaymentService {
       productId: finalProductId,
       courseId: finalCourseId,
       serviceId,
-      amount,
-      currency,
+      amount: resolvedAmount,
+      currency: resolvedCurrency,
       status: "pending",
       paymentMethod: "PayPal",
       merchantOrderId,
@@ -607,8 +728,8 @@ export class PaymentService {
     // Call PayPal API to create order with exchange rates
     try {
       const paypalOrder = await paypalClient.createOrder({
-        amount,
-        currency,
+        amount: resolvedAmount,
+        currency: resolvedCurrency,
         config: config,
         exchangeRates: exchangeRates // Pass exchange rates for currency conversion
       });
@@ -622,10 +743,10 @@ export class PaymentService {
       await this.paymentRepository.update(payment._id, {
         "paymentDetails.paypalOrderId": paypalOrder.id,
         "paymentDetails.approvalLink": paypalOrder.links.find(l => l.rel === "approve")?.href,
-        "paymentDetails.convertedAmount": paypalAmount ? parseFloat(paypalAmount) : amount,
-        "paymentDetails.convertedCurrency": paypalCurrency || currency,
-        "paymentDetails.originalAmount": amount,
-        "paymentDetails.originalCurrency": currency,
+        "paymentDetails.convertedAmount": paypalAmount ? parseFloat(paypalAmount) : resolvedAmount,
+        "paymentDetails.convertedCurrency": paypalCurrency || resolvedCurrency,
+        "paymentDetails.originalAmount": resolvedAmount,
+        "paymentDetails.originalCurrency": resolvedCurrency,
       });
 
       return {
@@ -817,6 +938,20 @@ export class PaymentService {
 
   async createCashierPayment({ userId, courseId, productId, amount, currency, customer }) {
     const config = await this.getGatewayConfig("cashier");
+    let resolvedAmount = Number(amount || 0);
+    let resolvedCurrency = this.normalizeCurrency(currency || "EGP", "EGP");
+
+    // For course checkout, always resolve price from DB.
+    if (courseId && !productId) {
+      const coursePricing = await this.resolveCoursePricing(courseId, resolvedCurrency);
+      resolvedAmount = coursePricing.amount;
+      resolvedCurrency = coursePricing.currency;
+    }
+
+    if (!Number.isFinite(resolvedAmount) || resolvedAmount <= 0) {
+      throw new ApiError(400, "Invalid payment amount");
+    }
+
     const finalProductId = productId || courseId;
     const finalCourseId = courseId || null;
 
@@ -840,8 +975,8 @@ export class PaymentService {
       userId,
       productId: finalProductId,
       courseId: finalCourseId,
-      amount,
-      currency: currency || "EGP",
+      amount: resolvedAmount,
+      currency: resolvedCurrency,
       status: "pending",
       paymentMethod: "Kashier",
       merchantOrderId,
@@ -862,8 +997,8 @@ export class PaymentService {
       // Create Payment Session using new API
       const session = await kashierService.createPaymentSession({
         orderId: merchantOrderId,
-        amount,
-        currency: currency || "EGP",
+        amount: resolvedAmount,
+        currency: resolvedCurrency,
         customer: {
           email: customer.email,
           name: customer.name,

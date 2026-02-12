@@ -1,20 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Loader2, CheckCircle, XCircle, ArrowRight, ArrowLeft } from "lucide-react";
+import { useSearchParams, useRouter, useParams } from "next/navigation";
+import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import axios from "@/lib/axios";
 import Link from "next/link";
 
-interface VerifyEmailPageProps {
-    params: Promise<{
-        locale: string;
-    }>;
-}
-
-export default async function VerifyEmailPage({ params }: VerifyEmailPageProps) {
-    const { locale } = await params;
+export default function VerifyEmailPage() {
+    const params = useParams<{ locale: string }>();
+    const locale = params?.locale || "ar";
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
     const router = useRouter();

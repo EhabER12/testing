@@ -395,7 +395,7 @@ export const cancelPaymentThunk = createAsyncThunk<
 interface CreatePaypalPaymentPayload {
   courseId?: string;
   productId?: string;
-  amount: number;
+  amount?: number;
   currency?: string;
   locale?: string;
   billingInfo?: {
@@ -425,7 +425,7 @@ export const createPaypalPaymentThunk = createAsyncThunk<
 interface CreateCashierPaymentPayload {
   courseId?: string;
   productId?: string;
-  amount: number;
+  amount?: number;
   currency?: string;
   customer?: {
     name: string;
