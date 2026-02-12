@@ -415,7 +415,7 @@ export class PaymentService {
         packageId,
         studentMemberId,
         amount: billingInfo.amount || 0,
-        currency: currency || billingInfo.currency || "SAR",
+        currency: currency || billingInfo.currency || "EGP",
         status: "pending",
         paymentMethod: titleString || "Manual",
         manualPaymentMethodId,

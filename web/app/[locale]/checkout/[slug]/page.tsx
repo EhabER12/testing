@@ -45,7 +45,7 @@ import toast from "react-hot-toast";
 import { countries } from "@/constants/countries";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getCourseBySlug } from "@/store/services/courseService";
-import axiosInstance from "@/lib/axios";
+import { useCurrencyContext } from "@/contexts/CurrencyContext";
 
 // Get localized text helper
 const getLocalizedText = (
@@ -56,6 +56,8 @@ const getLocalizedText = (
     if (typeof text === "string") return text;
     return text[locale as "ar" | "en"] || text.en || text.ar || "";
 };
+
+type CurrencyCode = "SAR" | "EGP" | "USD";
 
 export default function CourseCheckoutPage() {
     const params = useParams();
@@ -72,6 +74,7 @@ export default function CourseCheckoutPage() {
         (state) => state.courses
     );
     const { userData } = useAuth();
+    const { selectedCurrency, convert, format, exchangeRates } = useCurrencyContext();
 
     // Determine if user is logged in
     const isLoggedIn = !!user?.token;
@@ -90,7 +93,6 @@ export default function CourseCheckoutPage() {
     const [submitting, setSubmitting] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
     const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
-    const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
 
     // Fetch course data
     useEffect(() => {
@@ -110,12 +112,16 @@ export default function CourseCheckoutPage() {
                 console.error("Failed to load payment methods:", err);
                 setPaymentMethods([]);
             });
-        // Fetch exchange rates from public settings
-        axiosInstance.get("/settings/public").then((res) => {
-            const rates = res.data?.data?.financeSettings?.exchangeRates;
-            if (rates) setExchangeRates(rates);
-        }).catch(() => {});
     }, [dispatch]);
+
+    const courseBasePrice = Number(currentCourse?.price || 0);
+    const courseBaseCurrency = (currentCourse?.currency || "EGP") as CurrencyCode;
+    const payableAmount = convert(courseBasePrice, courseBaseCurrency, selectedCurrency);
+    const formattedPayableAmount = format(
+        payableAmount,
+        selectedCurrency,
+        isRtl ? "ar" : "en"
+    );
 
     // Pre-fill form with user data when logged in
     useEffect(() => {
@@ -247,8 +253,8 @@ export default function CourseCheckoutPage() {
             // 1. PayPal
             if (selectedMethodId === "paypal") {
                 const response = await dispatch(createPaypalPaymentThunk({
-                    amount: currentCourse?.price || 0,
-                    currency: currentCourse?.currency || "EGP", // Use course currency instead of hardcoded USD
+                    amount: payableAmount,
+                    currency: selectedCurrency,
                     courseId,
                     locale,
                     billingInfo: {
@@ -272,8 +278,8 @@ export default function CourseCheckoutPage() {
             // 2. Kashier (Payment Sessions API v3)
             else if (selectedMethodId === "cashier") {
                 const response = await dispatch(createCashierPaymentThunk({
-                    amount: currentCourse?.price || 0,
-                    currency: currentCourse?.currency || "EGP",
+                    amount: payableAmount,
+                    currency: selectedCurrency,
                     courseId,
                     customer: {
                         name: formData.name,
@@ -320,18 +326,18 @@ export default function CourseCheckoutPage() {
                         address: formData.address || "",
                         city: formData.city || "",
                         country: formData.country,
-                        amount: currentCourse?.price || 0,
+                        amount: payableAmount,
                         items: [
                             {
                                 productId: courseId,
                                 name: getLocalizedText(currentCourse?.title, "en"),
-                                price: currentCourse?.price || 0,
+                                price: payableAmount,
                                 quantity: 1,
                             },
                         ],
                     },
-                    amount: currentCourse?.price || 0,
-                    currency: "EGP",
+                    amount: payableAmount,
+                    currency: selectedCurrency,
                     // Add course-specific metadata
                     metadata: {
                         type: "course",
@@ -616,14 +622,14 @@ export default function CourseCheckoutPage() {
                                                         </p>
                                                     </div>
                                                 </label>
-                                                {selectedMethodId === "paypal" && currentCourse?.currency && currentCourse.currency !== "USD" && (
+                                                {selectedMethodId === "paypal" && selectedCurrency !== "USD" && (
                                                     <div className="px-4 pb-3">
                                                         <div className="text-sm bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded-lg p-3 flex items-center gap-2">
                                                             <span className="text-base">💱</span>
                                                             <span>
                                                                 {(() => {
-                                                                    const price = currentCourse?.price || 0;
-                                                                    const curr = currentCourse?.currency || "EGP";
+                                                                    const price = payableAmount;
+                                                                    const curr = selectedCurrency;
                                                                     const rate = exchangeRates[curr] || 0;
                                                                     const usdAmount = rate > 0 ? (price / rate).toFixed(2) : "...";
                                                                     return isRtl
@@ -808,7 +814,7 @@ export default function CourseCheckoutPage() {
                                     <div className="flex items-center justify-between text-lg font-semibold">
                                         <span>{isRtl ? "السعر" : "Price"}</span>
                                         <span className="text-primary">
-                                            {currentCourse.price} {isRtl ? "ج.م" : "EGP"}
+                                            {formattedPayableAmount}
                                         </span>
                                     </div>
 

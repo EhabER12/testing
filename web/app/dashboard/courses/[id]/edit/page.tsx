@@ -220,8 +220,10 @@ export default function EditCoursePage() {
 
             if (formData.accessType === "paid") {
                 courseData.price = formData.price ? parseFloat(formData.price) : 0;
+                courseData.currency = "EGP";
             } else {
                 courseData.price = 0;
+                courseData.currency = "EGP";
             }
 
             await dispatch(updateCourse({ id, data: courseData })).unwrap();
@@ -544,7 +546,7 @@ export default function EditCoursePage() {
 
                             {formData.accessType === "paid" && (
                                 <div className="space-y-2">
-                                    <Label htmlFor="price">{isRtl ? "السعر" : "Price"}</Label>
+                                    <Label htmlFor="price">{isRtl ? "السعر (ج.م)" : "Price (EGP)"}</Label>
                                     <Input
                                         id="price"
                                         type="number"

@@ -241,7 +241,7 @@ export const createCustomerManualPaymentThunk = createAsyncThunk<
       formData.append("cartSessionId", cartSessionId);
     }
 
-    // Send currency (default to SAR)
+    // Send currency (default is handled server-side, currently EGP)
     if (paymentData.currency) {
       formData.append("currency", paymentData.currency);
     }

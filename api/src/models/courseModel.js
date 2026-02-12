@@ -59,7 +59,7 @@ const courseSchema = new mongoose.Schema(
     currency: {
       type: String,
       enum: ["SAR", "EGP", "USD"],
-      default: "SAR",
+      default: "EGP",
     },
 
     // Teacher profit configuration (overrides teacher and global defaults)

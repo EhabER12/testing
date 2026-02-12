@@ -114,8 +114,9 @@ export default function CreateCoursePage() {
         courseData.categoryId = formData.categoryId;
       }
 
-      if (formData.accessType === "paid" && formData.price) {
-        courseData.price = parseFloat(formData.price);
+      if (formData.accessType === "paid") {
+        courseData.price = formData.price ? parseFloat(formData.price) : 0;
+        courseData.currency = "EGP";
       }
 
       await dispatch(createCourse(courseData)).unwrap();
@@ -391,7 +392,7 @@ export default function CreateCoursePage() {
 
               {formData.accessType === "paid" && (
                 <div className="space-y-2">
-                  <Label htmlFor="price">{isRtl ? "السعر" : "Price"}</Label>
+                  <Label htmlFor="price">{isRtl ? "السعر (ج.م)" : "Price (EGP)"}</Label>
                   <Input
                     id="price"
                     type="number"
