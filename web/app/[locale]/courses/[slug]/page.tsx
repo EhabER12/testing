@@ -353,7 +353,6 @@ export default function CoursePage() {
                           amount={currentCourse.price}
                           currency={currentCourse.currency as "SAR" | "EGP" | "USD"}
                           locale={isRtl ? "ar" : "en"}
-                          showOriginal={true}
                         />
                       </div>
                     )}
