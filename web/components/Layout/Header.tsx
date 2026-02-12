@@ -44,7 +44,7 @@ const translations = {
     courses: "الدورات",
     portfolio: "أعمالنا",
     articles: "المقالات",
-    reviews: "آراء العملاء",
+    reviews: "آراء طلابنا",
     cta: "ابدأ الآن",
     menu: "القائمة",
     new: "جديد",
@@ -60,7 +60,7 @@ const translations = {
     courses: "Courses",
     portfolio: "Portfolio",
     articles: "Articles",
-    reviews: "Reviews",
+    reviews: "Student Reviews",
     cta: "Get Started",
     menu: "Menu",
     new: "New",
@@ -126,6 +126,22 @@ export default function Header({ settings }: HeaderProps) {
     return `/${locale}${href}`;
   };
 
+  const isReviewsNavLink = (href: string) => {
+    if (!href) return false;
+    const normalized = href
+      .trim()
+      .replace(/^\/(ar|en)(?=\/)/, "")
+      .replace(/\/+$/, "");
+    return (
+      normalized === "/reviews" ||
+      normalized.startsWith("/reviews?") ||
+      normalized.startsWith("/reviews#")
+    );
+  };
+
+  const mapReviewsToSectionHref = (href: string) =>
+    isReviewsNavLink(href) ? "/#reviews" : href;
+
   const handleLogout = () => {
     dispatch(logout());
     setIsMobileMenuOpen(false);
@@ -136,7 +152,7 @@ export default function Header({ settings }: HeaderProps) {
   const defaultNavItems = [
     { label: t.home, href: "/", anchor: false },
     { label: t.courses, href: "/courses", anchor: false, special: true },
-    { label: t.reviews, href: "/reviews", anchor: false },
+    { label: t.reviews, href: "/#reviews", anchor: false },
     {
       label: isRtl ? "من نحن" : "About Us",
       href: "/pages/about-us",
@@ -149,12 +165,17 @@ export default function Header({ settings }: HeaderProps) {
     ? settings.navbarLinks
       .filter((link) => link.isEnabled)
       .sort((a, b) => a.order - b.order)
-      .map((link) => ({
-        label: isRtl ? link.title.ar : link.title.en,
-        href: link.url,
-        anchor: link.url.startsWith("#"),
-        special: link.url.includes("courses"), // Highlight courses as special
-      }))
+      .map((link) => {
+        const rawUrl = link.url || "";
+        const href = mapReviewsToSectionHref(rawUrl);
+
+        return {
+          label: isReviewsNavLink(rawUrl) ? t.reviews : (isRtl ? link.title.ar : link.title.en),
+          href,
+          anchor: href.startsWith("#"),
+          special: rawUrl.includes("courses"), // Highlight courses as special
+        };
+      })
     : defaultNavItems;
 
   return (
