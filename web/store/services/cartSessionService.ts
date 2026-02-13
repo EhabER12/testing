@@ -186,6 +186,30 @@ export async function updateCustomerInfo(customerInfo: {
       customerInfo
     );
   } catch (error) {
+    const status = (error as any)?.response?.status;
+    const sessionId = getOrCreateSessionId();
+
+    // If session wasn't found on backend, create a minimal one then retry once.
+    if (status === 404 && sessionId) {
+      try {
+        await requestWithApiPrefixFallback("post", "/cart-sessions", {
+          sessionId,
+          cartItems: [],
+          cartTotal: 0,
+          currency: "SAR",
+        });
+
+        return await requestWithApiPrefixFallback(
+          "patch",
+          `/cart-sessions/${sessionId}/customer`,
+          customerInfo
+        );
+      } catch (retryError) {
+        console.error("Failed to update customer info after session bootstrap:", retryError);
+        return null;
+      }
+    }
+
     console.error("Failed to update customer info:", error);
     return null;
   }
