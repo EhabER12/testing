@@ -156,6 +156,11 @@ export interface CoursesPageHeroSettings {
   backgroundImage?: string;
 }
 
+export interface BooksPageHeroSettings {
+  title: { ar: string; en: string };
+  subtitle: { ar: string; en: string };
+}
+
 export interface EmailSettings {
   enabled: boolean;
   host: string;
@@ -309,6 +314,7 @@ export interface WebsiteSettingsData {
   homepageBanner?: HomepageBannerSettings;
   homepageCourses?: HomepageCoursesSettings;
   coursesPageHero?: CoursesPageHeroSettings;
+  booksPageHero?: BooksPageHeroSettings;
   authorityBar?: AuthorityBarSettings;
   reviewsSettings?: ReviewsSectionSettings;
   whyGenounSettings?: WhyGenounSettings;
@@ -351,6 +357,7 @@ export interface PublicWebsiteSettingsData {
   homepageBanner?: HomepageBannerSettings;
   homepageCourses?: HomepageCoursesSettings;
   coursesPageHero?: CoursesPageHeroSettings;
+  booksPageHero?: BooksPageHeroSettings;
   authorityBar?: AuthorityBarSettings;
   reviewsSettings?: ReviewsSectionSettings;
   whyGenounSettings?: WhyGenounSettings;

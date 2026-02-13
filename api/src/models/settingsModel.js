@@ -240,6 +240,27 @@ const coursesPageHeroSchema = new mongoose.Schema({
   },
 });
 
+// Books Page Hero Settings Schema
+const booksPageHeroSchema = new mongoose.Schema(
+  {
+    title: {
+      ar: { type: String, default: "\u0627\u0644\u0643\u062a\u0628" },
+      en: { type: String, default: "Books" },
+    },
+    subtitle: {
+      ar: {
+        type: String,
+        default: "\u0645\u062c\u0645\u0648\u0639\u0629 \u0645\u0646\u062a\u0642\u0627\u0629 \u0645\u0646 \u0627\u0644\u0643\u062a\u0628 \u0627\u0644\u0631\u0642\u0645\u064a\u0629 \u0627\u0644\u062c\u0627\u0647\u0632\u0629 \u0644\u0644\u0634\u0631\u0627\u0621",
+      },
+      en: {
+        type: String,
+        default: "A curated collection of digital books ready for purchase",
+      },
+    },
+  },
+  { _id: false }
+);
+
 // Authority Bar Settings Schema (NEW - Platform Recognition Badges)
 const authorityBarSchema = new mongoose.Schema({
   isEnabled: {
@@ -763,6 +784,19 @@ const settingsSchema = new mongoose.Schema(
     coursesPageHero: {
       type: coursesPageHeroSchema,
       default: () => ({}),
+    },
+    booksPageHero: {
+      type: booksPageHeroSchema,
+      default: () => ({
+        title: {
+          ar: "\u0627\u0644\u0643\u062a\u0628",
+          en: "Books",
+        },
+        subtitle: {
+          ar: "\u0645\u062c\u0645\u0648\u0639\u0629 \u0645\u0646\u062a\u0642\u0627\u0629 \u0645\u0646 \u0627\u0644\u0643\u062a\u0628 \u0627\u0644\u0631\u0642\u0645\u064a\u0629 \u0627\u0644\u062c\u0627\u0647\u0632\u0629 \u0644\u0644\u0634\u0631\u0627\u0621",
+          en: "A curated collection of digital books ready for purchase",
+        },
+      }),
     },
     authorityBar: {
       type: authorityBarSchema,

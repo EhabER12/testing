@@ -38,7 +38,7 @@ router.put(
   (req, res, next) => {
     const fieldsToparse = [
       'socialLinks', 'theme', 'navbarLinks', 'homepageSections',
-      'promoModal', 'homepageBanner', 'homepageCourses', 'emailSettings',
+      'promoModal', 'homepageBanner', 'homepageCourses', 'booksPageHero', 'emailSettings',
       'authorityBar', 'reviewsSettings', 'whyGenounSettings',
       'headerDisplay', 'marketingBanners', 'notifications', 'paymentGateways',
       'financeSettings', 'apiKeys', 'teacherProfitSettings',

@@ -126,6 +126,7 @@ export class SettingsService {
       "promoModal",
       "homepageBanner",
       "homepageCourses",
+      "booksPageHero",
       "emailSettings",
       "authorityBar",
       "reviewsSettings",

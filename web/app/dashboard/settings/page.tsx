@@ -41,6 +41,7 @@ import {
   FinanceSettings,
   ApiKeysSettings,
   CoursesPageHeroSettings as CoursesPageHeroSettingsType,
+  BooksPageHeroSettings as BooksPageHeroSettingsType,
   HeroStatsSettings as HeroStatsSettingsType,
 } from "@/store/services/settingsService";
 import { resetSettingsStatus } from "@/store/slices/settingsSlice";
@@ -76,6 +77,7 @@ import { ReviewsSectionSettings as ReviewsSectionSettingsComponent } from "@/com
 import { WhyGenounSettings as WhyGenounSettingsComponent } from "@/components/dashboard/settings/WhyGenounSettings";
 import { ApiKeysSettings as ApiKeysSettingsComponent } from "@/components/dashboard/settings/ApiKeysSettings";
 import { CoursesPageHeroSettings as CoursesPageHeroSettingsComponent } from "@/components/dashboard/settings/CoursesPageHeroSettings";
+import { BooksPageHeroSettings as BooksPageHeroSettingsComponent } from "@/components/dashboard/settings/BooksPageHeroSettings";
 import { HeroStatsSettings as HeroStatsSettingsComponent } from "@/components/dashboard/settings/HeroStatsSettings";
 
 interface SettingsFormData extends Partial<WebsiteSettingsData> {
@@ -317,6 +319,8 @@ export default function SettingsDashboardPage() {
         floatingWhatsAppEnabled: settings.floatingWhatsAppEnabled !== false,
         address: settings.address,
         address_ar: settings.address_ar || "",
+        coursesPageHero: settings.coursesPageHero || undefined,
+        booksPageHero: settings.booksPageHero || undefined,
       });
 
       setLogoPreview(settings.logo);
@@ -817,6 +821,9 @@ export default function SettingsDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="courses-hero">
               {isRtl ? "صفحة الدورات" : "Courses Page"}
+            </TabsTrigger>
+            <TabsTrigger value="books-hero">
+              {isRtl ? "صفحة الكتب" : "Books Page"}
             </TabsTrigger>
             <TabsTrigger value="teacher-profit">
               {isRtl ? "أرباح المعلمين" : "Teacher Profit"}
@@ -2398,6 +2405,25 @@ export default function SettingsDashboardPage() {
                 setFormData((prev) => ({
                   ...prev,
                   coursesPageHero: settings,
+                }))
+              }
+              locale={formLang}
+            />
+          </TabsContent>
+
+          <TabsContent value="books-hero" className="space-y-6">
+            <BooksPageHeroSettingsComponent
+              settings={(formData.booksPageHero as BooksPageHeroSettingsType) || {
+                title: { ar: "الكتب", en: "Books" },
+                subtitle: {
+                  ar: "مجموعة منتقاة من الكتب الرقمية الجاهزة للشراء",
+                  en: "A curated collection of digital books ready for purchase",
+                },
+              }}
+              onUpdate={(settings) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  booksPageHero: settings,
                 }))
               }
               locale={formLang}

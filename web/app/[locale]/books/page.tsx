@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useAppDispatch } from "@/store/hooks";
 import { addToCart } from "@/store/slices/cartSlice";
 import { bookService, Book } from "@/store/services/bookService";
+import axiosInstance from "@/lib/axios";
 import { useCurrencyContext } from "@/contexts/CurrencyContext";
 import toast from "react-hot-toast";
 
@@ -37,6 +38,16 @@ export default function BooksPage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [booksPageHero, setBooksPageHero] = useState<{
+    title: { ar: string; en: string };
+    subtitle: { ar: string; en: string };
+  }>({
+    title: { ar: "الكتب", en: "Books" },
+    subtitle: {
+      ar: "مجموعة منتقاة من الكتب الرقمية الجاهزة للشراء",
+      en: "A curated collection of digital books ready for purchase",
+    },
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -62,6 +73,41 @@ export default function BooksPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+
+    const loadBooksPageSettings = async () => {
+      try {
+        const response = await axiosInstance.get("/settings/public", {
+          headers: { "X-No-Loading": "1" },
+        });
+        const settings = response?.data?.data;
+        const heroSettings = settings?.booksPageHero;
+
+        if (!mounted || !heroSettings) return;
+
+        setBooksPageHero((prev) => ({
+          title: {
+            ar: heroSettings.title?.ar || prev.title.ar,
+            en: heroSettings.title?.en || prev.title.en,
+          },
+          subtitle: {
+            ar: heroSettings.subtitle?.ar || prev.subtitle.ar,
+            en: heroSettings.subtitle?.en || prev.subtitle.en,
+          },
+        }));
+      } catch (settingsError) {
+        console.error("Failed to load books page settings:", settingsError);
+      }
+    };
+
+    loadBooksPageSettings();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const totalBooks = useMemo(() => books.length, [books]);
 
   const handleAddToCart = (book: Book) => {
@@ -79,9 +125,12 @@ export default function BooksPage() {
       <section className="bg-gradient-to-br from-primary to-primary/80 py-16 text-white">
         <div className="container mx-auto px-4 text-center">
           <BookOpen className="mx-auto mb-4 h-16 w-16 opacity-80" />
-          <h1 className="mb-3 text-4xl font-bold">Books</h1>
+          <h1 className="mb-3 text-4xl font-bold">
+            {getLocalizedText(booksPageHero.title, locale) || "Books"}
+          </h1>
           <p className="text-lg opacity-90">
-            A curated collection of digital books ready for purchase
+            {getLocalizedText(booksPageHero.subtitle, locale) ||
+              "A curated collection of digital books ready for purchase"}
           </p>
         </div>
       </section>
