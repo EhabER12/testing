@@ -49,8 +49,6 @@ import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import { countries } from "@/constants/countries";
 import {
-  syncCartSession,
-  updateCustomerInfo,
   markSessionConverted,
 } from "@/store/services/cartSessionService";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -200,13 +198,6 @@ export default function CheckoutPage() {
     };
   });
 
-  // Sync cart session on load and when cart changes
-  useEffect(() => {
-    if (items.length > 0) {
-      syncCartSession(items, roundedTotal, checkoutCurrency);
-    }
-  }, [items, roundedTotal, checkoutCurrency]);
-
   // Pre-fill form with user data when logged in
   useEffect(() => {
     if (userData && isLoggedIn) {
@@ -217,30 +208,6 @@ export default function CheckoutPage() {
       }));
     }
   }, [userData, isLoggedIn]);
-
-  // Debounced customer info update
-  const [customerInfoTimeout, setCustomerInfoTimeout] =
-    useState<NodeJS.Timeout | null>(null);
-
-  const handleCustomerInfoBlur = () => {
-    // Clear existing timeout
-    if (customerInfoTimeout) {
-      clearTimeout(customerInfoTimeout);
-    }
-
-    // Set new timeout to update after 500ms
-    const timeout = setTimeout(() => {
-      if (formData.name || formData.email || formData.phone) {
-        updateCustomerInfo({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-        });
-      }
-    }, 500);
-
-    setCustomerInfoTimeout(timeout);
-  };
 
   // Handle form change
   const handleChange = (
@@ -634,7 +601,6 @@ export default function CheckoutPage() {
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      onBlur={handleCustomerInfoBlur}
                       required
                     />
                   </div>
@@ -646,7 +612,6 @@ export default function CheckoutPage() {
                       type="email"
                       value={formData.email}
                       onChange={handleChange}
-                      onBlur={handleCustomerInfoBlur}
                       required
                       readOnly={isLoggedIn}
                       className={
@@ -668,7 +633,6 @@ export default function CheckoutPage() {
                       type="tel"
                       value={formData.phone}
                       onChange={handleChange}
-                      onBlur={handleCustomerInfoBlur}
                       required
                     />
                   </div>
