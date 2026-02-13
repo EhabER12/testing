@@ -18,11 +18,11 @@ import {
   removeFromCart,
   clearCart,
   closeCart,
-  calculateCartTotal,
   getCartItemCount,
   CartItem,
 } from "@/store/slices/cartSlice";
 import { useTranslations, useLocale } from "next-intl";
+import { useCurrencyContext } from "@/contexts/CurrencyContext";
 
 // Get localized text helper
 const getLocalizedText = (
@@ -51,10 +51,32 @@ const getCartItemCurrency = (item: CartItem): string => {
   return item.product?.currency || "SAR";
 };
 
+type CurrencyCode = "SAR" | "EGP" | "USD";
+
+const normalizeCurrency = (currency?: string): CurrencyCode => {
+  if (currency === "EGP" || currency === "USD" || currency === "SAR") {
+    return currency;
+  }
+  return "SAR";
+};
+
+const getCartItemUnitPrice = (item: CartItem): number => {
+  if (item.itemType === "course") return Number(item.course?.price || 0);
+  return (
+    (item.variant?.price ?? item.product?.basePrice ?? 0) +
+    item.addons.reduce((sum, addon) => sum + addon.price, 0)
+  );
+};
+
+const getCartItemLineTotal = (item: CartItem): number => {
+  return getCartItemUnitPrice(item) * item.quantity;
+};
+
 export function CartDrawer() {
   const locale = useLocale();
   const isRtl = locale === "ar";
   const t = useTranslations("cart");
+  const { selectedCurrency, convert, format } = useCurrencyContext();
 
   const dispatch = useAppDispatch();
   const { items, isOpen } = useAppSelector((state) => state.cart);
@@ -64,8 +86,12 @@ export function CartDrawer() {
     dispatch(initializeCart());
   }, [dispatch]);
 
-  const total = calculateCartTotal(items);
   const itemCount = getCartItemCount(items);
+  const displayLocale = isRtl ? "ar" : "en";
+  const displayTotal = items.reduce((sum, item) => {
+    const sourceCurrency = normalizeCurrency(getCartItemCurrency(item));
+    return sum + convert(getCartItemLineTotal(item), sourceCurrency, selectedCurrency);
+  }, 0);
 
   return (
     <Sheet open={isOpen} onOpenChange={() => dispatch(closeCart())}>
@@ -153,11 +179,15 @@ export function CartDrawer() {
 
                     {/* Price */}
                     <p className="text-sm font-semibold text-primary mt-1">
-                      {item.itemType === "course"
-                        ? Number(item.course?.price || 0)
-                        : (item.variant?.price ?? item.product?.basePrice ?? 0) +
-                          item.addons.reduce((s, a) => s + a.price, 0)}{" "}
-                      {getCartItemCurrency(item)}
+                      {format(
+                        convert(
+                          getCartItemUnitPrice(item),
+                          normalizeCurrency(getCartItemCurrency(item)),
+                          selectedCurrency
+                        ),
+                        selectedCurrency,
+                        displayLocale
+                      )}
                     </p>
 
                     {/* Quantity Controls */}
@@ -231,7 +261,7 @@ export function CartDrawer() {
             <div className="flex items-center justify-between text-lg font-semibold">
               <span>{t("total")}</span>
               <span className="text-primary">
-                {total} {items[0] ? getCartItemCurrency(items[0]) : "SAR"}
+                {format(displayTotal, selectedCurrency, displayLocale)}
               </span>
             </div>
 

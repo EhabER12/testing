@@ -32,7 +32,6 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   initializeCart,
   clearCart,
-  calculateCartTotal,
   getCartItemCount,
   CartItem,
 } from "@/store/slices/cartSlice";
@@ -55,7 +54,7 @@ import {
   markSessionConverted,
 } from "@/store/services/cartSessionService";
 import { useAuth } from "@/components/auth/auth-provider";
-import axiosInstance from "@/lib/axios";
+import { useCurrencyContext } from "@/contexts/CurrencyContext";
 
 // Get localized text helper
 const getLocalizedText = (
@@ -71,6 +70,27 @@ const getCartItemCurrency = (item: CartItem | undefined): string => {
   if (!item) return "SAR";
   if (item.itemType === "course") return item.course?.currency || "SAR";
   return item.product?.currency || "SAR";
+};
+
+type CurrencyCode = "SAR" | "EGP" | "USD";
+
+const normalizeCurrency = (currency?: string): CurrencyCode => {
+  if (currency === "EGP" || currency === "USD" || currency === "SAR") {
+    return currency;
+  }
+  return "SAR";
+};
+
+const getCartItemUnitPrice = (item: CartItem): number => {
+  if (item.itemType === "course") return Number(item.course?.price || 0);
+  return (
+    (item.variant?.price ?? item.product?.basePrice ?? 0) +
+    item.addons.reduce((sum, addon) => sum + addon.price, 0)
+  );
+};
+
+const getCartItemLineTotal = (item: CartItem): number => {
+  return getCartItemUnitPrice(item) * item.quantity;
 };
 
 const getCartItemName = (item: CartItem, locale: string): string => {
@@ -96,6 +116,7 @@ export default function CheckoutPage() {
   const { manualPaymentMethods } = useAppSelector((state) => state.settings);
   const { user } = useAppSelector((state) => state.auth);
   const { userData } = useAuth();
+  const { selectedCurrency, convert, format, exchangeRates } = useCurrencyContext();
 
   // Determine if user is logged in
   const isLoggedIn = !!user?.token;
@@ -124,23 +145,28 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [gateways, setGateways] = useState<any>({});
-  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
 
   // Initialize cart and fetch payment methods
   useEffect(() => {
     dispatch(initializeCart());
     dispatch(getManualPaymentMethodsThunk());
     dispatch(getPaymentGatewaysThunk()).unwrap().then(setGateways).catch(console.error);
-    // Fetch exchange rates from public settings
-    axiosInstance.get("/settings/public").then((res) => {
-      const rates = res.data?.data?.financeSettings?.exchangeRates;
-      if (rates) setExchangeRates(rates);
-    }).catch(() => {});
   }, [dispatch]);
 
-  const total = calculateCartTotal(items);
+  const displayLocale = isRtl ? "ar" : "en";
+  const total = items.reduce((sum, item) => {
+    return (
+      sum +
+      convert(
+        getCartItemLineTotal(item),
+        normalizeCurrency(getCartItemCurrency(item)),
+        selectedCurrency
+      )
+    );
+  }, 0);
+  const roundedTotal = Number(total.toFixed(2));
   const itemCount = getCartItemCount(items);
-  const checkoutCurrency = getCartItemCurrency(items[0]);
+  const checkoutCurrency: CurrencyCode = selectedCurrency;
 
   type CheckoutItemPayload = {
     itemType: "product" | "course";
@@ -177,9 +203,9 @@ export default function CheckoutPage() {
   // Sync cart session on load and when cart changes
   useEffect(() => {
     if (items.length > 0) {
-      syncCartSession(items, total, checkoutCurrency);
+      syncCartSession(items, roundedTotal, checkoutCurrency);
     }
-  }, [items, total, checkoutCurrency]);
+  }, [items, roundedTotal, checkoutCurrency]);
 
   // Pre-fill form with user data when logged in
   useEffect(() => {
@@ -806,10 +832,10 @@ export default function CheckoutPage() {
                                 {(() => {
                                   const currency = checkoutCurrency;
                                   const rate = exchangeRates[currency] || 0;
-                                  const usdAmount = rate > 0 ? (total / rate).toFixed(2) : "...";
+                                  const usdAmount = rate > 0 ? (roundedTotal / rate).toFixed(2) : "...";
                                   return isRtl
-                                    ? `سيتم تحويل ${total} ${currency} إلى $${usdAmount} USD عبر PayPal`
-                                    : `${total} ${currency} will be converted to $${usdAmount} USD via PayPal`;
+                                    ? `سيتم تحويل ${roundedTotal} ${currency} إلى $${usdAmount} USD عبر PayPal`
+                                    : `${roundedTotal} ${currency} will be converted to $${usdAmount} USD via PayPal`;
                                 })()}
                               </span>
                             </div>
@@ -981,11 +1007,15 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                       <p className="font-medium text-primary">
-                        {item.itemType === "course"
-                          ? Number(item.course?.price || 0) * item.quantity
-                          : (item.variant?.price ?? item.product?.basePrice ?? 0) *
-                            item.quantity}{" "}
-                        {getCartItemCurrency(item)}
+                        {format(
+                          convert(
+                            getCartItemLineTotal(item),
+                            normalizeCurrency(getCartItemCurrency(item)),
+                            selectedCurrency
+                          ),
+                          selectedCurrency,
+                          displayLocale
+                        )}
                       </p>
                     </div>
                   ))}
@@ -996,7 +1026,7 @@ export default function CheckoutPage() {
                   <div className="flex items-center justify-between text-lg font-semibold">
                     <span>{t("cart.total")}</span>
                     <span className="text-primary">
-                      {total} {checkoutCurrency}
+                      {format(roundedTotal, checkoutCurrency, displayLocale)}
                     </span>
                   </div>
 
