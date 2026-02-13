@@ -135,6 +135,12 @@ export async function createOrder({ amount, currency = "USD", config, exchangeRa
   console.log("🧪 PayPal API URL:", paypalApiUrl);
 
   const accessToken = await getAccessToken(config);
+  const returnUrl = config?.config?.returnUrl;
+  const cancelUrl = config?.config?.cancelUrl;
+
+  if (!returnUrl || !cancelUrl) {
+    throw new Error("PayPal return/cancel URLs are not configured");
+  }
 
   // Convert currency if needed (EGP → SAR)
   const converted = convertToPayPalCurrency(amount, currency, exchangeRates);
@@ -157,8 +163,8 @@ export async function createOrder({ amount, currency = "USD", config, exchangeRa
           },
         ],
         application_context: {
-          return_url: config.config.returnUrl,
-          cancel_url: config.config.cancelUrl,
+          return_url: returnUrl,
+          cancel_url: cancelUrl,
           brand_name: "Praplo",
           user_action: "PAY_NOW",
           shipping_preference: "NO_SHIPPING",
@@ -175,7 +181,12 @@ export async function createOrder({ amount, currency = "USD", config, exchangeRa
     return response.data;
   } catch (error) {
     console.error("❌ PayPal createOrder error:", error.response?.data);
-    throw new Error("Failed to create PayPal order");
+    const paypalError =
+      error?.response?.data?.details?.[0]?.description ||
+      error?.response?.data?.message ||
+      error?.message ||
+      "Unknown PayPal error";
+    throw new Error(`Failed to create PayPal order: ${paypalError}`);
   }
 }
 

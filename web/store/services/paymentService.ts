@@ -423,6 +423,7 @@ export const createPaypalPaymentThunk = createAsyncThunk<
     return response.data.data; // Expected to contain approvalUrl or payment details
   } catch (error: any) {
     const message =
+      (error.response && error.response.data && error.response.data.error?.message) ||
       (error.response && error.response.data && error.response.data.message) ||
       error.message ||
       error.toString();
@@ -460,6 +461,7 @@ export const createCashierPaymentThunk = createAsyncThunk<
     return response.data.data; // Contains sessionUrl as checkoutUrl, sessionId, merchantOrderId, paymentId
   } catch (error: any) {
     const message =
+      (error.response && error.response.data && error.response.data.error?.message) ||
       (error.response && error.response.data && error.response.data.message) ||
       error.message ||
       error.toString();

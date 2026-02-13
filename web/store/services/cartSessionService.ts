@@ -4,6 +4,31 @@ import Cookies from "js-cookie";
 
 const COOKIE_NAME = "genoun_cart_session";
 
+async function requestWithApiPrefixFallback<T = any>(
+  method: "get" | "post" | "patch" | "delete",
+  path: string,
+  data?: any,
+  config?: any
+): Promise<T> {
+  try {
+    const response = await (axiosInstance as any)[method](path, data, config);
+    return response.data;
+  } catch (error: any) {
+    const status = error?.response?.status;
+    const shouldRetry = status === 404 && !path.startsWith("/api/");
+
+    if (!shouldRetry) {
+      throw error;
+    }
+
+    const fallbackPath = `/api${path}`;
+    const fallbackResponse = await (axiosInstance as any)[
+      method
+    ](fallbackPath, data, config);
+    return fallbackResponse.data;
+  }
+}
+
 // Generate or get session ID from cookies
 export function getOrCreateSessionId(): string {
   if (typeof window === "undefined") return "";
@@ -81,14 +106,18 @@ export async function syncCartSession(
     const sessionId = getOrCreateSessionId();
     if (!sessionId) return null;
 
-    const response = await axiosInstance.post("/cart-sessions", {
+    const payload = {
       sessionId,
       cartItems: transformCartItems(items),
       cartTotal: total,
       currency,
-    });
+    };
 
-    return response.data;
+    return await requestWithApiPrefixFallback(
+      "post",
+      "/cart-sessions",
+      payload
+    );
   } catch (error) {
     console.error("Failed to sync cart session:", error);
     return null;
@@ -107,12 +136,11 @@ export async function updateCustomerInfo(customerInfo: {
     const sessionId = getOrCreateSessionId();
     if (!sessionId) return null;
 
-    const response = await axiosInstance.patch(
+    return await requestWithApiPrefixFallback(
+      "patch",
       `/cart-sessions/${sessionId}/customer`,
       customerInfo
     );
-
-    return response.data;
   } catch (error) {
     console.error("Failed to update customer info:", error);
     return null;
@@ -127,7 +155,8 @@ export async function markSessionConverted(paymentId?: string) {
     const sessionId = getOrCreateSessionId();
     if (!sessionId) return null;
 
-    const response = await axiosInstance.patch(
+    const response = await requestWithApiPrefixFallback(
+      "patch",
       `/cart-sessions/${sessionId}/converted`,
       { paymentId }
     );
@@ -135,7 +164,7 @@ export async function markSessionConverted(paymentId?: string) {
     // Clear session ID after conversion
     clearSessionId();
 
-    return response.data;
+    return response;
   } catch (error) {
     console.error("Failed to mark session as converted:", error);
     return null;

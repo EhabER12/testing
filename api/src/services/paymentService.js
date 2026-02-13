@@ -130,6 +130,25 @@ export class PaymentService {
     return String(candidate).replace(/\/$/, "");
   }
 
+  isValidAbsoluteUrl(value) {
+    if (!value || typeof value !== "string") return false;
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+
+  getClientBaseUrl(settings) {
+    const candidate =
+      settings?.siteSettings?.siteUrl ||
+      process.env.SITE_URL ||
+      process.env.CLIENT_URL ||
+      "https://med-side.net";
+    return String(candidate).replace(/\/$/, "");
+  }
+
   generateDownloadToken() {
     return crypto.randomBytes(40).toString("hex");
   }
@@ -1096,6 +1115,23 @@ export class PaymentService {
     // Get exchange rates from settings
     const settings = await this.settingsRepository.getSettings();
     const exchangeRates = this.getExchangeRatesMap(settings);
+    const safeLocale = locale === "ar" || locale === "en" ? locale : "ar";
+    const clientBaseUrl = this.getClientBaseUrl(settings);
+    const fallbackReturnUrl = `${clientBaseUrl}/${safeLocale}/payment/success`;
+    const fallbackCancelUrl = `${clientBaseUrl}/${safeLocale}/checkout`;
+
+    const gatewayConfig = {
+      ...config,
+      config: {
+        ...(config.config || {}),
+        returnUrl: this.isValidAbsoluteUrl(config?.config?.returnUrl)
+          ? config.config.returnUrl
+          : fallbackReturnUrl,
+        cancelUrl: this.isValidAbsoluteUrl(config?.config?.cancelUrl)
+          ? config.config.cancelUrl
+          : fallbackCancelUrl,
+      },
+    };
 
     // Debug logging
     console.log("💱 PayPal Payment Request:", {
@@ -1125,7 +1161,7 @@ export class PaymentService {
       billingInfo: billingInfo || {},
       paymentDetails: {
         methodType: "paypal_checkout",
-        gatewayMode: config.mode,
+        gatewayMode: gatewayConfig.mode,
         items: resolvedItems,
         locale: locale || "en" // Store locale for email notifications
       }
@@ -1138,7 +1174,7 @@ export class PaymentService {
       const paypalOrder = await paypalClient.createOrder({
         amount: resolvedAmount,
         currency: resolvedCurrency,
-        config: config,
+        config: gatewayConfig,
         exchangeRates: exchangeRates // Pass exchange rates for currency conversion
       });
 
@@ -1167,7 +1203,10 @@ export class PaymentService {
 
     } catch (error) {
       await this.paymentRepository.updateStatus(payment._id, "failed", "PayPal API Error: " + error.message);
-      throw error;
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(400, error.message || "Failed to create PayPal order");
     }
   }
 
