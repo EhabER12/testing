@@ -102,6 +102,7 @@ export const createManualPayment = async (req, res, next) => {
       manualPaymentMethodId,
       billingInfo,
       notes,
+      couponCode,
     } = req.body;
     const userId = req.user._id;
     const isAdmin = req.user.role === "admin" || req.user.role === "moderator";
@@ -155,6 +156,7 @@ export const createManualPayment = async (req, res, next) => {
         manualPaymentMethodId,
         paymentProofUrl,
         billingInfo,
+        couponCode,
       });
 
       return ApiResponse.success(
@@ -185,6 +187,7 @@ export const createCustomerManualPayment = async (req, res, next) => {
       billingInfo,
       cartSessionId,
       currency,
+      couponCode,
     } = req.body;
 
     const userId = req.user?._id || null;
@@ -224,6 +227,7 @@ export const createCustomerManualPayment = async (req, res, next) => {
       billingInfo,
       cartSessionId,
       currency,
+      couponCode,
     });
 
     res.status(201).json({
@@ -320,7 +324,7 @@ export const cancelPayment = async (req, res, next) => {
 // @access  Private
 export const createPaypalPayment = async (req, res, next) => {
   try {
-    const { courseId, productId, items, amount, currency = "USD", locale, billingInfo } = req.body;
+    const { courseId, productId, items, amount, currency = "USD", locale, billingInfo, couponCode } = req.body;
     const userId = req.user?._id; // Optional - may be undefined for guest checkout
 
     const hasCheckoutItems = Array.isArray(items) && items.length > 0;
@@ -343,6 +347,7 @@ export const createPaypalPayment = async (req, res, next) => {
       currency,
       locale,
       billingInfo,
+      couponCode,
     });
 
     return ApiResponse.success(
@@ -410,7 +415,7 @@ export const paypalWebhook = async (req, res, next) => {
 // @access  Private
 export const createCashierPayment = async (req, res, next) => {
   try {
-    const { courseId, productId, items, amount, currency = "EGP", customer } = req.body;
+    const { courseId, productId, items, amount, currency = "EGP", customer, couponCode } = req.body;
     const userId = req.user?._id;
     const user = req.user;
     const hasCheckoutItems = Array.isArray(items) && items.length > 0;
@@ -442,6 +447,7 @@ export const createCashierPayment = async (req, res, next) => {
       amount,
       currency,
       customer: finalCustomer,
+      couponCode,
     });
 
     return ApiResponse.success(

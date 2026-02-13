@@ -14,6 +14,8 @@ import {
   CreditCard as CreditCardIcon,
   Banknote,
   Upload,
+  TicketPercent,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +47,10 @@ import {
   createPaypalPaymentThunk,
   createCashierPaymentThunk,
 } from "@/store/services/paymentService";
+import {
+  validateCouponThunk,
+  type ValidateCouponResponse,
+} from "@/store/services/couponService";
 import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import { countries } from "@/constants/countries";
@@ -143,6 +149,9 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [gateways, setGateways] = useState<any>({});
+  const [couponCodeInput, setCouponCodeInput] = useState("");
+  const [couponApplying, setCouponApplying] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<ValidateCouponResponse | null>(null);
 
   // Initialize cart and fetch payment methods
   useEffect(() => {
@@ -165,6 +174,8 @@ export default function CheckoutPage() {
   const roundedTotal = Number(total.toFixed(2));
   const itemCount = getCartItemCount(items);
   const checkoutCurrency: CurrencyCode = selectedCurrency;
+  const discountAmount = Number(appliedCoupon?.discountAmount || 0);
+  const finalTotal = Number(Math.max(roundedTotal - discountAmount, 0).toFixed(2));
 
   type CheckoutItemPayload = {
     itemType: "product" | "course";
@@ -209,6 +220,21 @@ export default function CheckoutPage() {
     }
   }, [userData, isLoggedIn]);
 
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    if (roundedTotal <= 0) {
+      setAppliedCoupon(null);
+      return;
+    }
+    if (checkoutCurrency !== appliedCoupon.currency) {
+      setAppliedCoupon(null);
+      return;
+    }
+    if (Math.abs(Number(appliedCoupon.originalAmount) - roundedTotal) > 0.01) {
+      setAppliedCoupon(null);
+    }
+  }, [appliedCoupon, roundedTotal, checkoutCurrency]);
+
   // Handle form change
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -235,6 +261,56 @@ export default function CheckoutPage() {
     if (e.target.files && e.target.files[0]) {
       setPaymentProof(e.target.files[0]);
     }
+  };
+
+  const handleApplyCoupon = async () => {
+    const code = couponCodeInput.trim();
+    if (!code) {
+      toast.error(isRtl ? "أدخل كود الكوبون" : "Enter a coupon code");
+      return;
+    }
+    if (!isLoggedIn) {
+      toast.error(
+        isRtl
+          ? "سجل دخولك أولاً لاستخدام الكوبون"
+          : "Please login first to use a coupon"
+      );
+      return;
+    }
+    if (roundedTotal <= 0) {
+      toast.error(isRtl ? "قيمة الطلب غير صالحة" : "Invalid order amount");
+      return;
+    }
+
+    try {
+      setCouponApplying(true);
+      const result = await dispatch(
+        validateCouponThunk({
+          code,
+          amount: roundedTotal,
+          currency: checkoutCurrency,
+          context: "checkout",
+        })
+      ).unwrap();
+
+      setAppliedCoupon(result);
+      setCouponCodeInput(result.code);
+      toast.success(
+        isRtl
+          ? `تم تطبيق الكوبون (-${result.discountAmount} ${result.currency})`
+          : `Coupon applied (-${result.discountAmount} ${result.currency})`
+      );
+    } catch (error: any) {
+      setAppliedCoupon(null);
+      toast.error(error || (isRtl ? "كوبون غير صالح" : "Invalid coupon"));
+    } finally {
+      setCouponApplying(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCodeInput("");
   };
 
   // Handle checkout submission
@@ -265,6 +341,15 @@ export default function CheckoutPage() {
     }
     if (!selectedMethodId) {
       toast.error(t("checkout.paymentMethod") + " is required");
+      return;
+    }
+
+    if (couponCodeInput.trim() && !appliedCoupon) {
+      toast.error(
+        isRtl
+          ? "اضغط تطبيق الكوبون قبل تأكيد الطلب"
+          : "Please apply the coupon before placing the order"
+      );
       return;
     }
 
@@ -313,6 +398,7 @@ export default function CheckoutPage() {
           currency: checkoutCurrency,
           items: checkoutItemsPayload,
           locale,
+          couponCode: appliedCoupon?.code,
           billingInfo: {
             name: formData.name,
             email: formData.email,
@@ -336,6 +422,7 @@ export default function CheckoutPage() {
         const response = await dispatch(createCashierPaymentThunk({
           currency: checkoutCurrency,
           items: checkoutItemsPayload,
+          couponCode: appliedCoupon?.code,
           customer: {
             name: formData.name,
             email: formData.email
@@ -374,6 +461,7 @@ export default function CheckoutPage() {
           pricingTierId: "checkout_order", // Placeholder required by backend
           manualPaymentMethodId: selectedMethodId,
           paymentProof: processedProof || undefined,
+          couponCode: appliedCoupon?.code,
           billingInfo: {
             name: formData.name,
             email: formData.email,
@@ -796,10 +884,10 @@ export default function CheckoutPage() {
                                 {(() => {
                                   const currency = checkoutCurrency;
                                   const rate = exchangeRates[currency] || 0;
-                                  const usdAmount = rate > 0 ? (roundedTotal / rate).toFixed(2) : "...";
+                                  const usdAmount = rate > 0 ? (finalTotal / rate).toFixed(2) : "...";
                                   return isRtl
-                                    ? `سيتم تحويل ${roundedTotal} ${currency} إلى $${usdAmount} USD عبر PayPal`
-                                    : `${roundedTotal} ${currency} will be converted to $${usdAmount} USD via PayPal`;
+                                    ? `سيتم تحويل ${finalTotal} ${currency} إلى $${usdAmount} USD عبر PayPal`
+                                    : `${finalTotal} ${currency} will be converted to $${usdAmount} USD via PayPal`;
                                 })()}
                               </span>
                             </div>
@@ -986,11 +1074,68 @@ export default function CheckoutPage() {
 
                   <Separator />
 
-                  {/* Total */}
+                  <div className="space-y-2">
+                    <Label htmlFor="couponCode" className="text-sm font-medium">
+                      {isRtl ? "كوبون الخصم" : "Discount Coupon"}
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="couponCode"
+                        value={couponCodeInput}
+                        onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
+                        placeholder={isRtl ? "مثال: SAVE20" : "e.g. SAVE20"}
+                        disabled={couponApplying || submitting}
+                      />
+                      {appliedCoupon ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleRemoveCoupon}
+                          disabled={couponApplying || submitting}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleApplyCoupon}
+                          disabled={couponApplying || submitting || !couponCodeInput.trim()}
+                        >
+                          {couponApplying ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <TicketPercent className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    {appliedCoupon && (
+                      <p className="text-xs text-green-700">
+                        {isRtl
+                          ? `تم تطبيق ${appliedCoupon.code} بنجاح`
+                          : `${appliedCoupon.code} applied successfully`}
+                      </p>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{isRtl ? "المجموع قبل الخصم" : "Subtotal"}</span>
+                    <span>{format(roundedTotal, checkoutCurrency, displayLocale)}</span>
+                  </div>
+                  {discountAmount > 0 && (
+                    <div className="flex items-center justify-between text-sm text-green-700">
+                      <span>{isRtl ? "الخصم" : "Discount"}</span>
+                      <span>- {format(discountAmount, checkoutCurrency, displayLocale)}</span>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between text-lg font-semibold">
                     <span>{t("cart.total")}</span>
                     <span className="text-primary">
-                      {format(roundedTotal, checkoutCurrency, displayLocale)}
+                      {format(finalTotal, checkoutCurrency, displayLocale)}
                     </span>
                   </div>
 
@@ -1026,3 +1171,4 @@ export default function CheckoutPage() {
     </div>
   );
 }
+

@@ -13,7 +13,9 @@ import {
   Image as ImageIcon,
   User as UserIcon,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  TicketPercent,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +37,10 @@ import {
   ManualPaymentMethod 
 } from "@/store/services/settingsService";
 import { createCustomerManualPaymentThunk } from "@/store/services/paymentService";
+import {
+  validateCouponThunk,
+  type ValidateCouponResponse,
+} from "@/store/services/couponService";
 import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 
@@ -72,6 +78,16 @@ export default function PackageCheckoutPage() {
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [couponCodeInput, setCouponCodeInput] = useState("");
+  const [couponApplying, setCouponApplying] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<ValidateCouponResponse | null>(null);
+
+  const packageBaseAmount = Number(selectedPackage?.price || 0);
+  const packageCurrency = (selectedPackage?.currency || "EGP") as "EGP" | "SAR" | "USD";
+  const packageDiscountAmount = Number(appliedCoupon?.discountAmount || 0);
+  const packageFinalAmount = Number(
+    Math.max(packageBaseAmount - packageDiscountAmount, 0).toFixed(2)
+  );
 
   useEffect(() => {
     if (pkgId && pkgId !== "undefined") {
@@ -91,6 +107,21 @@ export default function PackageCheckoutPage() {
     }
   }, [user, isLoggedIn]);
 
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    if (packageBaseAmount <= 0) {
+      setAppliedCoupon(null);
+      return;
+    }
+    if (appliedCoupon.currency !== packageCurrency) {
+      setAppliedCoupon(null);
+      return;
+    }
+    if (Math.abs(Number(appliedCoupon.originalAmount) - packageBaseAmount) > 0.01) {
+      setAppliedCoupon(null);
+    }
+  }, [appliedCoupon, packageBaseAmount, packageCurrency]);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -101,6 +132,55 @@ export default function PackageCheckoutPage() {
     if (e.target.files && e.target.files[0]) {
       setPaymentProof(e.target.files[0]);
     }
+  };
+
+  const handleApplyCoupon = async () => {
+    const code = couponCodeInput.trim();
+    if (!code) {
+      toast.error(isRtl ? "أدخل كود الكوبون" : "Enter a coupon code");
+      return;
+    }
+    if (!isLoggedIn) {
+      toast.error(
+        isRtl
+          ? "سجل دخولك أولاً لاستخدام الكوبون"
+          : "Please login first to use a coupon"
+      );
+      return;
+    }
+    if (!selectedPackage || packageBaseAmount <= 0) {
+      toast.error(isRtl ? "لا يمكن تطبيق الكوبون الآن" : "Cannot apply coupon right now");
+      return;
+    }
+
+    try {
+      setCouponApplying(true);
+      const result = await dispatch(
+        validateCouponThunk({
+          code,
+          amount: packageBaseAmount,
+          currency: packageCurrency,
+          context: "package",
+        })
+      ).unwrap();
+      setAppliedCoupon(result);
+      setCouponCodeInput(result.code);
+      toast.success(
+        isRtl
+          ? `تم تطبيق الكوبون (-${result.discountAmount} ${result.currency})`
+          : `Coupon applied (-${result.discountAmount} ${result.currency})`
+      );
+    } catch (error: any) {
+      setAppliedCoupon(null);
+      toast.error(error || (isRtl ? "كوبون غير صالح" : "Invalid coupon"));
+    } finally {
+      setCouponApplying(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCodeInput("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,7 +203,16 @@ export default function PackageCheckoutPage() {
     }
 
     if (!selectedMethodId) {
-      toast.error(isRtl ? "يرجى اختيار وسيلة الدفع" : "Please select payment method");
+      toast.error(isRtl ? "Please select payment method" : "Please select payment method");
+      return;
+    }
+
+    if (couponCodeInput.trim() && !appliedCoupon) {
+      toast.error(
+        isRtl
+          ? "Please apply the coupon before confirming subscription"
+          : "Please apply the coupon before confirming subscription"
+      );
       return;
     }
 
@@ -141,12 +230,13 @@ export default function PackageCheckoutPage() {
         pricingTierId: "package_subscription",
         manualPaymentMethodId: selectedMethodId,
         paymentProof: paymentProof || undefined,
+        couponCode: appliedCoupon?.code,
         billingInfo: {
           ...formData,
-          amount: selectedPackage.price,
+          amount: packageFinalAmount,
         },
-        amount: selectedPackage.price,
-        currency: selectedPackage.currency,
+        amount: packageFinalAmount,
+        currency: packageCurrency,
       };
 
       await dispatch(createCustomerManualPaymentThunk(paymentData)).unwrap();
@@ -378,15 +468,73 @@ export default function PackageCheckoutPage() {
                 </div>
                 
                 <Separator />
-                
+
+                <div className="space-y-2">
+                  <Label htmlFor="packageCouponCode" className="text-sm font-medium">
+                    {isRtl ? "Coupon Code" : "Discount Coupon"}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="packageCouponCode"
+                      value={couponCodeInput}
+                      onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
+                      placeholder={isRtl ? "e.g. SAVE20" : "e.g. SAVE20"}
+                      disabled={couponApplying || submitting}
+                    />
+                    {appliedCoupon ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleRemoveCoupon}
+                        disabled={couponApplying || submitting}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleApplyCoupon}
+                        disabled={couponApplying || submitting || !couponCodeInput.trim()}
+                      >
+                        {couponApplying ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <TicketPercent className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                  {appliedCoupon && (
+                    <p className="text-xs text-green-700">
+                      {isRtl
+                        ? `${appliedCoupon.code} applied successfully`
+                        : `${appliedCoupon.code} applied successfully`}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{isRtl ? "Subtotal" : "Subtotal"}</span>
+                  <span>{packageBaseAmount} {packageCurrency}</span>
+                </div>
+                {packageDiscountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-green-700">
+                    <span>{isRtl ? "Discount" : "Discount"}</span>
+                    <span>- {packageDiscountAmount} {packageCurrency}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-end">
-                  <span className="font-bold text-lg">{isRtl ? "الإجمالي" : "Total"}</span>
+                  <span className="font-bold text-lg">{isRtl ? "Total" : "Total"}</span>
                   <div className="text-right">
                     <div className="text-3xl font-bold text-primary">
-                      {selectedPackage.price} {selectedPackage.currency}
+                      {packageFinalAmount} {packageCurrency}
                     </div>
                   </div>
                 </div>
+
+
 
                 <Button 
                   type="submit" 
@@ -414,4 +562,6 @@ export default function PackageCheckoutPage() {
     </div>
   );
 }
+
+
 

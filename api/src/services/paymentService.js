@@ -11,10 +11,12 @@ import Product from "../models/productModel.js";
 import BookDownloadGrant from "../models/bookDownloadGrantModel.js";
 import Service from "../models/serviceModel.js";
 import Course from "../models/courseModel.js";
+import Package from "../models/packageModel.js";
 import logger from "../utils/logger.js";
 import * as paypalClient from "./paypal.js";
 import { kashierService } from "./cashierService.js";
 import PaymentMethod from "../models/paymentMethodSchema.js";
+import couponService from "./couponService.js";
 
 export class PaymentService {
   constructor() {
@@ -100,6 +102,89 @@ export class PaymentService {
       amount: convertedAmount,
       currency: targetCurrency,
       course,
+    };
+  }
+
+  async resolvePackagePricing(packageId, requestedCurrency) {
+    const pkg = await Package.findById(packageId).select("name price currency isActive");
+    if (!pkg) {
+      throw new ApiError(404, "Package not found");
+    }
+
+    if (!pkg.isActive) {
+      throw new ApiError(400, "This package is not available now");
+    }
+
+    const baseAmount = Number(pkg.price || 0);
+    if (!Number.isFinite(baseAmount) || baseAmount <= 0) {
+      throw new ApiError(400, "Invalid package price");
+    }
+
+    const packageCurrency = this.normalizeCurrency(pkg.currency, "EGP");
+    const targetCurrency = this.normalizeCurrency(requestedCurrency, packageCurrency);
+
+    if (packageCurrency === targetCurrency) {
+      return {
+        amount: this.roundMoney(baseAmount),
+        currency: targetCurrency,
+        package: pkg,
+      };
+    }
+
+    const settings = await this.settingsRepository.getSettings();
+    const exchangeRates = this.getExchangeRatesMap(settings);
+    const convertedAmount = this.convertAmount(
+      baseAmount,
+      packageCurrency,
+      targetCurrency,
+      exchangeRates
+    );
+
+    return {
+      amount: convertedAmount,
+      currency: targetCurrency,
+      package: pkg,
+    };
+  }
+
+  async applyCouponDiscount({
+    couponCode,
+    amount,
+    currency,
+    context = "checkout",
+    userId = null,
+  }) {
+    const originalAmount = this.roundMoney(amount);
+
+    if (!couponCode) {
+      return {
+        originalAmount,
+        discountAmount: 0,
+        finalAmount: originalAmount,
+        couponCode: null,
+        couponId: null,
+        couponDetails: null,
+      };
+    }
+
+    const couponResult = await couponService.validateCouponForOrder({
+      code: couponCode,
+      amount: originalAmount,
+      currency,
+      context,
+      userId,
+    });
+
+    return {
+      originalAmount: couponResult.originalAmount,
+      discountAmount: couponResult.discountAmount,
+      finalAmount: couponResult.finalAmount,
+      couponCode: couponResult.code,
+      couponId: couponResult.coupon._id,
+      couponDetails: {
+        ...couponResult.snapshot,
+        context: couponResult.context,
+      },
     };
   }
 
@@ -816,6 +901,7 @@ export class PaymentService {
     billingInfo,
     cartSessionId,
     currency,
+    couponCode,
   }) {
     try {
       // Auto-create user logic (same as before)
@@ -911,9 +997,41 @@ export class PaymentService {
         ];
       }
 
+      if (!hasCheckoutItems && packageId && !productId && !courseId && !serviceId) {
+        const packagePricing = await this.resolvePackagePricing(packageId, requestedCurrency);
+        resolvedAmount = packagePricing.amount;
+        resolvedCurrency = packagePricing.currency;
+        resolvedItems = [
+          {
+            itemType: "package",
+            itemId: packageId,
+            name:
+              packagePricing.package?.name?.en ||
+              packagePricing.package?.name?.ar ||
+              "Package",
+            price: resolvedAmount,
+            unitPrice: resolvedAmount,
+            quantity: 1,
+          },
+        ];
+      }
+
       if (!Number.isFinite(resolvedAmount) || resolvedAmount <= 0) {
         throw new ApiError(400, "Invalid payment amount");
       }
+
+      const couponContext = packageId && !hasCheckoutItems ? "package" : "checkout";
+      const couponResult = await this.applyCouponDiscount({
+        couponCode,
+        amount: resolvedAmount,
+        currency: resolvedCurrency,
+        context: couponContext,
+        userId: linkedUserId || null,
+      });
+
+      const originalAmount = couponResult.originalAmount;
+      const discountAmount = couponResult.discountAmount;
+      resolvedAmount = couponResult.finalAmount;
 
       // Generate Title and Merchant ID
       const titleString = typeof manualMethod.title === "object"
@@ -931,6 +1049,11 @@ export class PaymentService {
         packageId,
         studentMemberId,
         amount: resolvedAmount,
+        originalAmount,
+        discountAmount,
+        couponCode: couponResult.couponCode || undefined,
+        couponId: couponResult.couponId || undefined,
+        couponDetails: couponResult.couponDetails || undefined,
         currency: resolvedCurrency,
         status: "pending",
         paymentMethod: titleString || "Manual",
@@ -948,6 +1071,7 @@ export class PaymentService {
           methodTitle: titleString || "Manual",
           requiresAttachment: manualMethod?.requiresAttachment || false,
           instructions: manualMethod?.instructions || "",
+          coupon: couponResult.couponDetails || undefined,
           items: resolvedItems,
         },
         billingInfo: {
@@ -1078,7 +1202,7 @@ export class PaymentService {
 
   // --- PayPal ---
 
-  async createPaypalPayment({ userId, courseId, productId, serviceId, items, amount, currency, locale, billingInfo }) {
+  async createPaypalPayment({ userId, courseId, productId, serviceId, items, amount, currency, locale, billingInfo, couponCode }) {
     const config = await this.getGatewayConfig("paypal");
 
     let resolvedAmount = Number(amount || 0);
@@ -1110,6 +1234,22 @@ export class PaymentService {
 
     if (!Number.isFinite(resolvedAmount) || resolvedAmount <= 0) {
       throw new ApiError(400, "Invalid payment amount");
+    }
+
+    const couponResult = await this.applyCouponDiscount({
+      couponCode,
+      amount: resolvedAmount,
+      currency: resolvedCurrency,
+      context: "checkout",
+      userId: userId || null,
+    });
+
+    const originalAmount = couponResult.originalAmount;
+    const discountAmount = couponResult.discountAmount;
+    resolvedAmount = couponResult.finalAmount;
+
+    if (!Number.isFinite(resolvedAmount) || resolvedAmount <= 0) {
+      throw new ApiError(400, "Final payment amount must be greater than 0");
     }
 
     // Get exchange rates from settings
@@ -1154,6 +1294,11 @@ export class PaymentService {
       courseId: finalCourseId,
       serviceId,
       amount: resolvedAmount,
+      originalAmount,
+      discountAmount,
+      couponCode: couponResult.couponCode || undefined,
+      couponId: couponResult.couponId || undefined,
+      couponDetails: couponResult.couponDetails || undefined,
       currency: resolvedCurrency,
       status: "pending",
       paymentMethod: "PayPal",
@@ -1162,6 +1307,7 @@ export class PaymentService {
       paymentDetails: {
         methodType: "paypal_checkout",
         gatewayMode: gatewayConfig.mode,
+        coupon: couponResult.couponDetails || undefined,
         items: resolvedItems,
         locale: locale || "en" // Store locale for email notifications
       }
@@ -1383,7 +1529,7 @@ export class PaymentService {
 
   // --- Cashier (Kashier) - Payment Sessions API v3 ---
 
-  async createCashierPayment({ userId, courseId, productId, items, amount, currency, customer }) {
+  async createCashierPayment({ userId, courseId, productId, items, amount, currency, customer, couponCode }) {
     const config = await this.getGatewayConfig("cashier");
     let resolvedAmount = Number(amount || 0);
     let resolvedCurrency = this.normalizeCurrency(currency || "EGP", "EGP");
@@ -1416,6 +1562,22 @@ export class PaymentService {
       throw new ApiError(400, "Invalid payment amount");
     }
 
+    const couponResult = await this.applyCouponDiscount({
+      couponCode,
+      amount: resolvedAmount,
+      currency: resolvedCurrency,
+      context: "checkout",
+      userId: userId || null,
+    });
+
+    const originalAmount = couponResult.originalAmount;
+    const discountAmount = couponResult.discountAmount;
+    resolvedAmount = couponResult.finalAmount;
+
+    if (!Number.isFinite(resolvedAmount) || resolvedAmount <= 0) {
+      throw new ApiError(400, "Final payment amount must be greater than 0");
+    }
+
     const finalProductId = resolvedProductId || resolvedCourseId;
     const finalCourseId = resolvedCourseId || null;
 
@@ -1440,6 +1602,11 @@ export class PaymentService {
       productId: finalProductId,
       courseId: finalCourseId,
       amount: resolvedAmount,
+      originalAmount,
+      discountAmount,
+      couponCode: couponResult.couponCode || undefined,
+      couponId: couponResult.couponId || undefined,
+      couponDetails: couponResult.couponDetails || undefined,
       currency: resolvedCurrency,
       status: "pending",
       paymentMethod: "Kashier",
@@ -1447,6 +1614,7 @@ export class PaymentService {
       paymentDetails: {
         methodType: "kashier_session",
         gatewayMode: config.mode,
+        coupon: couponResult.couponDetails || undefined,
         items: resolvedItems,
         sessionId: null, // Will be updated after session creation
       },

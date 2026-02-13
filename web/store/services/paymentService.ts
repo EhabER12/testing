@@ -5,7 +5,21 @@ import { getOrCreateSessionId } from "./cartSessionService";
 export interface PaymentIntent {
   id: string;
   amount: number;
+  originalAmount?: number;
+  discountAmount?: number;
   currency: string;
+  couponCode?: string;
+  couponId?: string;
+  couponDetails?: {
+    code?: string;
+    discountType?: "percentage" | "fixed";
+    discountValue?: number;
+    maxDiscountAmount?: number | null;
+    currency?: string;
+    appliesTo?: "all" | "checkout" | "package";
+    context?: "checkout" | "package";
+    [key: string]: any;
+  };
   status: string;
   clientSecret?: string;
   redirectUrl?: string;
@@ -175,9 +189,11 @@ interface CreateManualPaymentPayload {
   productId?: string;
   courseId?: string;
   serviceId?: string;
+  packageId?: string;
   pricingTierId: string;
   manualPaymentMethodId: string;
   paymentProof?: File;
+  couponCode?: string;
   billingInfo: {
     name: string;
     email: string;
@@ -205,11 +221,17 @@ export const createCustomerManualPaymentThunk = createAsyncThunk<
     if (paymentData.courseId) {
       formData.append("courseId", paymentData.courseId);
     }
-    if (paymentData.serviceId) {
+  if (paymentData.serviceId) {
       formData.append("serviceId", paymentData.serviceId);
+    }
+    if (paymentData.packageId) {
+      formData.append("packageId", paymentData.packageId);
     }
     formData.append("pricingTierId", paymentData.pricingTierId);
     formData.append("manualPaymentMethodId", paymentData.manualPaymentMethodId);
+    if (paymentData.couponCode) {
+      formData.append("couponCode", paymentData.couponCode);
+    }
 
     formData.append("billingInfo[name]", paymentData.billingInfo.name);
     formData.append("billingInfo[email]", paymentData.billingInfo.email);
@@ -283,11 +305,14 @@ export const createManualPaymentThunk = createAsyncThunk<
     formData.append("pricingTierId", paymentData.pricingTierId);
     formData.append("manualPaymentMethodId", paymentData.manualPaymentMethodId);
 
-    if (paymentData.amount) {
+  if (paymentData.amount) {
       formData.append("amount", paymentData.amount.toString());
     }
     if (paymentData.currency) {
       formData.append("currency", paymentData.currency);
+    }
+    if (paymentData.couponCode) {
+      formData.append("couponCode", paymentData.couponCode);
     }
 
     formData.append("billingInfo[name]", paymentData.billingInfo.name);
@@ -398,6 +423,7 @@ interface CreatePaypalPaymentPayload {
   amount?: number;
   currency?: string;
   locale?: string;
+  couponCode?: string;
   items?: Array<{
     itemType: "product" | "course";
     itemId: string;
@@ -436,6 +462,7 @@ interface CreateCashierPaymentPayload {
   productId?: string;
   amount?: number;
   currency?: string;
+  couponCode?: string;
   items?: Array<{
     itemType: "product" | "course";
     itemId: string;

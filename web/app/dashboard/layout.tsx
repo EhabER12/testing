@@ -39,6 +39,7 @@ import {
   Mail,
   Home,
   UserSquare2,
+  TicketPercent,
 } from "lucide-react";
 import { User } from "@/store/slices/authSlice";
 import {
@@ -313,6 +314,13 @@ const menuItems: MenuItem[] = [
     icon: <Wallet className="h-4 w-4" />,
     href: "/dashboard/payment-methods",
     roles: ["admin"],
+  },
+  {
+    titleKey: "admin.sidebar.coupons",
+    title: "Coupons",
+    icon: <TicketPercent className="h-4 w-4" />,
+    href: "/dashboard/coupons",
+    roles: ["admin", "moderator"],
   },
   {
     titleKey: "admin.sidebar.finance",

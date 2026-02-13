@@ -35,6 +35,27 @@ const paymentSchema = new mongoose.Schema(
       required: [true, "Amount is required"],
       min: [0, "Amount cannot be negative"],
     },
+    originalAmount: {
+      type: Number,
+      min: [0, "Original amount cannot be negative"],
+    },
+    discountAmount: {
+      type: Number,
+      min: [0, "Discount amount cannot be negative"],
+      default: 0,
+    },
+    couponCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+    },
+    couponId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Coupon",
+    },
+    couponDetails: {
+      type: mongoose.Schema.Types.Mixed,
+    },
     currency: {
       type: String,
       default: "EGP",
@@ -138,6 +159,9 @@ const paymentSchema = new mongoose.Schema(
     },
   }
 );
+
+paymentSchema.index({ couponCode: 1, status: 1 });
+paymentSchema.index({ couponId: 1 });
 
 const Payment = mongoose.model("Payment", paymentSchema);
 

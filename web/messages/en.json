@@ -325,7 +325,8 @@
       "teachers": "Teachers",
       "teacherDetails": "Teacher Details",
       "myStudents": "My Students",
-      "overdueSubscriptions": "Overdue Subscriptions"
+      "overdueSubscriptions": "Overdue Subscriptions",
+      "coupons": "Coupons"
     },
     "myStudents": {
       "title": "My Students",

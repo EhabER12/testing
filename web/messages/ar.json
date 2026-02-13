@@ -325,7 +325,8 @@
       "teachers": "المدرسين",
       "teacherDetails": "تفاصيل المدرسين",
       "myStudents": "طلابي",
-      "overdueSubscriptions": "الاشتراكات المتأخرة"
+      "overdueSubscriptions": "الاشتراكات المتأخرة",
+      "coupons": "الكوبونات"
     },
     "myStudents": {
       "title": "طلابي",
