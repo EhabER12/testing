@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getCourseBySlug, enrollCourse } from "@/store/services/courseService";
-import { addCourseToCart } from "@/store/slices/cartSlice";
+import { addCourseToCart, openCart } from "@/store/slices/cartSlice";
 import { getMySubscriptions } from "@/store/services/studentMemberService";
 import { getCourseSections } from "@/store/services/sectionService";
 import { getCourseCertificate, downloadCertificate } from "@/store/services/certificateService";
@@ -138,7 +138,7 @@ export default function CoursePage() {
           : "You can now complete checkout from cart",
         variant: "default",
       });
-      router.push(`/${locale}/checkout`);
+      dispatch(openCart());
       return;
     }
 

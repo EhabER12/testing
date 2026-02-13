@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import {
   ShoppingBag,
   ArrowLeft,
@@ -87,7 +87,6 @@ const getCartItemImage = (item: CartItem): string | undefined => {
 
 export default function CheckoutPage() {
   const params = useParams();
-  const router = useRouter();
   const locale = (params?.locale as string) || "ar";
   const isRtl = locale === "ar";
   const t = useTranslations();
@@ -100,6 +99,13 @@ export default function CheckoutPage() {
 
   // Determine if user is logged in
   const isLoggedIn = !!user?.token;
+  const checkoutPath = `/${locale}/checkout`;
+  const loginHref = `/${locale}/login?redirect=${encodeURIComponent(
+    checkoutPath
+  )}`;
+  const registerHref = `/${locale}/register?redirect=${encodeURIComponent(
+    checkoutPath
+  )}`;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -241,6 +247,15 @@ export default function CheckoutPage() {
   // Handle checkout submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isLoggedIn) {
+      toast.error(
+        isRtl
+          ? "يرجى تسجيل الدخول أو إنشاء حساب قبل إتمام الطلب"
+          : "Please login or create an account before placing your order"
+      );
+      return;
+    }
 
     // Validation
     if (!formData.name.trim()) {
@@ -553,6 +568,33 @@ export default function CheckoutPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left: Form */}
             <div className="lg:col-span-2 space-y-6">
+              {!isLoggedIn && (
+                <Card className="border-amber-300 bg-amber-50">
+                  <CardHeader className="space-y-1">
+                    <CardTitle className="text-lg text-amber-900">
+                      {isRtl ? "تسجيل الدخول مطلوب" : "Login required"}
+                    </CardTitle>
+                    <CardDescription className="text-amber-800">
+                      {isRtl
+                        ? "لا يمكن إتمام الطلب كزائر. سجل الدخول أو أنشئ حسابًا ثم أكمل الدفع."
+                        : "Guest checkout is not available. Please login or create an account to continue."}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex gap-3">
+                    <Button asChild>
+                      <Link href={loginHref}>
+                        {isRtl ? "تسجيل الدخول" : "Login"}
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline">
+                      <Link href={registerHref}>
+                        {isRtl ? "إنشاء حساب" : "Create account"}
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Contact Information */}
               <Card>
                 <CardHeader>
@@ -963,7 +1005,7 @@ export default function CheckoutPage() {
                     type="submit"
                     size="lg"
                     className="w-full"
-                    disabled={submitting}
+                    disabled={submitting || !isLoggedIn}
                   >
                     {submitting ? (
                       <>
@@ -974,7 +1016,11 @@ export default function CheckoutPage() {
                         {t("checkout.processing")}
                       </>
                     ) : (
-                      t("checkout.placeOrder")
+                      isLoggedIn
+                        ? t("checkout.placeOrder")
+                        : isRtl
+                          ? "سجل دخولك لإتمام الطلب"
+                          : "Login to place your order"
                     )}
                   </Button>
                 </CardContent>

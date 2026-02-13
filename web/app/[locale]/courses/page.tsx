@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getCourses } from "@/store/services/courseService";
-import { addCourseToCart } from "@/store/slices/cartSlice";
+import { addCourseToCart, openCart } from "@/store/slices/cartSlice";
 import { getCategories } from "@/store/slices/categorySlice";
 import { getPublicWebsiteSettingsThunk } from "@/store/services/settingsService";
 import { Button } from "@/components/ui/button";
@@ -370,7 +370,7 @@ export default function CoursesPage() {
                             ? "تمت إضافة الدورة للسلة"
                             : "Course added to cart"
                         );
-                        router.push(`/${locale}/checkout`);
+                        dispatch(openCart());
                         return;
                       }
                       handleCourseClick((course as any).slug);

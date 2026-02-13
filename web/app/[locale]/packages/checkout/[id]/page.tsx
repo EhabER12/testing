@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -40,7 +40,6 @@ import toast from "react-hot-toast";
 
 export default function PackageCheckoutPage() {
   const params = useParams();
-  const router = useRouter();
   const locale = (params?.locale as string) || "ar";
   const pkgId = params?.id as string;
   const isRtl = locale === "ar";
@@ -52,6 +51,16 @@ export default function PackageCheckoutPage() {
   const { user } = useAppSelector((state) => state.auth);
 
   const isLoggedIn = !!user?.token;
+  const packageCheckoutPath =
+    pkgId && pkgId !== "undefined"
+      ? `/${locale}/packages/checkout/${pkgId}`
+      : `/${locale}/packages`;
+  const loginHref = `/${locale}/login?redirect=${encodeURIComponent(
+    packageCheckoutPath
+  )}`;
+  const registerHref = `/${locale}/register?redirect=${encodeURIComponent(
+    packageCheckoutPath
+  )}`;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -96,6 +105,15 @@ export default function PackageCheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isLoggedIn) {
+      toast.error(
+        isRtl
+          ? "يرجى تسجيل الدخول أو إنشاء حساب قبل تأكيد الاشتراك"
+          : "Please login or create an account before confirming the subscription"
+      );
+      return;
+    }
 
     if (!selectedPackage) return;
 
@@ -211,6 +229,33 @@ export default function PackageCheckoutPage() {
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Forms */}
           <div className="lg:col-span-2 space-y-6">
+            {!isLoggedIn && (
+              <Card className="border-amber-300 bg-amber-50">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-lg text-amber-900">
+                    {isRtl ? "تسجيل الدخول مطلوب" : "Login required"}
+                  </CardTitle>
+                  <CardDescription className="text-amber-800">
+                    {isRtl
+                      ? "لا يمكن إتمام الاشتراك كزائر. سجل الدخول أو أنشئ حسابًا ثم أكمل الطلب."
+                      : "Guest checkout is not available. Please login or create an account to continue."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex gap-3">
+                  <Button asChild>
+                    <Link href={loginHref}>
+                      {isRtl ? "تسجيل الدخول" : "Login"}
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link href={registerHref}>
+                      {isRtl ? "إنشاء حساب" : "Create account"}
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Contact Info */}
             <Card>
               <CardHeader>
@@ -346,12 +391,14 @@ export default function PackageCheckoutPage() {
                 <Button 
                   type="submit" 
                   className="w-full h-12 text-lg mt-4" 
-                  disabled={submitting}
+                  disabled={submitting || !isLoggedIn}
                 >
                   {submitting ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    isRtl ? "تأكيد الاشتراك" : "Confirm Subscription"
+                    isLoggedIn
+                      ? (isRtl ? "تأكيد الاشتراك" : "Confirm Subscription")
+                      : (isRtl ? "سجل دخولك لإتمام الاشتراك" : "Login to confirm subscription")
                   )}
                 </Button>
                 <p className="text-[10px] text-center text-muted-foreground mt-2">
@@ -367,3 +414,4 @@ export default function PackageCheckoutPage() {
     </div>
   );
 }
+

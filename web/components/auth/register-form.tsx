@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { register as registerUser } from "@/store/services/authService";
 import { reset } from "@/store/slices/authSlice";
@@ -41,10 +41,16 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
   const t = useTranslations("auth.register");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const { isLoading, isError, message, isSuccess } = useAppSelector(
     (state) => state.auth
   );
+  const redirect = searchParams.get("redirect");
+  const safeRedirect =
+    redirect && redirect.startsWith("/") && !redirect.startsWith("//")
+      ? redirect
+      : null;
 
   const formSchema = createSchema(t);
 
@@ -76,7 +82,11 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
           } as any)
         ).unwrap();
         // Redirect to login after successful registration
-        router.push(`/${locale}/login`);
+        router.push(
+          safeRedirect
+            ? `/${locale}/login?redirect=${encodeURIComponent(safeRedirect)}`
+            : `/${locale}/login`
+        );
       } catch (error) {
         console.error(error);
       }
@@ -244,7 +254,14 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
       </Form>
       <div className="text-center text-sm">
         {t("alreadyHaveAccount")}{" "}
-        <Link href={`/${locale}/login`} className="text-genoun-green hover:text-genoun-green/90 font-semibold">
+        <Link
+          href={
+            safeRedirect
+              ? `/${locale}/login?redirect=${encodeURIComponent(safeRedirect)}`
+              : `/${locale}/login`
+          }
+          className="text-genoun-green hover:text-genoun-green/90 font-semibold"
+        >
           {t("signIn")}
         </Link>
       </div>

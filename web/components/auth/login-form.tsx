@@ -46,6 +46,9 @@ export function LoginForm() {
     redirect && redirect.startsWith("/") && !redirect.startsWith("//")
       ? redirect
       : null;
+  const registerHref = safeRedirect
+    ? `/${localePrefix}/register?redirect=${encodeURIComponent(safeRedirect)}`
+    : `/${localePrefix}/register`;
 
   // Reset error state on mount to prevent hydration mismatch
   useEffect(() => {
@@ -165,7 +168,7 @@ export function LoginForm() {
       <div className="text-center text-sm">
         {t("noAccount")}{" "}
         <Link
-          href="/register"
+          href={registerHref}
           className="text-genoun-green hover:text-genoun-green/90 font-semibold"
         >
           {t("signUp")}

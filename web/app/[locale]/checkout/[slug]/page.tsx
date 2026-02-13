@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getCourseBySlug } from "@/store/services/courseService";
-import { addCourseToCart } from "@/store/slices/cartSlice";
+import { addCourseToCart, openCart } from "@/store/slices/cartSlice";
 
 export default function LegacyCourseCheckoutRedirectPage() {
   const params = useParams();
@@ -59,8 +59,9 @@ export default function LegacyCourseCheckoutRedirectPage() {
       })
     );
 
-    toast.success("Course added to cart. Continue with checkout.");
-    router.replace(`/${locale}/checkout`);
+    toast.success("Course added to cart.");
+    dispatch(openCart());
+    router.replace(`/${locale}/courses/${slug}`);
   }, [currentCourse, dispatch, isLoading, locale, router, slug]);
 
   useEffect(() => {
