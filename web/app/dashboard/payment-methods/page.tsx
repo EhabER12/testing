@@ -28,7 +28,6 @@ export default function PaymentMethodsPage() {
     const [paypalForm, setPaypalForm] = useState({
         clientId: "",
         clientSecret: "",
-        webhookId: "",
         mode: "sandbox" as "sandbox" | "live",
         returnUrl: "",
         cancelUrl: "",
@@ -85,7 +84,6 @@ export default function PaymentMethodsPage() {
                 setPaypalForm({
                     clientId: paypalMethod.credentials?.clientId || "",
                     clientSecret: paypalMethod.credentials?.clientSecret || "",
-                    webhookId: paypalMethod.credentials?.webhookId || "",
                     mode: paypalMethod.mode as "sandbox" | "live",
                     returnUrl: paypalMethod.config?.returnUrl || "",
                     cancelUrl: paypalMethod.config?.cancelUrl || "",
@@ -132,7 +130,6 @@ export default function PaymentMethodsPage() {
 
             const clientId = paypalForm.clientId.trim();
             const clientSecret = paypalForm.clientSecret.trim();
-            const webhookId = paypalForm.webhookId.trim();
             const returnUrl = paypalForm.returnUrl.trim();
             const cancelUrl = paypalForm.cancelUrl.trim();
 
@@ -146,7 +143,6 @@ export default function PaymentMethodsPage() {
                 credentials: {
                     clientId,
                     clientSecret,
-                    webhookId,
                 },
                 mode: paypalForm.mode,
                 config: {
@@ -412,19 +408,6 @@ export default function PaymentMethodsPage() {
                                             {showPayPalSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </button>
                                     </div>
-                                </div>
-
-                                {/* Webhook ID */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="paypal-webhook-id">Webhook ID</Label>
-                                    <Input
-                                        id="paypal-webhook-id"
-                                        value={paypalForm.webhookId}
-                                        onChange={(e) =>
-                                            setPaypalForm({ ...paypalForm, webhookId: e.target.value })
-                                        }
-                                        placeholder="Enter PayPal Webhook ID"
-                                    />
                                 </div>
 
                                 {/* Return URL */}

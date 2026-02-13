@@ -16,7 +16,6 @@ export interface PaymentMethod {
         // PayPal
         clientId?: string;
         clientSecret?: string;
-        webhookId?: string;
 
         // Cashier
         mid?: string;
