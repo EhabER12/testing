@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getCourseBySlug } from "@/store/services/courseService";
@@ -12,6 +12,7 @@ import {
 } from "@/store/services/progressService";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import {
   Card,
   CardContent,
@@ -23,12 +24,19 @@ import {
   ChevronLeft,
   ChevronRight,
   PlayCircle,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
+  Minimize,
   CheckCircle,
   Download,
   FileText,
   Lock,
   BookOpen,
 } from "lucide-react";
+import ReactPlayer from "react-player";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/use-toast";
 import CourseSidebar from "@/components/courses/CourseSidebar";
@@ -57,6 +65,14 @@ export default function LessonPage() {
   const [currentLesson, setCurrentLesson] = useState<any>(null);
   const [currentSection, setCurrentSection] = useState<any>(null);
   const [accessChecked, setAccessChecked] = useState(false);
+  const vimeoPlayerRef = useRef<HTMLVideoElement | null>(null);
+  const vimeoContainerRef = useRef<HTMLDivElement | null>(null);
+  const [vimeoPlaying, setVimeoPlaying] = useState(true);
+  const [vimeoMuted, setVimeoMuted] = useState(false);
+  const [vimeoVolume, setVimeoVolume] = useState(0.8);
+  const [vimeoPlayedSeconds, setVimeoPlayedSeconds] = useState(0);
+  const [vimeoDuration, setVimeoDuration] = useState(0);
+  const [vimeoIsFullscreen, setVimeoIsFullscreen] = useState(false);
 
   // Fetch course data
   useEffect(() => {
@@ -148,6 +164,29 @@ export default function LessonPage() {
     }
   }, [currentLesson?.id, currentLesson?._id, currentCourse?.id, currentCourse?._id, user]);
 
+  // Reset custom Vimeo controls state when lesson changes
+  useEffect(() => {
+    if (currentLesson?.videoSource === "vimeo") {
+      setVimeoPlaying(true);
+      setVimeoMuted(false);
+      setVimeoVolume(0.8);
+      setVimeoPlayedSeconds(0);
+      setVimeoDuration(0);
+    }
+  }, [currentLesson?.id, currentLesson?._id, currentLesson?.videoSource]);
+
+  // Track fullscreen state for Vimeo custom controls
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setVimeoIsFullscreen(document.fullscreenElement === vimeoContainerRef.current);
+    };
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+    };
+  }, []);
+
   const getTextValue = (value: any): string => {
     if (!value) return "";
     if (typeof value === "string") return value;
@@ -184,6 +223,24 @@ export default function LessonPage() {
       }
     }
     return url;
+  };
+
+  const formatTime = (seconds: number): string => {
+    if (!Number.isFinite(seconds) || seconds < 0) return "00:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  };
+
+  const toggleVimeoFullscreen = async () => {
+    if (!vimeoContainerRef.current) return;
+
+    if (document.fullscreenElement === vimeoContainerRef.current) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await vimeoContainerRef.current.requestFullscreen();
   };
 
   // Get all lessons flattened
@@ -331,13 +388,125 @@ export default function LessonPage() {
                   userEmail={user?.email}
                   className="w-full"
                 />
+              ) : currentLesson?.videoSource === "vimeo" ? (
+                <div ref={vimeoContainerRef} className="absolute inset-0">
+                  <ReactPlayer
+                    ref={vimeoPlayerRef}
+                    src={getVimeoEmbedUrl(currentLesson.videoUrl)}
+                    width="100%"
+                    height="100%"
+                    playing={vimeoPlaying}
+                    controls={false}
+                    muted={vimeoMuted}
+                    volume={vimeoVolume}
+                    playsInline
+                    onDurationChange={(event) => {
+                      setVimeoDuration(event.currentTarget.duration || 0);
+                    }}
+                    onTimeUpdate={(event) => {
+                      setVimeoPlayedSeconds(event.currentTarget.currentTime || 0);
+                    }}
+                    config={{
+                      vimeo: {
+                        controls: false,
+                        title: false,
+                        byline: false,
+                        portrait: false,
+                        like: false,
+                        watchlater: false,
+                        share: false,
+                        dnt: true,
+                      } as any,
+                    }}
+                  />
+
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/45 to-transparent p-3 md:p-4">
+                    <Slider
+                      value={[vimeoPlayedSeconds]}
+                      min={0}
+                      max={Math.max(vimeoDuration, 1)}
+                      step={1}
+                      onValueChange={(value) => {
+                        const nextTime = value[0] || 0;
+                        setVimeoPlayedSeconds(nextTime);
+                        if (vimeoPlayerRef.current) {
+                          vimeoPlayerRef.current.currentTime = nextTime;
+                        }
+                      }}
+                      className="mb-3"
+                    />
+
+                    <div className="flex items-center justify-between gap-3 text-white">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-white hover:bg-white/20 hover:text-white"
+                          onClick={() => setVimeoPlaying((prev) => !prev)}
+                        >
+                          {vimeoPlaying ? (
+                            <Pause className="h-4 w-4" />
+                          ) : (
+                            <Play className="h-4 w-4" />
+                          )}
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-white hover:bg-white/20 hover:text-white"
+                          onClick={() => {
+                            setVimeoMuted((prev) => !prev);
+                          }}
+                        >
+                          {vimeoMuted || vimeoVolume === 0 ? (
+                            <VolumeX className="h-4 w-4" />
+                          ) : (
+                            <Volume2 className="h-4 w-4" />
+                          )}
+                        </Button>
+
+                        <Slider
+                          value={[vimeoMuted ? 0 : vimeoVolume]}
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          onValueChange={(value) => {
+                            const nextVolume = value[0] || 0;
+                            setVimeoVolume(nextVolume);
+                            setVimeoMuted(nextVolume === 0);
+                          }}
+                          className="w-24 md:w-28"
+                        />
+
+                        <span className="text-xs md:text-sm font-medium tabular-nums">
+                          {formatTime(vimeoPlayedSeconds)} / {formatTime(vimeoDuration)}
+                        </span>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-white hover:bg-white/20 hover:text-white"
+                        onClick={toggleVimeoFullscreen}
+                      >
+                        {vimeoIsFullscreen ? (
+                          <Minimize className="h-4 w-4" />
+                        ) : (
+                          <Maximize className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               ) : (
-                // Use iframe for YouTube/Vimeo
+                // Use iframe for YouTube
                 <iframe
                   src={
-                    currentLesson?.videoSource === "vimeo"
-                      ? getVimeoEmbedUrl(currentLesson.videoUrl)
-                      : getYouTubeEmbedUrl(currentLesson.videoUrl)
+                    getYouTubeEmbedUrl(currentLesson.videoUrl)
                   }
                   className="absolute top-0 left-0 w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
