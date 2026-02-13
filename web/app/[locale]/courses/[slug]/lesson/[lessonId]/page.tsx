@@ -333,16 +333,24 @@ export default function LessonPage() {
                 />
               ) : (
                 // Use iframe for YouTube/Vimeo
-                <iframe
-                  src={
-                    currentLesson?.videoSource === "vimeo"
-                      ? getVimeoEmbedUrl(currentLesson.videoUrl)
-                      : getYouTubeEmbedUrl(currentLesson.videoUrl)
-                  }
-                  className="absolute top-0 left-0 w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+                <>
+                  <iframe
+                    src={
+                      currentLesson?.videoSource === "vimeo"
+                        ? getVimeoEmbedUrl(currentLesson.videoUrl)
+                        : getYouTubeEmbedUrl(currentLesson.videoUrl)
+                    }
+                    className="absolute top-0 left-0 w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                  {currentLesson?.videoSource === "vimeo" && (
+                    <div
+                      className="pointer-events-none absolute top-0 right-0 z-10 h-44 w-16 bg-black"
+                      aria-hidden="true"
+                    />
+                  )}
+                </>
               )
             ) : (
               <div className="flex items-center justify-center h-full bg-gray-900 text-white">
