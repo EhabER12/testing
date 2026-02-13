@@ -398,6 +398,14 @@ interface CreatePaypalPaymentPayload {
   amount?: number;
   currency?: string;
   locale?: string;
+  items?: Array<{
+    itemType: "product" | "course";
+    itemId: string;
+    quantity: number;
+    variantId?: string;
+    addonIds?: string[];
+    customFields?: Array<{ label: string; value: string }>;
+  }>;
   billingInfo?: {
     name?: string;
     email?: string;
@@ -427,6 +435,14 @@ interface CreateCashierPaymentPayload {
   productId?: string;
   amount?: number;
   currency?: string;
+  items?: Array<{
+    itemType: "product" | "course";
+    itemId: string;
+    quantity: number;
+    variantId?: string;
+    addonIds?: string[];
+    customFields?: Array<{ label: string; value: string }>;
+  }>;
   customer?: {
     name: string;
     email: string;

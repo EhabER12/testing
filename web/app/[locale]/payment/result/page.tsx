@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense, useCallback } from "react";
+import { useEffect, useState, Suspense, useCallback, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,12 +16,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import axiosInstance from "@/lib/axios";
+import { useAppDispatch } from "@/store/hooks";
+import { clearCart } from "@/store/slices/cartSlice";
+import { markSessionConverted } from "@/store/services/cartSessionService";
 
 function PaymentResultContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const locale = (params?.locale as string) || "ar";
   const isRtl = locale === "ar";
+  const dispatch = useAppDispatch();
+  const handledSuccessRef = useRef(false);
 
   const paymentId = searchParams.get("paymentId");
 
@@ -46,6 +51,11 @@ function PaymentResultContent() {
       setPaymentData(data);
 
       if (data?.status === "success" || data?.status === "delivered") {
+        if (!handledSuccessRef.current) {
+          handledSuccessRef.current = true;
+          dispatch(clearCart());
+          markSessionConverted(data?.id).catch(() => null);
+        }
         setStatus("success");
         return true;
       } else if (data?.status === "failed" || data?.status === "cancelled") {

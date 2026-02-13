@@ -67,6 +67,24 @@ const getLocalizedText = (
   return text[locale as "ar" | "en"] || text.en || text.ar || "";
 };
 
+const getCartItemCurrency = (item: CartItem | undefined): string => {
+  if (!item) return "SAR";
+  if (item.itemType === "course") return item.course?.currency || "SAR";
+  return item.product?.currency || "SAR";
+};
+
+const getCartItemName = (item: CartItem, locale: string): string => {
+  if (item.itemType === "course") {
+    return getLocalizedText(item.course?.title, locale);
+  }
+  return getLocalizedText(item.product?.name, locale);
+};
+
+const getCartItemImage = (item: CartItem): string | undefined => {
+  if (item.itemType === "course") return item.course?.thumbnail;
+  return item.product?.coverImage;
+};
+
 export default function CheckoutPage() {
   const params = useParams();
   const router = useRouter();
@@ -116,13 +134,46 @@ export default function CheckoutPage() {
 
   const total = calculateCartTotal(items);
   const itemCount = getCartItemCount(items);
+  const checkoutCurrency = getCartItemCurrency(items[0]);
+
+  type CheckoutItemPayload = {
+    itemType: "product" | "course";
+    itemId: string;
+    quantity: number;
+    variantId?: string;
+    addonIds?: string[];
+    customFields?: Array<{ label: string; value: string }>;
+  };
+
+  const checkoutItemsPayload: CheckoutItemPayload[] = items.map((item, index) => {
+    if (item.itemType === "course") {
+      return {
+        itemType: "course",
+        itemId: item.courseId || item.itemId,
+        quantity: item.quantity,
+        customFields: [],
+      };
+    }
+
+    return {
+      itemType: "product",
+      itemId: item.productId || item.itemId,
+      quantity: item.quantity,
+      variantId: item.variantId,
+      addonIds: item.addonIds,
+      customFields: item.product?.customFields?.map((f, fIndex) => ({
+        label: getLocalizedText(f.label, "en"),
+        value: itemsData[index]?.[fIndex] || "",
+      })),
+    };
+  });
 
   // Sync cart session on load and when cart changes
   useEffect(() => {
     if (items.length > 0) {
-      syncCartSession(items, total, items[0]?.product?.currency || "SAR");
+      syncCartSession(items, total, checkoutCurrency);
     }
-  }, [items, total]);
+  }, [items, total, checkoutCurrency]);
 
   // Pre-fill form with user data when logged in
   useEffect(() => {
@@ -221,7 +272,7 @@ export default function CheckoutPage() {
     // Validate Custom Fields
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      if (item.product.customFields) {
+      if (item.itemType === "product" && item.product?.customFields) {
         for (
           let fIndex = 0;
           fIndex < item.product.customFields.length;
@@ -234,7 +285,7 @@ export default function CheckoutPage() {
               const label = getLocalizedText(field.label, locale);
               toast.error(
                 `${getLocalizedText(
-                  item.product.name,
+                  item.product?.name,
                   locale
                 )}: ${label} is required`
               );
@@ -250,13 +301,9 @@ export default function CheckoutPage() {
     try {
       // 1. PayPal
       if (selectedMethodId === "paypal") {
-        const mainItem = items[0];
-        const productId = mainItem?.product?.id || (mainItem?.product as any)?._id;
-
         const response = await dispatch(createPaypalPaymentThunk({
-          amount: total,
-          productId,
-          currency: items[0]?.product?.currency || "EGP", // Use product currency
+          currency: checkoutCurrency,
+          items: checkoutItemsPayload,
           locale,
           billingInfo: {
             name: formData.name,
@@ -278,12 +325,9 @@ export default function CheckoutPage() {
       }
       // 2. Kashier (Payment Sessions API v3)
       else if (selectedMethodId === "cashier") {
-        const mainItem = items[0];
-        const cashierProductId = mainItem?.product?.id || (mainItem?.product as any)?._id;
         const response = await dispatch(createCashierPaymentThunk({
-          amount: total,
-          productId: cashierProductId,
-          currency: items[0]?.product?.currency || "EGP",
+          currency: checkoutCurrency,
+          items: checkoutItemsPayload,
           customer: {
             name: formData.name,
             email: formData.email
@@ -318,27 +362,7 @@ export default function CheckoutPage() {
           }
         }
 
-        // Use the first item's product ID as the main reference (Limitation of current backend)
-        const mainItem = items[0];
-        const productId =
-          mainItem?.product?.id || (mainItem?.product as any)?._id;
-
-        const itemsPayload = items.map((item, index) => ({
-          productId: item.product.id || (item.product as any)._id || "",
-          name: getLocalizedText(item.product.name, "en"),
-          price: item.variant?.price ?? item.product.basePrice,
-          quantity: item.quantity,
-          variantId: item.variantId,
-          addonIds: item.addonIds,
-          customFields: item.product.customFields?.map((f, fIndex) => ({
-            label: getLocalizedText(f.label, "en"),
-            value: itemsData[index]?.[fIndex] || "",
-          })),
-        }));
-
         const paymentData = {
-          productId: productId,
-          serviceId: undefined,
           pricingTierId: "checkout_order", // Placeholder required by backend
           manualPaymentMethodId: selectedMethodId,
           paymentProof: processedProof || undefined,
@@ -349,12 +373,10 @@ export default function CheckoutPage() {
             address: formData.address || "",
             city: formData.city || "",
             country: formData.country,
-            amount: total,
-            items: itemsPayload,
+            items: checkoutItemsPayload,
           },
-          amount: total,
-          items: itemsPayload,
-          currency: items[0]?.product?.currency || "SAR",
+          items: checkoutItemsPayload,
+          currency: checkoutCurrency,
         };
 
         await dispatch(createCustomerManualPaymentThunk(paymentData)).unwrap();
@@ -635,14 +657,15 @@ export default function CheckoutPage() {
 
               {/* Product Custom Fields */}
               {items.map((item, index) => {
-                const fields = item.product.customFields || [];
+                const fields =
+                  item.itemType === "product" ? item.product?.customFields || [] : [];
                 if (fields.length === 0) return null;
 
                 return (
                   <Card key={`item-${index}`}>
                     <CardHeader>
                       <CardTitle className="text-lg">
-                        {getLocalizedText(item.product.name, locale)}
+                        {getCartItemName(item, locale)}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -733,13 +756,13 @@ export default function CheckoutPage() {
                             </p>
                           </div>
                         </label>
-                        {selectedMethodId === "paypal" && items[0]?.product?.currency && items[0].product.currency !== "USD" && (
+                        {selectedMethodId === "paypal" && checkoutCurrency !== "USD" && (
                           <div className="px-4 pb-3">
                             <div className="text-sm bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded-lg p-3 flex items-center gap-2">
                               <span className="text-base">💱</span>
                               <span>
                                 {(() => {
-                                  const currency = items[0].product.currency;
+                                  const currency = checkoutCurrency;
                                   const rate = exchangeRates[currency] || 0;
                                   const usdAmount = rate > 0 ? (total / rate).toFixed(2) : "...";
                                   return isRtl
@@ -895,9 +918,9 @@ export default function CheckoutPage() {
                   {items.map((item: CartItem, index: number) => (
                     <div key={index} className="flex gap-3 text-sm">
                       <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                        {item.product.coverImage ? (
+                        {getCartItemImage(item) ? (
                           <img
-                            src={item.product.coverImage}
+                            src={getCartItemImage(item)}
                             alt=""
                             className="w-full h-full object-cover"
                           />
@@ -909,16 +932,18 @@ export default function CheckoutPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium line-clamp-1">
-                          {getLocalizedText(item.product.name, locale)}
+                          {getCartItemName(item, locale)}
                         </p>
                         <p className="text-muted-foreground">
                           x{item.quantity}
                         </p>
                       </div>
                       <p className="font-medium text-primary">
-                        {(item.variant?.price ?? item.product.basePrice) *
-                          item.quantity}{" "}
-                        {item.product.currency}
+                        {item.itemType === "course"
+                          ? Number(item.course?.price || 0) * item.quantity
+                          : (item.variant?.price ?? item.product?.basePrice ?? 0) *
+                            item.quantity}{" "}
+                        {getCartItemCurrency(item)}
                       </p>
                     </div>
                   ))}
@@ -929,7 +954,7 @@ export default function CheckoutPage() {
                   <div className="flex items-center justify-between text-lg font-semibold">
                     <span>{t("cart.total")}</span>
                     <span className="text-primary">
-                      {total} {items[0]?.product.currency || "SAR"}
+                      {total} {checkoutCurrency}
                     </span>
                   </div>
 

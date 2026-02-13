@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getCourseBySlug, enrollCourse } from "@/store/services/courseService";
+import { addCourseToCart } from "@/store/slices/cartSlice";
 import { getMySubscriptions } from "@/store/services/studentMemberService";
 import { getCourseSections } from "@/store/services/sectionService";
 import { getCourseCertificate, downloadCertificate } from "@/store/services/certificateService";
@@ -113,8 +114,31 @@ export default function CoursePage() {
 
     // Check if course is paid
     if (currentCourse.accessType === "paid") {
-      // Redirect to payment page
-      router.push(`/${locale}/checkout/${slug}`);
+      const courseId = (currentCourse.id || currentCourse._id) as string;
+      dispatch(
+        addCourseToCart({
+          course: {
+            id: courseId,
+            _id: currentCourse._id,
+            title: currentCourse.title,
+            slug: currentCourse.slug,
+            shortDescription: currentCourse.shortDescription,
+            thumbnail: currentCourse.thumbnail,
+            accessType: currentCourse.accessType,
+            price: currentCourse.price,
+            currency: currentCourse.currency,
+          },
+          quantity: 1,
+        })
+      );
+      toast({
+        title: isRtl ? "تمت إضافة الدورة للسلة" : "Course added to cart",
+        description: isRtl
+          ? "يمكنك الآن إتمام الدفع من صفحة السلة"
+          : "You can now complete checkout from cart",
+        variant: "default",
+      });
+      router.push(`/${locale}/checkout`);
       return;
     }
 

@@ -9,6 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import axiosInstance from "@/lib/axios";
 import { useTranslations } from "next-intl";
+import { useAppDispatch } from "@/store/hooks";
+import { clearCart } from "@/store/slices/cartSlice";
+import { markSessionConverted } from "@/store/services/cartSessionService";
 
 function PaymentSuccessContent() {
   const params = useParams();
@@ -17,6 +20,7 @@ function PaymentSuccessContent() {
   const locale = (params?.locale as string) || "ar";
   const isRtl = locale === "ar";
   const t = useTranslations();
+  const dispatch = useAppDispatch();
 
   // PayPal returns token and PayerID in the URL
   const token = searchParams.get("token"); // PayPal Order ID
@@ -39,6 +43,9 @@ function PaymentSuccessContent() {
         const response = await axiosInstance.post(`/payments/paypal/capture/${token}`);
 
         if (response.data?.success) {
+          // Clean cart/session after successful external payment capture
+          dispatch(clearCart());
+          markSessionConverted(response.data?.data?.id).catch(() => null);
           setStatus("success");
           setPaymentDetails(response.data?.data);
         } else {

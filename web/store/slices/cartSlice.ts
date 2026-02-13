@@ -1,10 +1,26 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Product, ProductVariant, ProductAddon } from "./productSlice";
 
+export interface CartCourse {
+  id: string;
+  _id?: string;
+  title: { ar: string; en: string };
+  slug: string;
+  shortDescription?: { ar: string; en: string };
+  thumbnail?: string;
+  accessType: "free" | "paid" | "byPackage";
+  price?: number;
+  currency?: "SAR" | "EGP" | "USD";
+}
+
 // Cart Item Interface
 export interface CartItem {
+  itemType: "product" | "course";
+  itemId: string;
   productId: string;
-  product: Product;
+  product?: Product;
+  courseId?: string;
+  course?: CartCourse;
   variantId?: string;
   variant?: ProductVariant;
   addonIds: string[];
@@ -20,7 +36,12 @@ interface CartState {
 
 // Helper to calculate item price
 export function calculateItemPrice(item: CartItem): number {
-  const basePrice = item.variant?.price ?? item.product.basePrice;
+  if (item.itemType === "course") {
+    const coursePrice = Number(item.course?.price || 0);
+    return coursePrice * item.quantity;
+  }
+
+  const basePrice = item.variant?.price ?? item.product?.basePrice ?? 0;
   const addonsTotal = item.addons.reduce((sum, addon) => sum + addon.price, 0);
   return (basePrice + addonsTotal) * item.quantity;
 }
@@ -71,7 +92,34 @@ export const cartSlice = createSlice({
   reducers: {
     // Initialize cart from localStorage
     initializeCart: (state) => {
-      state.items = loadCartFromStorage();
+      const storedItems = loadCartFromStorage();
+      state.items = storedItems.map((item: any) => {
+        const inferredType =
+          item.itemType || (item.course || item.courseId ? "course" : "product");
+        const inferredId =
+          item.itemId ||
+          item.courseId ||
+          item.productId ||
+          item.product?.id ||
+          item.product?._id ||
+          item.course?.id ||
+          item.course?._id ||
+          "";
+
+        return {
+          itemType: inferredType,
+          itemId: inferredId,
+          productId: item.productId || inferredId,
+          product: item.product,
+          courseId: item.courseId,
+          course: item.course,
+          variantId: item.variantId,
+          variant: item.variant,
+          addonIds: Array.isArray(item.addonIds) ? item.addonIds : [],
+          addons: Array.isArray(item.addons) ? item.addons : [],
+          quantity: Number(item.quantity) > 0 ? Number(item.quantity) : 1,
+        } as CartItem;
+      });
       state.isInitialized = true;
     },
 
@@ -86,11 +134,13 @@ export const cartSlice = createSlice({
       }>
     ) => {
       const { product, variant, addons = [], quantity = 1 } = action.payload;
+      const productId = product.id || (product as any)._id;
 
       // Check if same product+variant+addons exists
       const existingIndex = state.items.findIndex(
         (item) =>
-          item.productId === product.id &&
+          item.itemType === "product" &&
+          item.productId === productId &&
           item.variantId === variant?.id &&
           JSON.stringify(item.addonIds.sort()) ===
             JSON.stringify(addons.map((a) => a.id).sort())
@@ -102,12 +152,53 @@ export const cartSlice = createSlice({
       } else {
         // Add new item
         state.items.push({
-          productId: product.id,
+          itemType: "product",
+          itemId: productId,
+          productId: productId,
           product,
+          courseId: undefined,
+          course: undefined,
           variantId: variant?.id,
           variant,
           addonIds: addons.map((a) => a.id),
           addons,
+          quantity,
+        });
+      }
+
+      saveCartToStorage(state.items);
+    },
+
+    // Add paid course to cart
+    addCourseToCart: (
+      state,
+      action: PayloadAction<{
+        course: CartCourse;
+        quantity?: number;
+      }>
+    ) => {
+      const { course, quantity = 1 } = action.payload;
+      const courseId = course.id || course._id;
+      if (!courseId) return;
+
+      const existingIndex = state.items.findIndex(
+        (item) => item.itemType === "course" && item.courseId === courseId
+      );
+
+      if (existingIndex >= 0) {
+        state.items[existingIndex].quantity += quantity;
+      } else {
+        state.items.push({
+          itemType: "course",
+          itemId: courseId,
+          productId: courseId, // Kept for backwards compatibility in some consumers
+          product: undefined,
+          courseId,
+          course,
+          variantId: undefined,
+          variant: undefined,
+          addonIds: [],
+          addons: [],
           quantity,
         });
       }
@@ -164,6 +255,7 @@ export const cartSlice = createSlice({
 export const {
   initializeCart,
   addToCart,
+  addCourseToCart,
   updateQuantity,
   removeFromCart,
   clearCart,

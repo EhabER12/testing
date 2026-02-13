@@ -190,8 +190,13 @@ export const createCustomerManualPayment = async (req, res, next) => {
     const userId = req.user?._id || null;
     const paymentProofUrl = req.file ? `uploads/${req.file.filename}` : null;
 
-    if (!productId && !courseId && !serviceId && !packageId) {
-      return next(new ApiError(400, "Product ID, Course ID, Service ID, or Package ID is required"));
+    const hasCheckoutItems =
+      Array.isArray(billingInfo?.items)
+        ? billingInfo.items.length > 0
+        : typeof billingInfo?.items === "string" && billingInfo.items.trim().length > 2;
+
+    if (!productId && !courseId && !serviceId && !packageId && !hasCheckoutItems) {
+      return next(new ApiError(400, "At least one purchasable item is required"));
     }
 
     if (!pricingTierId) {
@@ -315,15 +320,17 @@ export const cancelPayment = async (req, res, next) => {
 // @access  Private
 export const createPaypalPayment = async (req, res, next) => {
   try {
-    const { courseId, productId, amount, currency = "USD", locale, billingInfo } = req.body;
+    const { courseId, productId, items, amount, currency = "USD", locale, billingInfo } = req.body;
     const userId = req.user?._id; // Optional - may be undefined for guest checkout
 
-    if (!courseId && !productId) {
-      return next(new ApiError(400, "Course ID or Product ID is required"));
+    const hasCheckoutItems = Array.isArray(items) && items.length > 0;
+
+    if (!courseId && !productId && !hasCheckoutItems) {
+      return next(new ApiError(400, "Course ID, Product ID, or checkout items are required"));
     }
 
     // Amount is optional for course checkout (server calculates it from DB).
-    if (!courseId && (!amount || Number(amount) <= 0)) {
+    if (!courseId && !hasCheckoutItems && (!amount || Number(amount) <= 0)) {
       return next(new ApiError(400, "Valid amount is required"));
     }
 
@@ -331,6 +338,7 @@ export const createPaypalPayment = async (req, res, next) => {
       userId,
       courseId,
       productId,
+      items,
       amount,
       currency,
       locale,
@@ -402,16 +410,17 @@ export const paypalWebhook = async (req, res, next) => {
 // @access  Private
 export const createCashierPayment = async (req, res, next) => {
   try {
-    const { courseId, productId, amount, currency = "EGP", customer } = req.body;
+    const { courseId, productId, items, amount, currency = "EGP", customer } = req.body;
     const userId = req.user?._id;
     const user = req.user;
+    const hasCheckoutItems = Array.isArray(items) && items.length > 0;
 
-    if (!courseId && !productId) {
-      return next(new ApiError(400, "Course ID or Product ID is required"));
+    if (!courseId && !productId && !hasCheckoutItems) {
+      return next(new ApiError(400, "Course ID, Product ID, or checkout items are required"));
     }
 
     // Amount is optional for course checkout (server calculates it from DB).
-    if (!courseId && (!amount || Number(amount) <= 0)) {
+    if (!courseId && !hasCheckoutItems && (!amount || Number(amount) <= 0)) {
       return next(new ApiError(400, "Valid amount is required"));
     }
 
@@ -429,6 +438,7 @@ export const createCashierPayment = async (req, res, next) => {
       userId,
       courseId,
       productId,
+      items,
       amount,
       currency,
       customer: finalCustomer,

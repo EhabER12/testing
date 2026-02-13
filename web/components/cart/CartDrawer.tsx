@@ -34,6 +34,23 @@ const getLocalizedText = (
   return text[locale as "ar" | "en"] || text.en || text.ar || "";
 };
 
+const getCartItemName = (item: CartItem, locale: string): string => {
+  if (item.itemType === "course") {
+    return getLocalizedText(item.course?.title, locale);
+  }
+  return getLocalizedText(item.product?.name, locale);
+};
+
+const getCartItemImage = (item: CartItem): string | undefined => {
+  if (item.itemType === "course") return item.course?.thumbnail;
+  return item.product?.coverImage;
+};
+
+const getCartItemCurrency = (item: CartItem): string => {
+  if (item.itemType === "course") return item.course?.currency || "SAR";
+  return item.product?.currency || "SAR";
+};
+
 export function CartDrawer() {
   const locale = useLocale();
   const isRtl = locale === "ar";
@@ -91,10 +108,10 @@ export function CartDrawer() {
                 >
                   {/* Product Image */}
                   <div className="w-20 h-20 rounded-lg overflow-hidden bg-white flex-shrink-0">
-                    {item.product.coverImage ? (
+                    {getCartItemImage(item) ? (
                       <img
-                        src={item.product.coverImage}
-                        alt={getLocalizedText(item.product.name, locale)}
+                        src={getCartItemImage(item)}
+                        alt={getCartItemName(item, locale)}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -107,11 +124,17 @@ export function CartDrawer() {
                   {/* Product Info */}
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-sm line-clamp-2">
-                      {getLocalizedText(item.product.name, locale)}
+                      {getCartItemName(item, locale)}
                     </h4>
 
+                    {item.itemType === "course" && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {isRtl ? "دورة" : "Course"}
+                      </p>
+                    )}
+
                     {/* Variant */}
-                    {item.variant && (
+                    {item.itemType === "product" && item.variant && (
                       <p className="text-xs text-muted-foreground mt-1">
                         {t("variant")}:{" "}
                         {getLocalizedText(item.variant.name, locale)}
@@ -119,7 +142,7 @@ export function CartDrawer() {
                     )}
 
                     {/* Addons */}
-                    {item.addons.length > 0 && (
+                    {item.itemType === "product" && item.addons.length > 0 && (
                       <p className="text-xs text-muted-foreground">
                         {t("addons")}:{" "}
                         {item.addons
@@ -130,9 +153,11 @@ export function CartDrawer() {
 
                     {/* Price */}
                     <p className="text-sm font-semibold text-primary mt-1">
-                      {(item.variant?.price ?? item.product.basePrice) +
-                        item.addons.reduce((s, a) => s + a.price, 0)}{" "}
-                      {item.product.currency || "SAR"}
+                      {item.itemType === "course"
+                        ? Number(item.course?.price || 0)
+                        : (item.variant?.price ?? item.product?.basePrice ?? 0) +
+                          item.addons.reduce((s, a) => s + a.price, 0)}{" "}
+                      {getCartItemCurrency(item)}
                     </p>
 
                     {/* Quantity Controls */}
@@ -206,7 +231,7 @@ export function CartDrawer() {
             <div className="flex items-center justify-between text-lg font-semibold">
               <span>{t("total")}</span>
               <span className="text-primary">
-                {total} {items[0]?.product.currency || "SAR"}
+                {total} {items[0] ? getCartItemCurrency(items[0]) : "SAR"}
               </span>
             </div>
 

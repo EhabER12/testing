@@ -101,6 +101,214 @@ export class PaymentService {
     };
   }
 
+  parseCheckoutItems(itemsInput) {
+    if (!itemsInput) return [];
+    if (Array.isArray(itemsInput)) return itemsInput;
+    if (typeof itemsInput === "string") {
+      try {
+        const parsed = JSON.parse(itemsInput);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  roundMoney(value) {
+    return Math.round(Number(value || 0) * 100) / 100;
+  }
+
+  async resolveCheckoutOrderItems(itemsInput, requestedCurrency) {
+    const rawItems = this.parseCheckoutItems(itemsInput);
+    if (!rawItems.length) {
+      throw new ApiError(400, "Checkout items are required");
+    }
+    if (rawItems.length > 100) {
+      throw new ApiError(400, "Too many checkout items");
+    }
+
+    const resolvedLines = [];
+
+    for (const rawItem of rawItems) {
+      const itemType = rawItem?.itemType === "course" ? "course" : "product";
+      const quantity = Number(rawItem?.quantity || 1);
+      if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 100) {
+        throw new ApiError(400, "Invalid item quantity");
+      }
+
+      const rawItemId = rawItem?.itemId || rawItem?.productId || rawItem?.courseId;
+      const itemId = typeof rawItemId === "string" ? rawItemId.trim() : "";
+      if (!itemId) {
+        throw new ApiError(400, "Item ID is required");
+      }
+      if (itemId.length > 128) {
+        throw new ApiError(400, "Invalid item ID");
+      }
+
+      if (itemType === "course") {
+        const course = await Course.findById(itemId).select(
+          "title price currency accessType isPublished"
+        );
+
+        if (!course) {
+          throw new ApiError(404, "Course not found");
+        }
+
+        if (!course.isPublished || course.accessType !== "paid") {
+          throw new ApiError(400, "Course is not available for direct purchase");
+        }
+
+        const coursePrice = Number(course.price || 0);
+        if (!Number.isFinite(coursePrice) || coursePrice <= 0) {
+          throw new ApiError(400, "Invalid course price");
+        }
+
+        resolvedLines.push({
+          itemType: "course",
+          itemId: course._id.toString(),
+          quantity,
+          name: course.title?.en || course.title?.ar || "Course",
+          originalUnitPrice: this.roundMoney(coursePrice),
+          originalCurrency: this.normalizeCurrency(course.currency, "EGP"),
+          variantId: undefined,
+          addonIds: [],
+          customFields: [],
+        });
+        continue;
+      }
+
+      const product = await Product.findById(itemId).select(
+        "name basePrice currency isActive variants addons"
+      );
+      if (!product || !product.isActive) {
+        throw new ApiError(404, "Product not found");
+      }
+
+      const variantId =
+        typeof rawItem?.variantId === "string" && rawItem.variantId.trim().length > 0
+          ? rawItem.variantId.trim()
+          : undefined;
+      if (variantId && variantId.length > 128) {
+        throw new ApiError(400, "Invalid product variant");
+      }
+
+      const addonIds = Array.isArray(rawItem?.addonIds) ? rawItem.addonIds : [];
+      if (addonIds.length > 50) {
+        throw new ApiError(400, "Too many addons selected");
+      }
+
+      let basePrice = Number(product.basePrice || 0);
+      if (!Number.isFinite(basePrice) || basePrice < 0) {
+        throw new ApiError(400, "Invalid product price");
+      }
+
+      if (variantId) {
+        const matchedVariant = (product.variants || []).find(
+          (variant) => variant._id?.toString() === variantId || variant.id === variantId
+        );
+        if (!matchedVariant) {
+          throw new ApiError(400, "Invalid product variant");
+        }
+        basePrice = Number(matchedVariant.price || 0);
+      }
+
+      const selectedAddons = [];
+      for (const addonId of addonIds) {
+        if (typeof addonId !== "string" || addonId.trim().length === 0 || addonId.length > 128) {
+          throw new ApiError(400, "Invalid product addon");
+        }
+        const normalizedAddonId = addonId.trim();
+
+        const matchedAddon = (product.addons || []).find(
+          (addon) =>
+            addon._id?.toString() === normalizedAddonId || addon.id === normalizedAddonId
+        );
+        if (!matchedAddon) {
+          throw new ApiError(400, "Invalid product addon");
+        }
+        selectedAddons.push(matchedAddon);
+      }
+
+      const addonsTotal = selectedAddons.reduce(
+        (sum, addon) => sum + Number(addon.price || 0),
+        0
+      );
+      const unitPrice = this.roundMoney(basePrice + addonsTotal);
+
+      const normalizedCustomFields = Array.isArray(rawItem?.customFields)
+        ? rawItem.customFields
+            .slice(0, 20)
+            .map((field) => ({
+              label:
+                typeof field?.label === "string"
+                  ? field.label.slice(0, 120).trim()
+                  : "",
+              value:
+                typeof field?.value === "string"
+                  ? field.value.slice(0, 4000).trim()
+                  : "",
+            }))
+        : [];
+
+      resolvedLines.push({
+        itemType: "product",
+        itemId: product._id.toString(),
+        quantity,
+        name: product.name?.en || product.name?.ar || "Product",
+        originalUnitPrice: unitPrice,
+        originalCurrency: this.normalizeCurrency(product.currency, "SAR"),
+        variantId: variantId || undefined,
+        addonIds: selectedAddons.map((addon) => addon._id?.toString()).filter(Boolean),
+        customFields: normalizedCustomFields,
+      });
+    }
+
+    const settings = await this.settingsRepository.getSettings();
+    const exchangeRates = this.getExchangeRatesMap(settings);
+    const orderCurrency = this.normalizeCurrency(
+      requestedCurrency,
+      resolvedLines[0]?.originalCurrency || "EGP"
+    );
+
+    const pricedLines = resolvedLines.map((line) => {
+      const convertedUnitPrice = this.convertAmount(
+        line.originalUnitPrice,
+        line.originalCurrency,
+        orderCurrency,
+        exchangeRates
+      );
+      const totalPrice = this.roundMoney(convertedUnitPrice * line.quantity);
+
+      return {
+        ...line,
+        unitPrice: convertedUnitPrice,
+        currency: orderCurrency,
+        totalPrice,
+      };
+    });
+
+    const amount = this.roundMoney(
+      pricedLines.reduce((sum, line) => sum + line.totalPrice, 0)
+    );
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new ApiError(400, "Invalid checkout total");
+    }
+
+    const singleLine = pricedLines.length === 1 ? pricedLines[0] : null;
+
+    return {
+      amount,
+      currency: orderCurrency,
+      items: pricedLines,
+      productId:
+        singleLine && singleLine.itemType === "product" ? singleLine.itemId : undefined,
+      courseId:
+        singleLine && singleLine.itemType === "course" ? singleLine.itemId : undefined,
+    };
+  }
+
   async getAllPayments(queryParams) {
     const { page, limit, status, userId, productId, serviceId, packageId, studentMemberId } = queryParams;
 
@@ -274,56 +482,68 @@ export class PaymentService {
       }
 
       // Auto-enroll student in course if this is a course payment
-      // Check both courseId (new) and productId (legacy) for backward compatibility
-      const paymentCourseId = payment.courseId || payment.productId;
+      // Check both direct course refs and cart line-items for backward compatibility.
+      const directCourseRefs = [payment.courseId, payment.productId]
+        .filter(Boolean)
+        .map((id) => id.toString());
+      const itemCourseRefs = (payment.paymentDetails?.items || [])
+        .filter((item) => item?.itemType === "course" && item?.itemId)
+        .map((item) => String(item.itemId));
+      const courseIdsToEnroll = Array.from(new Set([...directCourseRefs, ...itemCourseRefs]));
 
       logger.info("Checking for course enrollment", {
         paymentId: payment._id,
         courseId: payment.courseId,
         productId: payment.productId,
-        paymentCourseId,
+        courseIdsToEnroll,
         userId: payment.userId,
         metadata: payment.metadata
       });
 
-      if (paymentCourseId && payment.userId) {
+      if (courseIdsToEnroll.length > 0 && payment.userId) {
         try {
           const Course = (await import("../models/courseModel.js")).default;
-          const course = await Course.findById(paymentCourseId);
+          const { CourseService } = await import("./courseService.js");
+          const courseService = new CourseService();
 
-          logger.info("Course lookup result", {
-            paymentCourseId,
-            courseFound: !!course,
-            courseTitle: course?.title?.en || course?.title?.ar
-          });
+          for (const courseIdCandidate of courseIdsToEnroll) {
+            const course = await Course.findById(courseIdCandidate);
 
-          // Only auto-enroll if it's actually a course (not a product)
-          if (course) {
-            const { CourseService } = await import("./courseService.js");
-            const courseService = new CourseService();
+            logger.info("Course lookup result", {
+              courseIdCandidate,
+              courseFound: !!course,
+              courseTitle: course?.title?.en || course?.title?.ar
+            });
+
+            // Only auto-enroll if it's actually a course (not a product)
+            if (!course) {
+              logger.info("No course found for payment reference - might be a product", {
+                courseIdCandidate,
+              });
+              continue;
+            }
+
             // Skip payment check since we're calling this after payment success
-            await courseService.enrollStudent(paymentCourseId, payment.userId, true);
+            await courseService.enrollStudent(courseIdCandidate, payment.userId, true);
             logger.info("Student auto-enrolled in course after payment", {
               userId: payment.userId,
-              courseId: paymentCourseId,
+              courseId: courseIdCandidate,
               paymentId: payment._id
             });
-          } else {
-            logger.info("No course found for payment - might be a product", { paymentCourseId });
           }
         } catch (enrollError) {
           logger.error("Failed to auto-enroll student in course", {
             error: enrollError.message,
             stack: enrollError.stack,
             userId: payment.userId,
-            courseId: paymentCourseId
+            courseIdsToEnroll
           });
           // Don't fail the payment if enrollment fails
         }
       } else {
         logger.info("No courseId/productId or userId found for payment", {
           paymentId: payment._id,
-          hasPaymentCourseId: !!paymentCourseId,
+          hasPaymentCourseId: courseIdsToEnroll.length > 0,
           hasUserId: !!payment.userId
         });
       }
@@ -486,9 +706,25 @@ export class PaymentService {
       let resolvedAmount = Number(billingInfo?.amount || 0);
       let resolvedCurrency = requestedCurrency;
       let resolvedItems = Array.isArray(billingInfo?.items) ? billingInfo.items : [];
+      let resolvedProductId = productId;
+      let resolvedCourseId = courseId;
+
+      const hasCheckoutItems = this.parseCheckoutItems(billingInfo?.items).length > 0;
+
+      if (hasCheckoutItems) {
+        const checkoutOrder = await this.resolveCheckoutOrderItems(
+          billingInfo?.items,
+          requestedCurrency
+        );
+        resolvedAmount = checkoutOrder.amount;
+        resolvedCurrency = checkoutOrder.currency;
+        resolvedItems = checkoutOrder.items;
+        resolvedProductId = checkoutOrder.productId;
+        resolvedCourseId = checkoutOrder.courseId;
+      }
 
       // For course checkout, always trust DB price and backend conversion only.
-      if (courseId && !productId && !serviceId && !packageId) {
+      if (!hasCheckoutItems && courseId && !productId && !serviceId && !packageId) {
         const coursePricing = await this.resolveCoursePricing(courseId, requestedCurrency);
         resolvedAmount = coursePricing.amount;
         resolvedCurrency = coursePricing.currency;
@@ -516,8 +752,8 @@ export class PaymentService {
       // Create payment data
       const paymentData = {
         userId: linkedUserId,
-        productId,
-        courseId,
+        productId: resolvedProductId,
+        courseId: resolvedCourseId,
         serviceId,
         packageId,
         studentMemberId,
@@ -669,14 +905,31 @@ export class PaymentService {
 
   // --- PayPal ---
 
-  async createPaypalPayment({ userId, courseId, productId, serviceId, amount, currency, locale, billingInfo }) {
+  async createPaypalPayment({ userId, courseId, productId, serviceId, items, amount, currency, locale, billingInfo }) {
     const config = await this.getGatewayConfig("paypal");
 
     let resolvedAmount = Number(amount || 0);
     let resolvedCurrency = this.normalizeCurrency(currency || "USD", "USD");
+    let resolvedProductId = productId;
+    let resolvedCourseId = courseId;
+    let resolvedItems = this.parseCheckoutItems(items);
+
+    const hasCheckoutItems = resolvedItems.length > 0;
+
+    if (hasCheckoutItems) {
+      const checkoutOrder = await this.resolveCheckoutOrderItems(
+        resolvedItems,
+        resolvedCurrency
+      );
+      resolvedAmount = checkoutOrder.amount;
+      resolvedCurrency = checkoutOrder.currency;
+      resolvedProductId = checkoutOrder.productId;
+      resolvedCourseId = checkoutOrder.courseId;
+      resolvedItems = checkoutOrder.items;
+    }
 
     // For course checkout, always resolve price from DB.
-    if (courseId && !productId && !serviceId) {
+    if (!hasCheckoutItems && courseId && !productId && !serviceId) {
       const coursePricing = await this.resolveCoursePricing(courseId, resolvedCurrency);
       resolvedAmount = coursePricing.amount;
       resolvedCurrency = coursePricing.currency;
@@ -699,8 +952,8 @@ export class PaymentService {
     });
 
     // Map courseId to productId if present (for compatibility)
-    const finalProductId = productId || courseId;
-    const finalCourseId = courseId || null;
+    const finalProductId = resolvedProductId || resolvedCourseId;
+    const finalCourseId = resolvedCourseId || null;
 
     // Create a pending payment record first
     const merchantOrderId = `PAYPAL-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
@@ -719,6 +972,7 @@ export class PaymentService {
       paymentDetails: {
         methodType: "paypal_checkout",
         gatewayMode: config.mode,
+        items: resolvedItems,
         locale: locale || "en" // Store locale for email notifications
       }
     };
@@ -936,13 +1190,30 @@ export class PaymentService {
 
   // --- Cashier (Kashier) - Payment Sessions API v3 ---
 
-  async createCashierPayment({ userId, courseId, productId, amount, currency, customer }) {
+  async createCashierPayment({ userId, courseId, productId, items, amount, currency, customer }) {
     const config = await this.getGatewayConfig("cashier");
     let resolvedAmount = Number(amount || 0);
     let resolvedCurrency = this.normalizeCurrency(currency || "EGP", "EGP");
+    let resolvedProductId = productId;
+    let resolvedCourseId = courseId;
+    let resolvedItems = this.parseCheckoutItems(items);
+
+    const hasCheckoutItems = resolvedItems.length > 0;
+
+    if (hasCheckoutItems) {
+      const checkoutOrder = await this.resolveCheckoutOrderItems(
+        resolvedItems,
+        resolvedCurrency
+      );
+      resolvedAmount = checkoutOrder.amount;
+      resolvedCurrency = checkoutOrder.currency;
+      resolvedProductId = checkoutOrder.productId;
+      resolvedCourseId = checkoutOrder.courseId;
+      resolvedItems = checkoutOrder.items;
+    }
 
     // For course checkout, always resolve price from DB.
-    if (courseId && !productId) {
+    if (!hasCheckoutItems && courseId && !productId) {
       const coursePricing = await this.resolveCoursePricing(courseId, resolvedCurrency);
       resolvedAmount = coursePricing.amount;
       resolvedCurrency = coursePricing.currency;
@@ -952,8 +1223,8 @@ export class PaymentService {
       throw new ApiError(400, "Invalid payment amount");
     }
 
-    const finalProductId = productId || courseId;
-    const finalCourseId = courseId || null;
+    const finalProductId = resolvedProductId || resolvedCourseId;
+    const finalCourseId = resolvedCourseId || null;
 
     const merchantOrderId = `KASHIER-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
@@ -983,6 +1254,7 @@ export class PaymentService {
       paymentDetails: {
         methodType: "kashier_session",
         gatewayMode: config.mode,
+        items: resolvedItems,
         sessionId: null, // Will be updated after session creation
       },
       billingInfo: {
@@ -1007,7 +1279,9 @@ export class PaymentService {
         config,
         merchantRedirect: `${baseUrl}/payment/result?paymentId=${payment._id}`,
         serverWebhook: `${apiBaseUrl}/api/payments/kashier/webhook`,
-        description: `Payment for ${finalProductId ? 'product' : 'course'} - Order ${merchantOrderId}`,
+        description: hasCheckoutItems
+          ? `Cart checkout - Order ${merchantOrderId}`
+          : `Payment for ${finalProductId ? "product" : "course"} - Order ${merchantOrderId}`,
       });
 
       // Update payment with session information

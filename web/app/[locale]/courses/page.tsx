@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getCourses } from "@/store/services/courseService";
+import { addCourseToCart } from "@/store/slices/cartSlice";
 import { getCategories } from "@/store/slices/categorySlice";
 import { getPublicWebsiteSettingsThunk } from "@/store/services/settingsService";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import toast from "react-hot-toast";
 
 export default function CoursesPage() {
   const params = useParams();
@@ -345,6 +347,32 @@ export default function CoursesPage() {
                     className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-2 shadow-md hover:shadow-lg transition-all border border-purple-600 whitespace-nowrap"
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (course.accessType === "paid") {
+                        const courseId = (course.id || course._id) as string;
+                        dispatch(
+                          addCourseToCart({
+                            course: {
+                              id: courseId,
+                              _id: course._id,
+                              title: course.title,
+                              slug: (course as any).slug || "",
+                              shortDescription: course.shortDescription,
+                              thumbnail: course.thumbnail,
+                              accessType: course.accessType,
+                              price: course.price,
+                              currency: course.currency,
+                            },
+                            quantity: 1,
+                          })
+                        );
+                        toast.success(
+                          isRtl
+                            ? "تمت إضافة الدورة للسلة"
+                            : "Course added to cart"
+                        );
+                        router.push(`/${locale}/checkout`);
+                        return;
+                      }
                       handleCourseClick((course as any).slug);
                     }}
                   >

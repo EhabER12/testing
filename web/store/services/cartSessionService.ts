@@ -31,24 +31,41 @@ export function clearSessionId(): void {
 // Transform cart items for API
 function transformCartItems(items: CartItem[]) {
   return items.map((item) => ({
-    productId: item.productId,
-    productName: item.product.name,
-    productSlug: item.product.slug,
-    productImage: item.product.coverImage,
-    variantId: item.variantId,
-    variantName: item.variant?.name,
-    variantPrice: item.variant?.price,
-    addons: item.addons.map((addon) => ({
-      addonId: addon.id,
-      name: addon.name,
-      price: addon.price,
-    })),
+    productId: item.itemType === "course" ? item.courseId || item.itemId : item.productId,
+    productName:
+      item.itemType === "course"
+        ? item.course?.title
+        : item.product?.name,
+    productSlug:
+      item.itemType === "course"
+        ? item.course?.slug
+        : item.product?.slug,
+    productImage:
+      item.itemType === "course"
+        ? item.course?.thumbnail
+        : item.product?.coverImage,
+    variantId: item.itemType === "course" ? undefined : item.variantId,
+    variantName: item.itemType === "course" ? undefined : item.variant?.name,
+    variantPrice: item.itemType === "course" ? undefined : item.variant?.price,
+    addons:
+      item.itemType === "course"
+        ? []
+        : item.addons.map((addon) => ({
+            addonId: addon.id,
+            name: addon.name,
+            price: addon.price,
+          })),
     quantity: item.quantity,
-    unitPrice: item.variant?.price ?? item.product.basePrice,
+    unitPrice:
+      item.itemType === "course"
+        ? Number(item.course?.price || 0)
+        : item.variant?.price ?? item.product?.basePrice ?? 0,
     totalPrice:
-      ((item.variant?.price ?? item.product.basePrice) +
-        item.addons.reduce((sum, a) => sum + a.price, 0)) *
-      item.quantity,
+      item.itemType === "course"
+        ? Number(item.course?.price || 0) * item.quantity
+        : ((item.variant?.price ?? item.product?.basePrice ?? 0) +
+            item.addons.reduce((sum, a) => sum + a.price, 0)) *
+          item.quantity,
   }));
 }
 

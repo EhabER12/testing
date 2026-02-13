@@ -9,8 +9,32 @@ export const createOrUpdateSession = async (req, res) => {
   try {
     const { sessionId, cartItems, cartTotal, currency } = req.body;
 
+    if (sessionId && (typeof sessionId !== "string" || sessionId.length > 128)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session ID",
+      });
+    }
+
+    if (!Array.isArray(cartItems) || cartItems.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid cart items",
+      });
+    }
+
+    const safeCartTotal = Number(cartTotal || 0);
+    if (!Number.isFinite(safeCartTotal) || safeCartTotal < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid cart total",
+      });
+    }
+
     // Generate new session ID if not provided
     const sid = sessionId || uuidv4();
+    const existingSession = await CartSession.findOne({ sessionId: sid }).select("status");
+    const nextStatus = existingSession?.status === "converted" ? "converted" : "active";
 
     // Device info from request
     const deviceInfo = {
@@ -25,8 +49,9 @@ export const createOrUpdateSession = async (req, res) => {
       {
         $set: {
           cartItems,
-          cartTotal,
+          cartTotal: safeCartTotal,
           currency: currency || "SAR",
+          status: nextStatus,
           lastActivityAt: new Date(),
           deviceInfo,
           ...(req.user && { userId: req.user._id }),
@@ -68,6 +93,13 @@ export const updateCustomerInfo = async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { name, email, phone } = req.body;
+
+    if (!sessionId || typeof sessionId !== "string" || sessionId.length > 128) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session ID",
+      });
+    }
 
     const session = await CartSession.findOne({ sessionId });
 
@@ -114,6 +146,13 @@ export const markAsConverted = async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { paymentId } = req.body;
+
+    if (!sessionId || typeof sessionId !== "string" || sessionId.length > 128) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session ID",
+      });
+    }
 
     const session = await CartSession.findOne({ sessionId });
 
