@@ -17,6 +17,7 @@ class EmailTemplateService {
         "student_welcome",
         "user_invitation",
         "order_confirmation",
+        "book_download_links",
         "password_reset",
         "password_reset_confirmation",
         "employee_task_assigned",
@@ -270,6 +271,68 @@ class EmailTemplateService {
           { name: "currency", description: "Payment currency" },
           { name: "year", description: "Current year" },
           { name: "dashboardUrl", description: "Link to user dashboard" },
+        ],
+      });
+    }
+
+    if (name === "book_download_links") {
+      return await this.saveTemplate({
+        name: "book_download_links",
+        type: "custom",
+        subject: {
+          ar: "روابط تحميل الكتب - طلب رقم {{orderId}}",
+          en: "Your Book Download Links - Order #{{orderId}}",
+        },
+        content: {
+          ar: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; direction: rtl; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 26px;">Genoun</h1>
+            </div>
+            <div style="padding: 30px;">
+              <h2 style="color: #1a472a; margin: 0 0 16px; font-size: 22px;">مرحباً {{name}}</h2>
+              <p style="color: #4a5568; line-height: 1.8; font-size: 15px;">
+                تم تأكيد طلبك بنجاح. يمكنك تحميل الكتب المشتراة من الروابط التالية:
+              </p>
+              <ul style="line-height: 2; font-size: 15px; padding-right: 18px;">
+                {{booksList}}
+              </ul>
+              <p style="color: #718096; font-size: 13px; margin-top: 20px;">
+                يمكنك أيضاً الرجوع إلى حسابك من خلال الرابط التالي:
+              </p>
+              <p><a href="{{dashboardUrl}}" style="color:#1a472a;">{{dashboardUrl}}</a></p>
+            </div>
+            <div style="background-color: #f7fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. جميع الحقوق محفوظة.</p>
+            </div>
+          </div>`,
+          en: `<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #1a472a 0%, #0d2b1a 100%); padding: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 26px;">Genoun</h1>
+            </div>
+            <div style="padding: 30px;">
+              <h2 style="color: #1a472a; margin: 0 0 16px; font-size: 22px;">Hello {{name}}</h2>
+              <p style="color: #4a5568; line-height: 1.8; font-size: 15px;">
+                Your payment was confirmed. You can download your purchased books from the links below:
+              </p>
+              <ul style="line-height: 2; font-size: 15px; padding-left: 18px;">
+                {{booksList}}
+              </ul>
+              <p style="color: #718096; font-size: 13px; margin-top: 20px;">
+                You can also access your account here:
+              </p>
+              <p><a href="{{dashboardUrl}}" style="color:#1a472a;">{{dashboardUrl}}</a></p>
+            </div>
+            <div style="background-color: #f7fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #a0aec0; margin: 0; font-size: 12px;">© {{year}} Genoun. All rights reserved.</p>
+            </div>
+          </div>`,
+        },
+        variables: [
+          { name: "name", description: "Customer name" },
+          { name: "orderId", description: "Order ID" },
+          { name: "booksList", description: "HTML list of downloadable books" },
+          { name: "dashboardUrl", description: "User account URL" },
+          { name: "year", description: "Current year" },
         ],
       });
     }

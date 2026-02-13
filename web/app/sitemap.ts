@@ -59,6 +59,24 @@ async function fetchProducts(): Promise<{ slug: string; updatedAt: string }[]> {
   }
 }
 
+async function fetchBooks(): Promise<{ slug: string; updatedAt: string }[]> {
+  try {
+    const res = await fetch(`${API_URL}/books?limit=200`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const books = data.books || data.data?.books || data.data || [];
+    return books.map((book: any) => ({
+      slug: book.slug,
+      updatedAt: book.updatedAt || book.createdAt || new Date().toISOString(),
+    }));
+  } catch (error) {
+    console.error("Error fetching books for sitemap:", error);
+    return [];
+  }
+}
+
 async function fetchServices(): Promise<{ slug: string; updatedAt: string }[]> {
   try {
     const res = await fetch(`${API_URL}/services?isActive=true&limit=100`, {
@@ -85,9 +103,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date().toISOString();
 
   // Fetch all dynamic content in parallel
-  const [articles, products, services] = await Promise.all([
+  const [articles, products, books, services] = await Promise.all([
     fetchArticles(),
     fetchProducts(),
+    fetchBooks(),
     fetchServices(),
   ]);
 
@@ -95,6 +114,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages = [
     "", // Home
     "/products",
+    "/books",
     "/services",
     "/articles",
     "/about",
@@ -136,6 +156,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }))
   );
 
+  // Generate book URLs for all locales (books are bilingual)
+  const bookUrls: MetadataRoute.Sitemap = books.flatMap((book) =>
+    locales.map((locale) => ({
+      url: `${BASE_URL}/${locale}/books/${book.slug}`,
+      lastModified: book.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+      alternates: generateAlternates(`/books/${book.slug}`),
+    }))
+  );
+
   // Generate service URLs for all locales (services are bilingual)
   const serviceUrls: MetadataRoute.Sitemap = services.flatMap((service) =>
     locales.map((locale) => ({
@@ -148,5 +179,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   );
 
   // Combine all URLs
-  return [...staticUrls, ...articleUrls, ...productUrls, ...serviceUrls];
+  return [...staticUrls, ...articleUrls, ...productUrls, ...bookUrls, ...serviceUrls];
 }

@@ -1,12 +1,14 @@
 import { PaymentRepository } from "../repositories/paymentRepository.js";
 import { SettingsRepository } from "../repositories/settingsRepository.js";
 import { ApiError } from "../utils/apiError.js";
+import crypto from "crypto";
 import emailTemplateService from "./emailTemplateService.js";
 import { EmailService } from "./emailService.js";
 import { FinanceService } from "./financeService.js";
 import User from "../models/userModel.js";
 import CartSession from "../models/cartSessionModel.js";
 import Product from "../models/productModel.js";
+import BookDownloadGrant from "../models/bookDownloadGrantModel.js";
 import Service from "../models/serviceModel.js";
 import Course from "../models/courseModel.js";
 import logger from "../utils/logger.js";
@@ -119,6 +121,135 @@ export class PaymentService {
     return Math.round(Number(value || 0) * 100) / 100;
   }
 
+  getApiBaseUrl() {
+    const candidate =
+      process.env.API_PUBLIC_URL ||
+      process.env.BASE_URL ||
+      process.env.API_URL ||
+      "http://localhost:5000";
+    return String(candidate).replace(/\/$/, "");
+  }
+
+  generateDownloadToken() {
+    return crypto.randomBytes(40).toString("hex");
+  }
+
+  escapeHtml(input) {
+    return String(input || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  async processBookDownloadDelivery(payment, locale = "ar") {
+    const paymentItems = Array.isArray(payment.paymentDetails?.items)
+      ? payment.paymentDetails.items
+      : [];
+
+    const bookItemIdsFromLines = paymentItems
+      .filter(
+        (item) =>
+          item?.itemType === "product" &&
+          item?.itemId &&
+          (item?.productType === "digital_book" || item?.isDigitalBook === true)
+      )
+      .map((item) => String(item.itemId));
+
+    const fallbackProductIds = payment.productId ? [String(payment.productId)] : [];
+    const allCandidateIds = Array.from(
+      new Set([...bookItemIdsFromLines, ...fallbackProductIds])
+    ).filter(Boolean);
+
+    if (allCandidateIds.length === 0) {
+      return;
+    }
+
+    const books = await Product.find({
+      _id: { $in: allCandidateIds },
+      productType: "digital_book",
+      bookFilePath: { $exists: true, $ne: "" },
+    }).select("name slug productType bookFilePath");
+
+    if (!books.length) {
+      return;
+    }
+
+    const recipientEmail = String(
+      payment.billingInfo?.email || payment.userId?.email || ""
+    )
+      .trim()
+      .toLowerCase();
+
+    if (!recipientEmail) {
+      logger.warn("Skipping book delivery email: missing recipient email", {
+        paymentId: payment._id,
+      });
+      return;
+    }
+
+    const apiBaseUrl = this.getApiBaseUrl();
+    const createdLinks = [];
+
+    for (const book of books) {
+      let grant = await BookDownloadGrant.findOne({
+        paymentId: payment._id,
+        productId: book._id,
+        userId: payment.userId || null,
+      });
+
+      if (!grant) {
+        grant = await BookDownloadGrant.create({
+          token: this.generateDownloadToken(),
+          paymentId: payment._id,
+          userId: payment.userId || null,
+          productId: book._id,
+          email: recipientEmail,
+        });
+      }
+
+      createdLinks.push({
+        title: book.name?.en || book.name?.ar || "Digital Book",
+        url: `${apiBaseUrl}/api/books/download/${grant.token}`,
+      });
+    }
+
+    if (!createdLinks.length) {
+      return;
+    }
+
+    const booksList = createdLinks
+      .map(
+        (entry) =>
+          `<li><a href="${this.escapeHtml(entry.url)}" style="color:#1a472a;">${this.escapeHtml(
+            entry.title
+          )}</a></li>`
+      )
+      .join("");
+
+    const dashboardUrl = `${(process.env.CLIENT_URL || "http://localhost:3000").replace(/\/$/, "")}/account`;
+
+    await emailTemplateService.sendTemplatedEmail(
+      recipientEmail,
+      "book_download_links",
+      {
+        name: payment.billingInfo?.name || "Customer",
+        orderId: payment.merchantOrderId || payment._id?.toString?.() || "",
+        booksList,
+        year: new Date().getFullYear(),
+        dashboardUrl,
+      },
+      locale
+    );
+
+    logger.info("Book download links email sent", {
+      paymentId: payment._id,
+      email: recipientEmail,
+      booksCount: createdLinks.length,
+    });
+  }
+
   async resolveCheckoutOrderItems(itemsInput, requestedCurrency) {
     const rawItems = this.parseCheckoutItems(itemsInput);
     if (!rawItems.length) {
@@ -179,10 +310,17 @@ export class PaymentService {
       }
 
       const product = await Product.findById(itemId).select(
-        "name basePrice currency isActive variants addons"
+        "name basePrice currency isActive variants addons productType approvalStatus"
       );
       if (!product || !product.isActive) {
         throw new ApiError(404, "Product not found");
+      }
+
+      if (
+        product.productType === "digital_book" &&
+        product.approvalStatus !== "approved"
+      ) {
+        throw new ApiError(400, "This book is not available for purchase");
       }
 
       const variantId =
@@ -256,6 +394,8 @@ export class PaymentService {
         itemId: product._id.toString(),
         quantity,
         name: product.name?.en || product.name?.ar || "Product",
+        productType: product.productType || "default",
+        isDigitalBook: product.productType === "digital_book",
         originalUnitPrice: unitPrice,
         originalCurrency: this.normalizeCurrency(product.currency, "SAR"),
         variantId: variantId || undefined,
@@ -282,6 +422,7 @@ export class PaymentService {
 
       return {
         ...line,
+        price: convertedUnitPrice,
         unitPrice: convertedUnitPrice,
         currency: orderCurrency,
         totalPrice,
@@ -460,6 +601,16 @@ export class PaymentService {
         );
       } catch (emailError) {
         logger.error("Failed to send purchase notification email using template", { error: emailError.message });
+      }
+
+      // Deliver purchased digital books by email with download links.
+      try {
+        await this.processBookDownloadDelivery(payment, paymentLocale);
+      } catch (bookDeliveryError) {
+        logger.error("Failed to process book download delivery", {
+          paymentId: payment._id,
+          error: bookDeliveryError.message,
+        });
       }
 
       // Auto-create finance entry for successful payment
@@ -730,9 +881,12 @@ export class PaymentService {
         resolvedCurrency = coursePricing.currency;
         resolvedItems = [
           {
+            itemType: "course",
+            itemId: courseId,
             productId: courseId,
             name: coursePricing.course?.title?.en || coursePricing.course?.title?.ar || "Course",
             price: resolvedAmount,
+            unitPrice: resolvedAmount,
             quantity: 1,
           },
         ];

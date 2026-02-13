@@ -24,6 +24,37 @@ const productSchema = new mongoose.Schema(
     basePrice: { type: Number, required: true },
     compareAtPrice: { type: Number },
     currency: { type: String, default: "SAR" },
+    productType: {
+      type: String,
+      enum: ["default", "digital_book"],
+      default: "default",
+    },
+    author: {
+      ar: { type: String },
+      en: { type: String },
+    },
+    bookFilePath: { type: String },
+    bookCoverPath: { type: String },
+    approvalStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "approved",
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    approvedAt: { type: Date },
+    rejectionReason: { type: String },
+    submittedByRole: {
+      type: String,
+      enum: ["admin", "moderator", "teacher", "system"],
+      default: "admin",
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     variants: [
       {
         name: {
@@ -93,6 +124,7 @@ const productSchema = new mongoose.Schema(
 
 productSchema.index({ categoryId: 1 });
 productSchema.index({ isActive: 1, isFeatured: 1 });
+productSchema.index({ productType: 1, approvalStatus: 1, isActive: 1 });
 
 const Product = mongoose.model("Product", productSchema);
 export default Product;

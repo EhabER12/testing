@@ -7,10 +7,24 @@ export class ProductController {
   // Get all products (with filters)
   async getProducts(req, res, next) {
     try {
-      const { category, featured, active, limit, page } = req.query;
+      const { category, featured, active, limit, page, productType } = req.query;
       const isAdmin = req.user?.role === "admin";
 
       const query = {};
+      const normalizedProductType =
+        productType === "digital_book" || productType === "default"
+          ? productType
+          : null;
+
+      if (normalizedProductType) {
+        if (normalizedProductType === "default") {
+          query.$or = [{ productType: "default" }, { productType: { $exists: false } }];
+        } else {
+          query.productType = normalizedProductType;
+        }
+      } else {
+        query.productType = { $ne: "digital_book" };
+      }
 
       // Filter by category
       if (category) {
@@ -68,7 +82,11 @@ export class ProductController {
   // Get featured products
   async getFeaturedProducts(req, res, next) {
     try {
-      const products = await Product.find({ isActive: true, isFeatured: true })
+      const products = await Product.find({
+        isActive: true,
+        isFeatured: true,
+        productType: { $ne: "digital_book" },
+      })
         .sort({ order: 1 })
         .limit(8)
         .populate("categoryId", "name");
@@ -94,7 +112,7 @@ export class ProductController {
       const { slug } = req.params;
       const isAdmin = req.user?.role === "admin";
 
-      const query = { slug };
+      const query = { slug, productType: { $ne: "digital_book" } };
       if (!isAdmin) {
         query.isActive = true;
       }
@@ -160,6 +178,9 @@ export class ProductController {
       if (typeof productData.description === "string") {
         productData.description = JSON.parse(productData.description);
       }
+      if (typeof productData.author === "string") {
+        productData.author = JSON.parse(productData.author);
+      }
       if (typeof productData.variants === "string") {
         productData.variants = JSON.parse(productData.variants);
       }
@@ -209,6 +230,9 @@ export class ProductController {
       }
       if (typeof updateData.description === "string") {
         updateData.description = JSON.parse(updateData.description);
+      }
+      if (typeof updateData.author === "string") {
+        updateData.author = JSON.parse(updateData.author);
       }
       if (typeof updateData.variants === "string") {
         updateData.variants = JSON.parse(updateData.variants);

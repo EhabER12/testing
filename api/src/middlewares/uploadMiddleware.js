@@ -9,14 +9,36 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const uploadsDir = path.resolve(__dirname, "../../uploads");
+const booksDir = path.join(uploadsDir, "books");
+const bookCoversDir = path.join(uploadsDir, "book-covers");
 
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+const ensureDir = (dirPath) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+};
+
+ensureDir(uploadsDir);
+ensureDir(booksDir);
+ensureDir(bookCoversDir);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueFilename = `${uuidv4()}${path.extname(file.originalname)}`;
+    cb(null, uniqueFilename);
+  },
+});
+
+const bookAssetsStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    if (file.fieldname === "pdf") {
+      cb(null, booksDir);
+      return;
+    }
+    cb(null, bookCoversDir);
   },
   filename: (req, file, cb) => {
     const uniqueFilename = `${uuidv4()}${path.extname(file.originalname)}`;
@@ -50,6 +72,22 @@ const mixedFileFilter = (req, file, cb) => {
       return cb(new ApiError(400, "Only image files are allowed!"), false);
     }
   }
+  cb(null, true);
+};
+
+const bookAssetsFileFilter = (req, file, cb) => {
+  if (file.fieldname === "pdf") {
+    if (!file.originalname.match(/\.(pdf)$/i)) {
+      return cb(new ApiError(400, "Only PDF files are allowed for books!"), false);
+    }
+    cb(null, true);
+    return;
+  }
+
+  if (!file.originalname.match(/\.(jpg|jpeg|png|gif|svg|ico|webp|avif)$/i)) {
+    return cb(new ApiError(400, "Only image files are allowed!"), false);
+  }
+
   cb(null, true);
 };
 
@@ -98,11 +136,19 @@ export const uploadFormAttachments = multer({
   fileFilter: attachmentFileFilter,
 }).any();
 
+export const uploadBookAssets = multer({
+  storage: bookAssetsStorage,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB
+  },
+  fileFilter: bookAssetsFileFilter,
+});
+
 export const ensureUploadDirectories = (req, res, next) => {
   try {
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
+    ensureDir(uploadsDir);
+    ensureDir(booksDir);
+    ensureDir(bookCoversDir);
     next();
   } catch (error) {
     console.error("Error ensuring upload directory exists:", error);

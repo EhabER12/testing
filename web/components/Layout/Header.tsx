@@ -41,6 +41,7 @@ const translations = {
     home: "الرئيسية",
     services: "خدماتنا",
     products: "المنتجات",
+    books: "الكتب",
     courses: "الدورات",
     portfolio: "أعمالنا",
     articles: "المقالات",
@@ -57,6 +58,7 @@ const translations = {
     home: "Home",
     services: "Services",
     products: "Products",
+    books: "Books",
     courses: "Courses",
     portfolio: "Portfolio",
     articles: "Articles",
@@ -152,6 +154,7 @@ export default function Header({ settings }: HeaderProps) {
   const defaultNavItems = [
     { label: t.home, href: "/", anchor: false },
     { label: t.courses, href: "/courses", anchor: false, special: true },
+    { label: t.books, href: "/books", anchor: false },
     { label: t.reviews, href: "/#reviews", anchor: false },
     {
       label: isRtl ? "من نحن" : "About Us",

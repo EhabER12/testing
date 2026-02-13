@@ -229,20 +229,34 @@ export function OrdersTab({
               </TableHeader>
               <TableBody>
                 {selectedPayment?.paymentDetails?.items?.map(
-                  (item: any, index: number) => (
+                  (item: any, index: number) => {
+                    const unitPrice = Number(
+                      item.price ?? item.unitPrice ?? item.originalUnitPrice ?? 0
+                    );
+                    const lineTotal =
+                      Number(item.totalPrice ?? unitPrice * Number(item.quantity || 0)) || 0;
+                    return (
                     <TableRow key={index}>
-                      <TableCell className="text-start">{item.name}</TableCell>
+                      <TableCell className="text-start">
+                        {item.name}
+                        {item.productType === "digital_book" && (
+                          <Badge variant="secondary" className="ms-2">
+                            {isArabic ? "كتاب رقمي" : "Digital Book"}
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="text-start">
                         {item.quantity}
                       </TableCell>
                       <TableCell className="text-start">
-                        {item.price} {selectedPayment.currency}
+                        {unitPrice} {selectedPayment.currency}
                       </TableCell>
                       <TableCell className="text-start">
-                        {item.price * item.quantity} {selectedPayment.currency}
+                        {lineTotal} {selectedPayment.currency}
                       </TableCell>
                     </TableRow>
-                  )
+                    );
+                  }
                 )}
                 <TableRow>
                   <TableCell colSpan={3} className="text-end font-bold">

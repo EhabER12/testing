@@ -118,7 +118,7 @@ const menuItems: MenuItem[] = [
     titleKey: "admin.sidebar.products",
     title: "Products",
     icon: <ShoppingBag className="h-4 w-4" />,
-    roles: ["admin", "moderator"],
+    roles: ["admin", "moderator", "teacher"],
     children: [
       {
         titleKey: "admin.categories.title",
@@ -133,6 +133,13 @@ const menuItems: MenuItem[] = [
         icon: <ShoppingBag className="h-4 w-4" />,
         href: "/dashboard/products",
         roles: ["admin", "moderator"],
+      },
+      {
+        titleKey: "admin.sidebar.books",
+        title: "Books",
+        icon: <BookAIcon className="h-4 w-4" />,
+        href: "/dashboard/books",
+        roles: ["admin", "moderator", "teacher"],
       },
       {
         titleKey: "admin.productAnalytics.title",
