@@ -586,10 +586,28 @@ export const getPaymentGatewaysThunk = createAsyncThunk<
   { rejectValue: string }
 >("settings/getPaymentGateways", async (_, thunkAPI) => {
   try {
-    const response = await axiosInstance.get("/settings/public");
-    return response.data.data?.paymentGateways;
+    // Source of truth for gateway enable/disable is /payment-methods
+    const response = await axiosInstance.get("/payment-methods");
+    const methods = Array.isArray(response.data?.data) ? response.data.data : [];
+
+    const gateways = methods.reduce((acc: Record<string, any>, method: any) => {
+      if (!method?.provider) return acc;
+      acc[method.provider] = {
+        isEnabled: method.isActive !== false,
+        mode: method.mode,
+      };
+      return acc;
+    }, {});
+
+    return gateways;
   } catch (error: any) {
-    return {};
+    // Backward-compatible fallback in case legacy deployments still depend on settings.public
+    try {
+      const fallbackResponse = await axiosInstance.get("/settings/public");
+      return fallbackResponse.data?.data?.paymentGateways || {};
+    } catch {
+      return {};
+    }
   }
 });
 
