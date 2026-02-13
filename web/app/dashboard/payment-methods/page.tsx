@@ -18,6 +18,14 @@ import { Loader2, CreditCard, CheckCircle2, XCircle, Info, Eye, EyeOff, Save, Pl
 import toast from "react-hot-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+const getErrorMessage = (error: any, fallback: string) => {
+    if (!error) return fallback;
+    if (typeof error === "string") return error;
+    if (error?.message) return error.message;
+    if (error?.error?.message) return error.error.message;
+    return fallback;
+};
+
 export default function PaymentMethodsPage() {
     const dispatch = useAppDispatch();
     const [loading, setLoading] = useState(true);
@@ -179,7 +187,7 @@ export default function PaymentMethodsPage() {
 
             await loadPaymentMethods();
         } catch (error: any) {
-            toast.error(error?.message || "Failed to save PayPal configuration");
+            toast.error(getErrorMessage(error, "Failed to save PayPal configuration"));
         } finally {
             setSaving(false);
         }
@@ -250,7 +258,7 @@ export default function PaymentMethodsPage() {
                 data: error?.response?.data,
                 full: error,
             });
-            toast.error(error?.message || "Failed to save Cashier configuration");
+            toast.error(getErrorMessage(error, "Failed to save Cashier configuration"));
         } finally {
             setSaving(false);
         }

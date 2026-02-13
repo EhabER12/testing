@@ -7,12 +7,12 @@ import {
     deletePaymentMethod,
     togglePaymentMethod,
 } from "../controllers/paymentMethodController.js";
-import { protect, authorize } from "../middlewares/authMiddleware.js";
+import { protect, authorize, optionalAuth } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
 // Public route to get active payment methods
-router.get("/", getAllPaymentMethods);
+router.get("/", optionalAuth, getAllPaymentMethods);
 
 // Admin routes
 router.use(protect);
