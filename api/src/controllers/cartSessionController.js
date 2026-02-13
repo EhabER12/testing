@@ -1,5 +1,6 @@
 import CartSession from "../models/cartSessionModel.js";
 import { v4 as uuidv4 } from "uuid";
+import mongoose from "mongoose";
 
 /**
  * Create or update cart session
@@ -22,6 +23,53 @@ export const createOrUpdateSession = async (req, res) => {
         message: "Invalid cart items",
       });
     }
+
+    const normalizeLocalizedText = (value) => {
+      if (!value) return { ar: "", en: "" };
+      if (typeof value === "string") return { ar: value, en: value };
+      if (typeof value === "object") {
+        const ar = typeof value.ar === "string" ? value.ar : "";
+        const en = typeof value.en === "string" ? value.en : "";
+        if (ar || en) return { ar, en: en || ar };
+      }
+      return { ar: "", en: "" };
+    };
+
+    const sanitizedCartItems = cartItems
+      .map((item) => {
+        const productId = String(item?.productId || "").trim();
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+          return null;
+        }
+
+        const quantity = Number(item?.quantity || 1);
+        const safeQuantity = Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+        const unitPrice = Number(item?.unitPrice || 0);
+        const totalPrice = Number(item?.totalPrice || unitPrice * safeQuantity);
+
+        const addons = Array.isArray(item?.addons)
+          ? item.addons.slice(0, 50).map((addon) => ({
+              addonId: String(addon?.addonId || ""),
+              name: normalizeLocalizedText(addon?.name),
+              price: Number(addon?.price || 0),
+            }))
+          : [];
+
+        return {
+          productId,
+          productName: normalizeLocalizedText(item?.productName),
+          productSlug: item?.productSlug ? String(item.productSlug) : "",
+          productImage: item?.productImage ? String(item.productImage) : "",
+          variantId: item?.variantId ? String(item.variantId) : undefined,
+          variantName: normalizeLocalizedText(item?.variantName),
+          variantPrice: Number(item?.variantPrice || 0),
+          addons,
+          quantity: safeQuantity,
+          unitPrice,
+          totalPrice,
+        };
+      })
+      .filter(Boolean);
 
     const safeCartTotal = Number(cartTotal || 0);
     if (!Number.isFinite(safeCartTotal) || safeCartTotal < 0) {
@@ -48,7 +96,7 @@ export const createOrUpdateSession = async (req, res) => {
       { sessionId: sid },
       {
         $set: {
-          cartItems,
+          cartItems: sanitizedCartItems,
           cartTotal: safeCartTotal,
           currency: currency || "SAR",
           status: nextStatus,
@@ -101,29 +149,38 @@ export const updateCustomerInfo = async (req, res) => {
       });
     }
 
-    const session = await CartSession.findOne({ sessionId });
+    const existingSession = await CartSession.findOne({ sessionId });
 
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        message: "Session not found",
+    if (!existingSession) {
+      await CartSession.create({
+        sessionId,
+        status: "active",
+        customerInfo: {
+          name: name || "",
+          email: email || "",
+          phone: phone || "",
+        },
+        cartItems: [],
+        cartTotal: 0,
+        currency: "SAR",
+        checkoutStartedAt: new Date(),
+        lastActivityAt: new Date(),
       });
+    } else {
+      existingSession.customerInfo = {
+        name: name || existingSession.customerInfo?.name,
+        email: email || existingSession.customerInfo?.email,
+        phone: phone || existingSession.customerInfo?.phone,
+      };
+
+      // Mark checkout started if not already
+      if (!existingSession.checkoutStartedAt) {
+        existingSession.checkoutStartedAt = new Date();
+      }
+
+      existingSession.lastActivityAt = new Date();
+      await existingSession.save();
     }
-
-    // Update customer info
-    session.customerInfo = {
-      name: name || session.customerInfo?.name,
-      email: email || session.customerInfo?.email,
-      phone: phone || session.customerInfo?.phone,
-    };
-
-    // Mark checkout started if not already
-    if (!session.checkoutStartedAt) {
-      session.checkoutStartedAt = new Date();
-    }
-
-    session.lastActivityAt = new Date();
-    await session.save();
 
     res.status(200).json({
       success: true,

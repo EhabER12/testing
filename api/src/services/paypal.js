@@ -14,7 +14,8 @@ const getPaypalApiUrl = (mode) => {
  * Get access token using DB config
  */
 export async function getAccessToken(config) {
-  const { clientId, clientSecret } = config.credentials;
+  const clientId = String(config?.credentials?.clientId || "").trim();
+  const clientSecret = String(config?.credentials?.clientSecret || "").trim();
   const mode = config.mode;
 
   if (!clientId || !clientSecret) {
@@ -41,7 +42,12 @@ export async function getAccessToken(config) {
     return response.data.access_token;
   } catch (error) {
     console.error("❌ PayPal getAccessToken error:", error.response?.data);
-    throw new Error("Failed to get PayPal access token");
+    const details =
+      error?.response?.data?.error_description ||
+      error?.response?.data?.error ||
+      error?.response?.data?.message ||
+      error?.message;
+    throw new Error(`Failed to get PayPal access token: ${details}`);
   }
 }
 

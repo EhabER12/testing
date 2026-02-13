@@ -10,24 +10,56 @@ async function requestWithApiPrefixFallback<T = any>(
   data?: any,
   config?: any
 ): Promise<T> {
+  const baseUrl = String((axiosInstance as any)?.defaults?.baseURL || "");
+  const baseHasApiPrefix = /\/api\/?$/i.test(baseUrl);
+  const primaryPath = baseHasApiPrefix || path.startsWith("/api/")
+    ? path
+    : `/api${path}`;
+  const secondaryPath =
+    primaryPath === path ? `/api${path}` : path;
+
   try {
-    const response = await (axiosInstance as any)[method](path, data, config);
+    const response = await (axiosInstance as any)[method](
+      primaryPath,
+      data,
+      config
+    );
     return response.data;
   } catch (error: any) {
     const status = error?.response?.status;
-    const shouldRetry = status === 404 && !path.startsWith("/api/");
+    const shouldRetry =
+      !baseHasApiPrefix &&
+      !path.startsWith("/api/") &&
+      (status === 404 || status >= 500 || !status);
 
     if (!shouldRetry) {
       throw error;
     }
 
-    const fallbackPath = `/api${path}`;
-    const fallbackResponse = await (axiosInstance as any)[
-      method
-    ](fallbackPath, data, config);
+    const fallbackResponse = await (axiosInstance as any)[method](
+      secondaryPath,
+      data,
+      config
+    );
     return fallbackResponse.data;
   }
 }
+
+const isValidObjectId = (value: unknown): value is string =>
+  typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
+
+const normalizeLocalizedText = (
+  value: any
+): { ar: string; en: string } => {
+  if (!value) return { ar: "", en: "" };
+  if (typeof value === "string") return { ar: value, en: value };
+  if (typeof value === "object") {
+    const ar = typeof value.ar === "string" ? value.ar : "";
+    const en = typeof value.en === "string" ? value.en : "";
+    if (ar || en) return { ar, en: en || ar };
+  }
+  return { ar: "", en: "" };
+};
 
 // Generate or get session ID from cookies
 export function getOrCreateSessionId(): string {
@@ -55,43 +87,55 @@ export function clearSessionId(): void {
 
 // Transform cart items for API
 function transformCartItems(items: CartItem[]) {
-  return items.map((item) => ({
-    productId: item.itemType === "course" ? item.courseId || item.itemId : item.productId,
-    productName:
-      item.itemType === "course"
-        ? item.course?.title
-        : item.product?.name,
-    productSlug:
-      item.itemType === "course"
-        ? item.course?.slug
-        : item.product?.slug,
-    productImage:
-      item.itemType === "course"
-        ? item.course?.thumbnail
-        : item.product?.coverImage,
-    variantId: item.itemType === "course" ? undefined : item.variantId,
-    variantName: item.itemType === "course" ? undefined : item.variant?.name,
-    variantPrice: item.itemType === "course" ? undefined : item.variant?.price,
-    addons:
-      item.itemType === "course"
-        ? []
-        : item.addons.map((addon) => ({
-            addonId: addon.id,
-            name: addon.name,
-            price: addon.price,
-          })),
-    quantity: item.quantity,
-    unitPrice:
-      item.itemType === "course"
-        ? Number(item.course?.price || 0)
-        : item.variant?.price ?? item.product?.basePrice ?? 0,
-    totalPrice:
-      item.itemType === "course"
-        ? Number(item.course?.price || 0) * item.quantity
-        : ((item.variant?.price ?? item.product?.basePrice ?? 0) +
-            item.addons.reduce((sum, a) => sum + a.price, 0)) *
-          item.quantity,
-  }));
+  return items
+    .map((item) => {
+      const rawId =
+        item.itemType === "course" ? item.courseId || item.itemId : item.productId;
+
+      if (!isValidObjectId(rawId)) {
+        return null;
+      }
+
+      const quantity = Number(item.quantity || 1);
+      const safeQuantity = Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+      const unitPrice =
+        item.itemType === "course"
+          ? Number(item.course?.price || 0)
+          : Number(item.variant?.price ?? item.product?.basePrice ?? 0);
+      const addons =
+        item.itemType === "course"
+          ? []
+          : item.addons.map((addon) => ({
+              addonId: addon.id,
+              name: normalizeLocalizedText(addon.name),
+              price: Number(addon.price || 0),
+            }));
+      const addonsTotal = addons.reduce((sum, addon) => sum + addon.price, 0);
+
+      return {
+        productId: rawId,
+        productName: normalizeLocalizedText(
+          item.itemType === "course" ? item.course?.title : item.product?.name
+        ),
+        productSlug:
+          item.itemType === "course" ? item.course?.slug : item.product?.slug,
+        productImage:
+          item.itemType === "course"
+            ? item.course?.thumbnail
+            : item.product?.coverImage,
+        variantId: item.itemType === "course" ? undefined : item.variantId,
+        variantName:
+          item.itemType === "course"
+            ? undefined
+            : normalizeLocalizedText(item.variant?.name),
+        variantPrice: item.itemType === "course" ? undefined : Number(item.variant?.price ?? 0),
+        addons,
+        quantity: safeQuantity,
+        unitPrice,
+        totalPrice: (unitPrice + addonsTotal) * safeQuantity,
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => !!entry);
 }
 
 /**
