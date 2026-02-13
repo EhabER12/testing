@@ -180,7 +180,7 @@ export default function LessonPage() {
     for (const pattern of patterns) {
       const match = url.match(pattern);
       if (match && match[1]) {
-        return `https://player.vimeo.com/video/${match[1]}?autoplay=1&title=0&byline=0&portrait=0&badge=0&vimeo_logo=0&dnt=1`;
+        return `https://player.vimeo.com/video/${match[1]}?autoplay=1&title=0&byline=0&portrait=0&badge=0&vimeo_logo=0&like=0&watchlater=0&share=0&dnt=1`;
       }
     }
     return url;
