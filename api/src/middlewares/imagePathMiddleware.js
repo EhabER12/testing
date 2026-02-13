@@ -8,15 +8,7 @@ export const imagePathMiddleware = (req, res, next) => {
   res.json = function (body) {
     if (body && body.success) {
       const visited = new WeakSet();
-      if (body.data) {
-        processImagePaths(body.data, visited);
-      }
-      if (body.methods) {
-        processImagePaths(body.methods, visited);
-      }
-      if (body.method) {
-        processImagePaths(body.method, visited);
-      }
+      processImagePaths(body, visited);
     }
 
     return originalSend.call(this, body);
