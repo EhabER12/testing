@@ -389,8 +389,20 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
                 <h3 className="font-bold text-lg mb-4">{isRtl ? "مراجعة الإجابات" : "Review Answers"}</h3>
                 {currentQuiz.questions.map((q, idx) => {
                   const qId = (q as any).id || q._id;
-                  const userAnswer = lastAttempt.answers.find(a => a.questionId === qId);
+                  const userAnswer = lastAttempt.answers.find(
+                    (a) => String(a.questionId) === String(qId)
+                  );
                   const isCorrect = userAnswer?.isCorrect;
+                  const correctAnswerIndex =
+                    typeof userAnswer?.correctAnswer === "number"
+                      ? userAnswer.correctAnswer
+                      : typeof q.correctAnswer === "number"
+                        ? q.correctAnswer
+                        : -1;
+                  const hasCorrectAnswer =
+                    typeof correctAnswerIndex === "number" &&
+                    correctAnswerIndex >= 0 &&
+                    correctAnswerIndex < q.choices.length;
                   return (
                     <div key={idx} className={`p-4 rounded-lg border-2 ${isCorrect ? 'border-green-100 bg-green-50/30' : 'border-red-100 bg-red-50/30'}`}>
                       <div className="flex items-start gap-3">
@@ -404,7 +416,9 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
                           {!isCorrect && (
                             <p className="text-sm text-green-700 font-medium mt-1">
                               <span className="font-bold">{isRtl ? "الإجابة الصحيحة:" : "Correct answer:"}</span>{" "}
-                              {getTextValue(q.choices[q.correctAnswer])}
+                              {hasCorrectAnswer
+                                ? getTextValue(q.choices[correctAnswerIndex])
+                                : (isRtl ? "غير متاحة" : "Not available")}
                             </p>
                           )}
                           {q.explanation && (getTextValue(q.explanation)) && (
