@@ -180,7 +180,7 @@ export default function LessonPage() {
     for (const pattern of patterns) {
       const match = url.match(pattern);
       if (match && match[1]) {
-        return `https://player.vimeo.com/video/${match[1]}?autoplay=1&title=0&byline=0&portrait=0&badge=0&vimeo_logo=0&like=0&watchlater=0&share=0&dnt=1`;
+        return `https://player.vimeo.com/video/${match[1]}?autoplay=1&controls=0&title=0&byline=0&portrait=0&badge=0&vimeo_logo=0&like=0&watchlater=0&share=0&dnt=1`;
       }
     }
     return url;
@@ -333,24 +333,16 @@ export default function LessonPage() {
                 />
               ) : (
                 // Use iframe for YouTube/Vimeo
-                <>
-                  <iframe
-                    src={
-                      currentLesson?.videoSource === "vimeo"
-                        ? getVimeoEmbedUrl(currentLesson.videoUrl)
-                        : getYouTubeEmbedUrl(currentLesson.videoUrl)
-                    }
-                    className="absolute top-0 left-0 w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                  {currentLesson?.videoSource === "vimeo" && (
-                    <div
-                      className="pointer-events-none absolute top-0 right-0 z-10 h-44 w-16 bg-black"
-                      aria-hidden="true"
-                    />
-                  )}
-                </>
+                <iframe
+                  src={
+                    currentLesson?.videoSource === "vimeo"
+                      ? getVimeoEmbedUrl(currentLesson.videoUrl)
+                      : getYouTubeEmbedUrl(currentLesson.videoUrl)
+                  }
+                  className="absolute top-0 left-0 w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
               )
             ) : (
               <div className="flex items-center justify-center h-full bg-gray-900 text-white">
