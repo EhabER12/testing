@@ -163,19 +163,20 @@ export const register = createAsyncThunk<
 >("auth/register", async (userData, thunkAPI) => {
   try {
     const response = await axiosInstance.post("/auth/register", userData);
+    const payload = response.data?.data ?? response.data;
 
     // If verification is required, do NOT auto-login (don't save to localStorage)
-    if (response.data?.requiresVerification) {
-      return response.data;
+    if (payload?.requiresVerification) {
+      return payload;
     }
 
-    if (response.data) {
-      if (response.data.token) {
-        Cookies.set("token", response.data.token, { expires: 7, path: "/" });
+    if (payload) {
+      if (payload.token) {
+        Cookies.set("token", payload.token, { expires: 7, path: "/" });
       }
-      localStorage.setItem("user", JSON.stringify(response.data));
+      localStorage.setItem("user", JSON.stringify(payload));
     }
-    return response.data;
+    return payload;
   } catch (error: any) {
     return thunkAPI.rejectWithValue(extractErrorMessage(error));
   }

@@ -26,6 +26,8 @@ export interface User {
   status?: string;
   createdAt?: string;
   updatedAt?: string;
+  requiresVerification?: boolean;
+  message?: string;
   teacherInfo?: {
     isApproved?: boolean;
     canPublishDirectly?: boolean;
@@ -92,7 +94,8 @@ export const authSlice = createSlice({
       .addCase(register.fulfilled, (state, action: PayloadAction<User>) => {
         state.isLoading = false;
         state.isSuccess = true;
-        state.user = action.payload;
+        state.user = action.payload?.token ? action.payload : null;
+        state.message = action.payload?.message || "";
       })
       .addCase(register.rejected, (state, action) => {
         state.isLoading = false;

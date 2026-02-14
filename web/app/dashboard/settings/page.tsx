@@ -30,6 +30,7 @@ import {
   WebsiteSettingsData,
   SocialLink,
   Notifications,
+  AuthSettings,
   NavbarLink,
   HomepageSections,
   PromoModalSettings as PromoModalSettingsType,
@@ -190,6 +191,10 @@ export default function SettingsDashboardPage() {
     pass: "",
     fromName: "",
     fromEmail: "",
+  });
+
+  const [authSettings, setAuthSettings] = useState<AuthSettings>({
+    requireEmailVerification: true,
   });
 
   const [authorityBar, setAuthorityBar] = useState<AuthorityBarSettings>({
@@ -380,6 +385,13 @@ export default function SettingsDashboardPage() {
           pass: settings.emailSettings.pass || "",
           fromName: settings.emailSettings.fromName || "",
           fromEmail: settings.emailSettings.fromEmail || "",
+        });
+      }
+
+      if (settings.authSettings) {
+        setAuthSettings({
+          requireEmailVerification:
+            settings.authSettings.requireEmailVerification !== false,
         });
       }
 
@@ -633,6 +645,7 @@ export default function SettingsDashboardPage() {
       reviewsSettings,
       whyGenounSettings,
       emailSettings,
+      authSettings,
       financeSettings: {
         baseCurrency: financeSettings.baseCurrency,
         exchangeRates: financeSettings.exchangeRates,
@@ -2009,6 +2022,43 @@ export default function SettingsDashboardPage() {
               }}
               formLang={formLang}
             />
+
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {isRtl ? "إعدادات تفعيل الحساب" : "Account Activation Settings"}
+                </CardTitle>
+                <CardDescription>
+                  {isRtl
+                    ? "عند التفعيل: التسجيل يتطلب تحقق البريد الإلكتروني. عند الإلغاء: المستخدم يدخل مباشرة بعد التسجيل."
+                    : "When enabled: registration requires email verification. When disabled: users can access immediately after registration."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="requireEmailVerification">
+                      {isRtl ? "تفعيل التحقق عبر البريد الإلكتروني" : "Require Email Verification"}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {isRtl
+                        ? "إرسال رسالة Verify ومنع الدخول قبل التفعيل."
+                        : "Send verification email and block login until verified."}
+                    </p>
+                  </div>
+                  <Switch
+                    id="requireEmailVerification"
+                    checked={authSettings.requireEmailVerification}
+                    onCheckedChange={(checked) =>
+                      setAuthSettings((prev) => ({
+                        ...prev,
+                        requireEmailVerification: checked,
+                      }))
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="currency" className="space-y-6">

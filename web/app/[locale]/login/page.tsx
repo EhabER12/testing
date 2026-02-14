@@ -53,6 +53,16 @@ function LoginContent() {
             </Alert>
           )}
 
+          {message === "verify_email" && (
+            <Alert className="bg-blue-50 border-blue-200">
+              <AlertDescription className="text-blue-800">
+                <strong>Please verify your email first</strong>
+                <br />
+                A verification email has been sent to your inbox. Open it and click the verification link.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {message === "reset_success" && (
             <Alert className="bg-green-50 border-green-200">
               <AlertDescription className="text-green-800">

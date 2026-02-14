@@ -172,6 +172,10 @@ export interface EmailSettings {
   fromEmail: string;
 }
 
+export interface AuthSettings {
+  requireEmailVerification: boolean;
+}
+
 // Authority Bar Settings (NEW)
 export interface AuthorityBarItem {
   icon: string;
@@ -319,6 +323,7 @@ export interface WebsiteSettingsData {
   reviewsSettings?: ReviewsSectionSettings;
   whyGenounSettings?: WhyGenounSettings;
   emailSettings?: EmailSettings;
+  authSettings?: AuthSettings;
   financeSettings?: FinanceSettings;
   apiKeys?: ApiKeysSettings;
   teacherProfitSettings?: TeacherProfitSettings;

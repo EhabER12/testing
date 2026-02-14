@@ -128,6 +128,7 @@ export class SettingsService {
       "homepageCourses",
       "booksPageHero",
       "emailSettings",
+      "authSettings",
       "authorityBar",
       "reviewsSettings",
       "whyGenounSettings",

@@ -10,6 +10,7 @@ import {
 } from "../utils/jwtUtils.js";
 import emailTemplateService from "./emailTemplateService.js";
 import { EmailService } from "./emailService.js";
+import Settings from "../models/settingsModel.js";
 import logger from "../utils/logger.js";
 
 // Password reset token expiry (1 hour)
@@ -21,6 +22,25 @@ export class AuthService {
   constructor() {
     this.userRepository = new UserRepository();
     this.emailService = new EmailService();
+  }
+
+  async isEmailVerificationRequired() {
+    try {
+      const settings = await Settings.findOne().select(
+        "authSettings.requireEmailVerification"
+      );
+      const settingsValue = settings?.authSettings?.requireEmailVerification;
+      if (typeof settingsValue === "boolean") {
+        return settingsValue;
+      }
+    } catch (error) {
+      logger.warn("Failed to read auth settings, using env fallback", {
+        error: error.message,
+      });
+    }
+
+    // Fallback for old environments that still use env-only control
+    return process.env.REQUIRE_EMAIL_VERIFICATION !== "false";
   }
 
   async register(userData) {
@@ -43,9 +63,14 @@ export class AuthService {
       userRole = role;
     }
 
-    // Generate email verification token
-    const verificationToken = generateSecureToken(32);
-    const hashedVerificationToken = hashToken(verificationToken);
+    const requireEmailVerification = await this.isEmailVerificationRequired();
+    const verificationToken = requireEmailVerification
+      ? generateSecureToken(32)
+      : null;
+    const hashedVerificationToken =
+      requireEmailVerification && verificationToken
+        ? hashToken(verificationToken)
+        : undefined;
 
     // Prepare user data
     const userPayload = {
@@ -54,9 +79,11 @@ export class AuthService {
       phone,
       password,
       role: userRole,
-      isEmailVerified: false,
+      isEmailVerified: !requireEmailVerification,
       emailVerificationToken: hashedVerificationToken,
-      emailVerificationExpires: new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY),
+      emailVerificationExpires: requireEmailVerification
+        ? new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY)
+        : undefined,
     };
 
     // If registering as teacher, require approval
@@ -68,18 +95,16 @@ export class AuthService {
       };
     }
 
-    // Create user with verification token
+    // Create user
     const user = await this.userRepository.create(userPayload);
 
-    // Send verification email
-    await this.sendVerificationEmail(user, verificationToken);
+    if (requireEmailVerification && verificationToken) {
+      await this.sendVerificationEmail(user, verificationToken);
+    }
 
     logger.info("New user registered", { userId: user._id, email: user.email });
 
-    // Check if email verification is required (default is TRUE)
-    const skipEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === "false";
-
-    if (!skipEmailVerification) {
+    if (requireEmailVerification) {
       return {
         _id: user._id,
         fullName: user.fullName,
@@ -91,7 +116,7 @@ export class AuthService {
       };
     }
 
-    // Only generate tokens if verification is skipped
+    // Generate tokens and allow immediate access if verification is disabled
     await this.sendStudentWelcomeEmail(user);
     const tokens = generateTokenPair(user._id);
 
@@ -179,12 +204,8 @@ export class AuthService {
       throw new ApiError(401, "Invalid email or password");
     }
 
-    // Check if email is verified (optional: you can make this mandatory)
-    // Check if email is verified (Mandatory by default unless disabled)
-    // Default to TRUE if not specified, or check for explicit "false" to disable
-    const skipEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === "false";
-
-    if (!skipEmailVerification && !user.isEmailVerified) {
+    const requireEmailVerification = await this.isEmailVerificationRequired();
+    if (requireEmailVerification && !user.isEmailVerified) {
       throw new ApiError(403, "Please verify your email before logging in. Check your inbox or request a new verification email.");
     }
 

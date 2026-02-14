@@ -397,6 +397,16 @@ const emailSettingsSchema = new mongoose.Schema({
   },
 });
 
+const authSettingsSchema = new mongoose.Schema(
+  {
+    requireEmailVerification: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  { _id: false }
+);
+
 const headerDisplaySchema = new mongoose.Schema({
   showLogo: {
     type: Boolean,
@@ -833,6 +843,12 @@ const settingsSchema = new mongoose.Schema(
     emailSettings: {
       type: emailSettingsSchema,
       default: () => ({}),
+    },
+    authSettings: {
+      type: authSettingsSchema,
+      default: () => ({
+        requireEmailVerification: true,
+      }),
     },
     financeSettings: {
       type: financeSettingsSchema,

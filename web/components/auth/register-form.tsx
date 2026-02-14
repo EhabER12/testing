@@ -69,7 +69,7 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
   function onSubmit(values: z.infer<typeof formSchema>) {
     startTransition(async () => {
       try {
-        await dispatch(
+        const result = await dispatch(
           registerUser({
             fullName: {
               ar: values.fullNameAr,
@@ -81,12 +81,18 @@ export function RegisterForm({ locale = 'ar' }: { locale?: string }) {
             confirmPassword: values.confirmPassword,
           } as any)
         ).unwrap();
-        // Redirect to login after successful registration
-        router.push(
-          safeRedirect
-            ? `/${locale}/login?redirect=${encodeURIComponent(safeRedirect)}`
-            : `/${locale}/login`
-        );
+
+        if (result?.requiresVerification) {
+          router.push(
+            safeRedirect
+              ? `/${locale}/login?message=verify_email&redirect=${encodeURIComponent(safeRedirect)}`
+              : `/${locale}/login?message=verify_email`
+          );
+          return;
+        }
+
+        // Direct access when email verification is disabled
+        router.push(safeRedirect || `/${locale}`);
       } catch (error) {
         console.error(error);
       }
