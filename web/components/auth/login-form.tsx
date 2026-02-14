@@ -42,6 +42,7 @@ export function LoginForm() {
   const { isLoading, isError, message } = useAppSelector((state) => state.auth);
   const redirect = searchParams.get("redirect");
   const localePrefix = pathname?.split("/")[1] || "ar";
+  const isArabic = localePrefix === "ar";
   const safeRedirect =
     redirect && redirect.startsWith("/") && !redirect.startsWith("//")
       ? redirect
@@ -49,6 +50,11 @@ export function LoginForm() {
   const registerHref = safeRedirect
     ? `/${localePrefix}/register?redirect=${encodeURIComponent(safeRedirect)}`
     : `/${localePrefix}/register`;
+  const localizedErrorMessage =
+    isArabic &&
+    message?.includes("Please verify your email before logging in")
+      ? "يرجى تفعيل بريدك الإلكتروني أولاً، ثم تسجيل الدخول."
+      : message;
 
   // Reset error state on mount to prevent hydration mismatch
   useEffect(() => {
@@ -86,7 +92,7 @@ export function LoginForm() {
             router.push("/dashboard");
           } else {
             // Regular user - redirect back if requested
-            router.push(safeRedirect || `/${localePrefix}`);
+            router.push(safeRedirect || `/${localePrefix}/account`);
           }
         }, 100);
       } catch (error) {
@@ -101,7 +107,7 @@ export function LoginForm() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
           {isError && message && (
             <Alert variant="destructive">
-              <AlertDescription>{message}</AlertDescription>
+              <AlertDescription>{localizedErrorMessage}</AlertDescription>
             </Alert>
           )}
           <FormField
