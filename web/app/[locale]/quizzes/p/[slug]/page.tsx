@@ -17,7 +17,12 @@ export default function PublicQuizPage() {
   const isRtl = locale === "ar";
 
   const { currentQuiz, isLoading } = useAppSelector((state) => state.quizzes);
-  const { user } = useAppSelector((state) => state.auth);
+
+  const getTextValue = (value: any): string => {
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    return (isRtl ? value.ar : value.en) || value.en || value.ar || "";
+  };
 
   useEffect(() => {
     if (slug) {
@@ -58,7 +63,7 @@ export default function PublicQuizPage() {
           </Button>
           <div className="flex items-center gap-2 font-bold text-lg">
             <BookOpen className="h-5 w-5 text-orange-500" />
-            <span>{isRtl ? "اختبار عام" : "General Quiz"}</span>
+            <span>{getTextValue(currentQuiz.title) || (isRtl ? "اختبار عام" : "General Quiz")}</span>
           </div>
           <div className="w-24"></div> {/* Spacer */}
         </div>
