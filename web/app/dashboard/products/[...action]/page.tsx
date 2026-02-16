@@ -305,8 +305,19 @@ export default function ProductFormPage() {
     e.preventDefault();
 
     // Validation
-    if (!formData.name.ar && !formData.name.en) {
-      toast.error(t("admin.forms.fillAtLeastOneLanguage"));
+    if (!formData.slug?.trim()) {
+      toast.error(
+        (t("admin.products.slugRequired") as any) || "Slug is required"
+      );
+      return;
+    }
+
+    // Backend schema requires both languages for name.
+    if (!formData.name.ar?.trim() || !formData.name.en?.trim()) {
+      toast.error(
+        (t("admin.products.nameBothLanguages") as any) ||
+          "Product name is required in Arabic and English"
+      );
       return;
     }
 
@@ -321,7 +332,10 @@ export default function ProductFormPage() {
         JSON.stringify(formData.shortDescription)
       );
       data.append("description", JSON.stringify(formData.description));
-      data.append("categoryId", formData.categoryId);
+      // Avoid sending empty string which can trigger CastError in mongoose for ObjectId.
+      if (formData.categoryId) {
+        data.append("categoryId", formData.categoryId);
+      }
       data.append("basePrice", String(formData.basePrice));
       data.append("compareAtPrice", String(formData.compareAtPrice));
       data.append("currency", formData.currency);

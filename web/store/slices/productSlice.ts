@@ -169,8 +169,19 @@ export const createProduct = createAsyncThunk<
     const response = await axiosInstance.post("/products", productData);
     return response.data.product || response.data.data || response.data;
   } catch (error: any) {
+    const apiError = error.response?.data?.error;
+    const details = Array.isArray(apiError?.details)
+      ? apiError.details
+          .map((d: any) => `${d?.path ? `${d.path}: ` : ""}${d?.message || ""}`)
+          .filter(Boolean)
+          .join(", ")
+      : "";
     const message =
-      error.response?.data?.error?.message ||
+      (apiError?.message
+        ? details
+          ? `${apiError.message} (${details})`
+          : apiError.message
+        : null) ||
       error.response?.data?.message ||
       error.message ||
       "Failed to create product";
@@ -188,8 +199,19 @@ export const updateProduct = createAsyncThunk<
     const response = await axiosInstance.put(`/products/${id}`, data);
     return response.data.product || response.data.data || response.data;
   } catch (error: any) {
+    const apiError = error.response?.data?.error;
+    const details = Array.isArray(apiError?.details)
+      ? apiError.details
+          .map((d: any) => `${d?.path ? `${d.path}: ` : ""}${d?.message || ""}`)
+          .filter(Boolean)
+          .join(", ")
+      : "";
     const message =
-      error.response?.data?.error?.message ||
+      (apiError?.message
+        ? details
+          ? `${apiError.message} (${details})`
+          : apiError.message
+        : null) ||
       error.response?.data?.message ||
       error.message ||
       "Failed to update product";
