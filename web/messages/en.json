@@ -1387,7 +1387,9 @@
       "fieldType": "Field Type",
       "placeholder": "Placeholder",
       "isRequired": "Required",
-      "noCustomFields": "No custom fields defined."
+      "noCustomFields": "No custom fields defined.",
+      "nameBothLanguages": "Product name is required in Arabic and English",
+      "slugAutoFailed": "Could not generate product slug automatically"
     },
     "cart": {
       "title": "Shopping Cart",

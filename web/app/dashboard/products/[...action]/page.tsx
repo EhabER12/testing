@@ -45,6 +45,18 @@ interface BilingualText {
 
 const createEmptyBilingual = (): BilingualText => ({ ar: "", en: "" });
 
+const generateSlug = (text: string) => {
+  return text
+    .normalize("NFKD")
+    .toLowerCase()
+    .trim()
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
+
 interface ProductFormData {
   name: BilingualText;
   slug: string;
@@ -304,14 +316,6 @@ export default function ProductFormPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
-    if (!formData.slug?.trim()) {
-      toast.error(
-        (t("admin.products.slugRequired") as any) || "Slug is required"
-      );
-      return;
-    }
-
     // Backend schema requires both languages for name.
     if (!formData.name.ar?.trim() || !formData.name.en?.trim()) {
       toast.error(
@@ -324,9 +328,21 @@ export default function ProductFormPage() {
     setSubmitting(true);
 
     try {
+      const resolvedSlug =
+        formData.slug?.trim() ||
+        generateSlug(formData.name.en || formData.name.ar || "");
+
+      if (!resolvedSlug) {
+        toast.error(
+          (t("admin.products.slugAutoFailed") as any) ||
+            "Could not generate product slug"
+        );
+        return;
+      }
+
       const data = new FormData();
       data.append("name", JSON.stringify(formData.name));
-      data.append("slug", formData.slug);
+      data.append("slug", resolvedSlug);
       data.append(
         "shortDescription",
         JSON.stringify(formData.shortDescription)

@@ -1389,7 +1389,9 @@
       "fieldType": "نوع الحقل",
       "placeholder": "نص توضيحي",
       "isRequired": "مطلوب",
-      "noCustomFields": "لا توجد حقول مخصصة."
+      "noCustomFields": "لا توجد حقول مخصصة.",
+      "nameBothLanguages": "اسم المنتج مطلوب بالعربي والإنجليزي",
+      "slugAutoFailed": "تعذر توليد رابط المنتج تلقائيًا"
     },
     "cart": {
       "title": "سلة التسوق",
