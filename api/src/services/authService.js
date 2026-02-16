@@ -137,7 +137,7 @@ export class AuthService {
    * Send verification email to user
    */
   async sendVerificationEmail(user, token) {
-    const verifyUrl = `${process.env.CLIENT_URL || process.env.WEBSITE_URL}/verify-email?token=${token}`;
+    const verifyUrl = `${process.env.CLIENT_URL || process.env.WEBSITE_URL}/ar/verify-email?token=${token}`;
 
     try {
       await emailTemplateService.sendTemplatedEmail(
@@ -161,7 +161,7 @@ export class AuthService {
     if (!user || user.role !== "user") return;
 
     const baseUrl = process.env.CLIENT_URL || process.env.WEBSITE_URL || "";
-    const loginUrl = `${baseUrl}/login`;
+    const loginUrl = `${baseUrl}/ar/login`;
 
     try {
       await emailTemplateService.sendTemplatedEmail(
@@ -371,7 +371,7 @@ export class AuthService {
     });
 
     // Build reset URL
-    const resetUrl = `${process.env.CLIENT_URL || process.env.WEBSITE_URL}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.CLIENT_URL || process.env.WEBSITE_URL}/ar/reset-password?token=${resetToken}`;
 
     // Send email
     try {
