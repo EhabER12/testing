@@ -1,15 +1,11 @@
 import axios from "axios";
 import NProgress from "nprogress";
 
-// NEXT_PUBLIC_API_URL may be configured as either:
-// - https://api.example.com
-// - https://api.example.com/api
-// Normalize to always end with /api since backend routes are mounted under /api/*.
+// Treat NEXT_PUBLIC_API_URL as the full API base URL exactly as deployed.
+// Some deployments expose routes at the root (e.g. https://api.example.com/products),
+// others under /api (e.g. https://example.com/api/products). Make this explicit via env.
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-const normalizedBase = baseURL.replace(/\/+$/, ""); // remove trailing slashes
-const apiUrl = normalizedBase.endsWith("/api")
-  ? normalizedBase
-  : `${normalizedBase}/api`;
+const apiUrl = baseURL.replace(/\/+$/, ""); // remove trailing slashes
 
 // Debug: Log the final API URL
 if (typeof window !== "undefined") {
