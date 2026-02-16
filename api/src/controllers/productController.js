@@ -3,6 +3,16 @@ import Category from "../models/categoryModel.js";
 import { ApiError } from "../utils/apiError.js";
 import AnalyticsService from "../services/analyticsService.js";
 
+const parseJsonField = (obj, fieldName) => {
+  if (typeof obj[fieldName] !== "string") return;
+
+  try {
+    obj[fieldName] = JSON.parse(obj[fieldName]);
+  } catch {
+    throw new ApiError(400, `Invalid JSON format for field: ${fieldName}`);
+  }
+};
+
 export class ProductController {
   // Get all products (with filters)
   async getProducts(req, res, next) {
@@ -169,24 +179,13 @@ export class ProductController {
       const productData = req.body;
 
       // Parse JSON fields
-      if (typeof productData.name === "string") {
-        productData.name = JSON.parse(productData.name);
-      }
-      if (typeof productData.shortDescription === "string") {
-        productData.shortDescription = JSON.parse(productData.shortDescription);
-      }
-      if (typeof productData.description === "string") {
-        productData.description = JSON.parse(productData.description);
-      }
-      if (typeof productData.author === "string") {
-        productData.author = JSON.parse(productData.author);
-      }
-      if (typeof productData.variants === "string") {
-        productData.variants = JSON.parse(productData.variants);
-      }
-      if (typeof productData.addons === "string") {
-        productData.addons = JSON.parse(productData.addons);
-      }
+      parseJsonField(productData, "name");
+      parseJsonField(productData, "shortDescription");
+      parseJsonField(productData, "description");
+      parseJsonField(productData, "author");
+      parseJsonField(productData, "variants");
+      parseJsonField(productData, "addons");
+      parseJsonField(productData, "customFields");
 
       // Handle cover image upload
       if (req.files?.coverImage) {
@@ -222,24 +221,13 @@ export class ProductController {
       const updateData = req.body;
 
       // Parse JSON fields
-      if (typeof updateData.name === "string") {
-        updateData.name = JSON.parse(updateData.name);
-      }
-      if (typeof updateData.shortDescription === "string") {
-        updateData.shortDescription = JSON.parse(updateData.shortDescription);
-      }
-      if (typeof updateData.description === "string") {
-        updateData.description = JSON.parse(updateData.description);
-      }
-      if (typeof updateData.author === "string") {
-        updateData.author = JSON.parse(updateData.author);
-      }
-      if (typeof updateData.variants === "string") {
-        updateData.variants = JSON.parse(updateData.variants);
-      }
-      if (typeof updateData.addons === "string") {
-        updateData.addons = JSON.parse(updateData.addons);
-      }
+      parseJsonField(updateData, "name");
+      parseJsonField(updateData, "shortDescription");
+      parseJsonField(updateData, "description");
+      parseJsonField(updateData, "author");
+      parseJsonField(updateData, "variants");
+      parseJsonField(updateData, "addons");
+      parseJsonField(updateData, "customFields");
 
       // Handle cover image upload
       if (req.files?.coverImage) {
