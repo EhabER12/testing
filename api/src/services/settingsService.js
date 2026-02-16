@@ -127,6 +127,8 @@ export class SettingsService {
       "homepageBanner",
       "homepageCourses",
       "booksPageHero",
+      "articlesPageHero",
+      "homepageArticlesSection",
       "emailSettings",
       "authSettings",
       "authorityBar",

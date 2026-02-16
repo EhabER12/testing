@@ -199,8 +199,14 @@ export default function HomeClient({
       <HomepageCourses settings={settings || undefined} locale={locale} />
 
       {/* Articles Section (if available) */}
-      {articles && articles.length > 0 && (
-        <ArticlesSection locale={locale} articles={articles} />
+      {articles &&
+        articles.length > 0 &&
+        settings?.homepageArticlesSection?.isEnabled !== false && (
+        <ArticlesSection
+          locale={locale}
+          articles={articles}
+          settings={settings || undefined}
+        />
       )}
     </main>
   );

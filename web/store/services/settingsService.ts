@@ -161,6 +161,22 @@ export interface BooksPageHeroSettings {
   subtitle: { ar: string; en: string };
 }
 
+export interface ArticlesPageHeroSettings {
+  badge: { ar: string; en: string };
+  title: { ar: string; en: string };
+  subtitle: { ar: string; en: string };
+  latestArticles: { ar: string; en: string };
+}
+
+export interface HomepageArticlesSectionSettings {
+  isEnabled: boolean;
+  badge: { ar: string; en: string };
+  title: { ar: string; en: string };
+  titleHighlight: { ar: string; en: string };
+  subtitle: { ar: string; en: string };
+  viewAllText: { ar: string; en: string };
+}
+
 export interface EmailSettings {
   enabled: boolean;
   host: string;
@@ -319,6 +335,8 @@ export interface WebsiteSettingsData {
   homepageCourses?: HomepageCoursesSettings;
   coursesPageHero?: CoursesPageHeroSettings;
   booksPageHero?: BooksPageHeroSettings;
+  articlesPageHero?: ArticlesPageHeroSettings;
+  homepageArticlesSection?: HomepageArticlesSectionSettings;
   authorityBar?: AuthorityBarSettings;
   reviewsSettings?: ReviewsSectionSettings;
   whyGenounSettings?: WhyGenounSettings;
@@ -363,6 +381,8 @@ export interface PublicWebsiteSettingsData {
   homepageCourses?: HomepageCoursesSettings;
   coursesPageHero?: CoursesPageHeroSettings;
   booksPageHero?: BooksPageHeroSettings;
+  articlesPageHero?: ArticlesPageHeroSettings;
+  homepageArticlesSection?: HomepageArticlesSectionSettings;
   authorityBar?: AuthorityBarSettings;
   reviewsSettings?: ReviewsSectionSettings;
   whyGenounSettings?: WhyGenounSettings;

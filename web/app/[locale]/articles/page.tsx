@@ -19,7 +19,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getArticles } from "@/store/slices/articleSlice";
-import { useTranslations, useLocale } from "next-intl";
+import { getPublicWebsiteSettingsThunk } from "@/store/services/settingsService";
+import { useLocale } from "next-intl";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -69,9 +70,10 @@ export default function ArticlesPage() {
   const { articles, isLoading, isError, message } = useAppSelector(
     (state) => state.articles
   );
-  const t = useTranslations("articles");
+  const publicSettings = useAppSelector((state) => state.settings.publicSettings);
   const locale = useLocale();
   const isRtl = locale === "ar";
+  const lang = isRtl ? "ar" : "en";
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -83,6 +85,7 @@ export default function ArticlesPage() {
         language: locale as "en" | "ar",
       })
     );
+    dispatch(getPublicWebsiteSettingsThunk());
   }, [dispatch, locale]);
 
   // GSAP animations
@@ -156,6 +159,15 @@ export default function ArticlesPage() {
   const str = (key: keyof typeof strings) =>
     isRtl ? strings[key].ar : strings[key].en;
 
+  const customArticlesPageHero = publicSettings?.articlesPageHero;
+  const heroBadge = customArticlesPageHero?.badge?.[lang]?.trim() || str("badge");
+  const heroTitle = customArticlesPageHero?.title?.[lang]?.trim();
+  const heroSubtitle =
+    customArticlesPageHero?.subtitle?.[lang]?.trim() || str("subtitle");
+  const latestArticlesTitle =
+    customArticlesPageHero?.latestArticles?.[lang]?.trim() ||
+    str("latestArticles");
+
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
       <main className="flex-1">
@@ -180,12 +192,12 @@ export default function ArticlesPage() {
               {/* Badge */}
               <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 text-white text-sm font-medium rounded-full mb-6">
                 <BookOpen className="w-4 h-4" />
-                {str("badge")}
+                {heroBadge}
               </span>
 
               {/* Title */}
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4">
-                {isRtl ? (
+                {heroTitle ? heroTitle : isRtl ? (
                   <>
                     <span className="text-[#FB9903]">رؤى</span> رقمية ومعرفة
                   </>
@@ -199,7 +211,7 @@ export default function ArticlesPage() {
 
               {/* Subtitle */}
               <p className="text-lg sm:text-xl text-white/80 mb-10 max-w-2xl mx-auto">
-                {str("subtitle")}
+                {heroSubtitle}
               </p>
 
               {/* Search Bar */}
@@ -250,7 +262,7 @@ export default function ArticlesPage() {
                       )}
                     </>
                   ) : (
-                    str("latestArticles")
+                    latestArticlesTitle
                   )}
                 </h2>
                 <div className="w-20 h-1 bg-[#FB9903] rounded-full" />

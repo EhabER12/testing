@@ -44,6 +44,8 @@ import {
   CoursesPageHeroSettings as CoursesPageHeroSettingsType,
   BooksPageHeroSettings as BooksPageHeroSettingsType,
   HeroStatsSettings as HeroStatsSettingsType,
+  ArticlesPageHeroSettings as ArticlesPageHeroSettingsType,
+  HomepageArticlesSectionSettings as HomepageArticlesSectionSettingsType,
 } from "@/store/services/settingsService";
 import { resetSettingsStatus } from "@/store/slices/settingsSlice";
 import { revalidateSettings } from "@/app/actions/settings";
@@ -123,6 +125,28 @@ interface LocalHeroButton {
   _id?: string;
 }
 
+const defaultArticlesPageHero: ArticlesPageHeroSettingsType = {
+  badge: { ar: "", en: "Genoun Blog" },
+  title: { ar: "", en: "Digital Insights & Knowledge" },
+  subtitle: {
+    ar: "",
+    en: "Latest articles and insights in digital marketing and e-commerce",
+  },
+  latestArticles: { ar: "", en: "Latest Articles" },
+};
+
+const defaultHomepageArticlesSection: HomepageArticlesSectionSettingsType = {
+  isEnabled: true,
+  badge: { ar: "", en: "Blog" },
+  title: { ar: "", en: "Latest" },
+  titleHighlight: { ar: "", en: "Articles" },
+  subtitle: {
+    ar: "",
+    en: "Insights and ideas in digital marketing and e-commerce",
+  },
+  viewAllText: { ar: "", en: "View All Articles" },
+};
+
 export default function SettingsDashboardPage() {
   const dispatch = useAppDispatch();
   const { t, isRtl } = useAdminLocale();
@@ -181,6 +205,12 @@ export default function SettingsDashboardPage() {
     subtitle: { ar: "تصفح أحدث دوراتنا", en: "Browse our latest courses" },
     buttonText: { ar: "عرض جميع الدورات", en: "View All Courses" },
   });
+  const [articlesPageHero, setArticlesPageHero] =
+    useState<ArticlesPageHeroSettingsType>(defaultArticlesPageHero);
+  const [homepageArticlesSection, setHomepageArticlesSection] =
+    useState<HomepageArticlesSectionSettingsType>(
+      defaultHomepageArticlesSection
+    );
 
   const [emailSettings, setEmailSettings] = useState({
     enabled: false,
@@ -373,6 +403,54 @@ export default function SettingsDashboardPage() {
 
       if (settings.homepageCourses) {
         setHomepageCourses(settings.homepageCourses);
+      }
+      if (settings.articlesPageHero) {
+        setArticlesPageHero({
+          ...defaultArticlesPageHero,
+          ...settings.articlesPageHero,
+          badge: {
+            ...defaultArticlesPageHero.badge,
+            ...(settings.articlesPageHero.badge || {}),
+          },
+          title: {
+            ...defaultArticlesPageHero.title,
+            ...(settings.articlesPageHero.title || {}),
+          },
+          subtitle: {
+            ...defaultArticlesPageHero.subtitle,
+            ...(settings.articlesPageHero.subtitle || {}),
+          },
+          latestArticles: {
+            ...defaultArticlesPageHero.latestArticles,
+            ...(settings.articlesPageHero.latestArticles || {}),
+          },
+        });
+      }
+      if (settings.homepageArticlesSection) {
+        setHomepageArticlesSection({
+          ...defaultHomepageArticlesSection,
+          ...settings.homepageArticlesSection,
+          badge: {
+            ...defaultHomepageArticlesSection.badge,
+            ...(settings.homepageArticlesSection.badge || {}),
+          },
+          title: {
+            ...defaultHomepageArticlesSection.title,
+            ...(settings.homepageArticlesSection.title || {}),
+          },
+          titleHighlight: {
+            ...defaultHomepageArticlesSection.titleHighlight,
+            ...(settings.homepageArticlesSection.titleHighlight || {}),
+          },
+          subtitle: {
+            ...defaultHomepageArticlesSection.subtitle,
+            ...(settings.homepageArticlesSection.subtitle || {}),
+          },
+          viewAllText: {
+            ...defaultHomepageArticlesSection.viewAllText,
+            ...(settings.homepageArticlesSection.viewAllText || {}),
+          },
+        });
       }
 
       if (settings.emailSettings) {
@@ -641,6 +719,8 @@ export default function SettingsDashboardPage() {
       promoModal,
       homepageBanner,
       homepageCourses,
+      articlesPageHero,
+      homepageArticlesSection,
       authorityBar,
       reviewsSettings,
       whyGenounSettings,
@@ -1409,6 +1489,316 @@ export default function SettingsDashboardPage() {
                     disabled={isLoading}
                     dir={formLang === "ar" ? "rtl" : "ltr"}
                   />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {isRtl ? "عناوين المقالات والمدونة" : "Articles & Blog Titles"}
+                </CardTitle>
+                <CardDescription>
+                  {isRtl
+                    ? "تعديل عناوين صفحة المقالات وقسم المدونة في الصفحة الرئيسية"
+                    : "Customize titles for the Articles page and homepage blog section"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground">
+                    {isRtl ? "صفحة المقالات" : "Articles Page"}
+                  </h4>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "الشارة (عربي)" : "Badge (Arabic)"}</Label>
+                      <Input
+                        value={articlesPageHero.badge.ar}
+                        onChange={(e) =>
+                          setArticlesPageHero((prev) => ({
+                            ...prev,
+                            badge: { ...prev.badge, ar: e.target.value },
+                          }))
+                        }
+                        dir="rtl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "الشارة (إنجليزي)" : "Badge (English)"}</Label>
+                      <Input
+                        value={articlesPageHero.badge.en}
+                        onChange={(e) =>
+                          setArticlesPageHero((prev) => ({
+                            ...prev,
+                            badge: { ...prev.badge, en: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "العنوان (عربي)" : "Title (Arabic)"}</Label>
+                      <Input
+                        value={articlesPageHero.title.ar}
+                        onChange={(e) =>
+                          setArticlesPageHero((prev) => ({
+                            ...prev,
+                            title: { ...prev.title, ar: e.target.value },
+                          }))
+                        }
+                        dir="rtl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "العنوان (إنجليزي)" : "Title (English)"}</Label>
+                      <Input
+                        value={articlesPageHero.title.en}
+                        onChange={(e) =>
+                          setArticlesPageHero((prev) => ({
+                            ...prev,
+                            title: { ...prev.title, en: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "الوصف (عربي)" : "Subtitle (Arabic)"}</Label>
+                      <Textarea
+                        value={articlesPageHero.subtitle.ar}
+                        onChange={(e) =>
+                          setArticlesPageHero((prev) => ({
+                            ...prev,
+                            subtitle: { ...prev.subtitle, ar: e.target.value },
+                          }))
+                        }
+                        dir="rtl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "الوصف (إنجليزي)" : "Subtitle (English)"}</Label>
+                      <Textarea
+                        value={articlesPageHero.subtitle.en}
+                        onChange={(e) =>
+                          setArticlesPageHero((prev) => ({
+                            ...prev,
+                            subtitle: { ...prev.subtitle, en: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "عنوان قائمة المقالات (عربي)" : "Latest Articles Label (Arabic)"}</Label>
+                      <Input
+                        value={articlesPageHero.latestArticles.ar}
+                        onChange={(e) =>
+                          setArticlesPageHero((prev) => ({
+                            ...prev,
+                            latestArticles: {
+                              ...prev.latestArticles,
+                              ar: e.target.value,
+                            },
+                          }))
+                        }
+                        dir="rtl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "عنوان قائمة المقالات (إنجليزي)" : "Latest Articles Label (English)"}</Label>
+                      <Input
+                        value={articlesPageHero.latestArticles.en}
+                        onChange={(e) =>
+                          setArticlesPageHero((prev) => ({
+                            ...prev,
+                            latestArticles: {
+                              ...prev.latestArticles,
+                              en: e.target.value,
+                            },
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-2 border-t">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-muted-foreground">
+                      {isRtl ? "قسم المدونة في الصفحة الرئيسية" : "Homepage Blog Section"}
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <Label>{isRtl ? "تفعيل القسم" : "Enable Section"}</Label>
+                      <Switch
+                        checked={homepageArticlesSection.isEnabled}
+                        onCheckedChange={(checked) =>
+                          setHomepageArticlesSection((prev) => ({
+                            ...prev,
+                            isEnabled: checked,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "الشارة (عربي)" : "Badge (Arabic)"}</Label>
+                      <Input
+                        value={homepageArticlesSection.badge.ar}
+                        onChange={(e) =>
+                          setHomepageArticlesSection((prev) => ({
+                            ...prev,
+                            badge: { ...prev.badge, ar: e.target.value },
+                          }))
+                        }
+                        dir="rtl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "الشارة (إنجليزي)" : "Badge (English)"}</Label>
+                      <Input
+                        value={homepageArticlesSection.badge.en}
+                        onChange={(e) =>
+                          setHomepageArticlesSection((prev) => ({
+                            ...prev,
+                            badge: { ...prev.badge, en: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "العنوان (عربي)" : "Title (Arabic)"}</Label>
+                      <Input
+                        value={homepageArticlesSection.title.ar}
+                        onChange={(e) =>
+                          setHomepageArticlesSection((prev) => ({
+                            ...prev,
+                            title: { ...prev.title, ar: e.target.value },
+                          }))
+                        }
+                        dir="rtl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "العنوان (إنجليزي)" : "Title (English)"}</Label>
+                      <Input
+                        value={homepageArticlesSection.title.en}
+                        onChange={(e) =>
+                          setHomepageArticlesSection((prev) => ({
+                            ...prev,
+                            title: { ...prev.title, en: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "تمييز العنوان (عربي)" : "Title Highlight (Arabic)"}</Label>
+                      <Input
+                        value={homepageArticlesSection.titleHighlight.ar}
+                        onChange={(e) =>
+                          setHomepageArticlesSection((prev) => ({
+                            ...prev,
+                            titleHighlight: {
+                              ...prev.titleHighlight,
+                              ar: e.target.value,
+                            },
+                          }))
+                        }
+                        dir="rtl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "تمييز العنوان (إنجليزي)" : "Title Highlight (English)"}</Label>
+                      <Input
+                        value={homepageArticlesSection.titleHighlight.en}
+                        onChange={(e) =>
+                          setHomepageArticlesSection((prev) => ({
+                            ...prev,
+                            titleHighlight: {
+                              ...prev.titleHighlight,
+                              en: e.target.value,
+                            },
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "الوصف (عربي)" : "Subtitle (Arabic)"}</Label>
+                      <Textarea
+                        value={homepageArticlesSection.subtitle.ar}
+                        onChange={(e) =>
+                          setHomepageArticlesSection((prev) => ({
+                            ...prev,
+                            subtitle: { ...prev.subtitle, ar: e.target.value },
+                          }))
+                        }
+                        dir="rtl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "الوصف (إنجليزي)" : "Subtitle (English)"}</Label>
+                      <Textarea
+                        value={homepageArticlesSection.subtitle.en}
+                        onChange={(e) =>
+                          setHomepageArticlesSection((prev) => ({
+                            ...prev,
+                            subtitle: { ...prev.subtitle, en: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "نص زر عرض الكل (عربي)" : "View All Button Text (Arabic)"}</Label>
+                      <Input
+                        value={homepageArticlesSection.viewAllText.ar}
+                        onChange={(e) =>
+                          setHomepageArticlesSection((prev) => ({
+                            ...prev,
+                            viewAllText: {
+                              ...prev.viewAllText,
+                              ar: e.target.value,
+                            },
+                          }))
+                        }
+                        dir="rtl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "نص زر عرض الكل (إنجليزي)" : "View All Button Text (English)"}</Label>
+                      <Input
+                        value={homepageArticlesSection.viewAllText.en}
+                        onChange={(e) =>
+                          setHomepageArticlesSection((prev) => ({
+                            ...prev,
+                            viewAllText: {
+                              ...prev.viewAllText,
+                              en: e.target.value,
+                            },
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

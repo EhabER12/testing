@@ -14,6 +14,7 @@ import {
   ArrowRight,
   ArrowLeft,
 } from "lucide-react";
+import { PublicWebsiteSettingsData } from "@/store/services/settingsService";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -51,15 +52,27 @@ const strings = {
 interface ArticlesSectionProps {
   locale: string;
   articles: Article[];
+  settings?: PublicWebsiteSettingsData;
 }
 
-export function ArticlesSection({ locale, articles }: ArticlesSectionProps) {
+export function ArticlesSection({ locale, articles, settings }: ArticlesSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const isRtl = locale === "ar";
   const ArrowIcon = isRtl ? ArrowLeft : ArrowRight;
+  const lang = isRtl ? "ar" : "en";
 
   const str = (key: keyof typeof strings) =>
     isRtl ? strings[key].ar : strings[key].en;
+
+  const homepageArticles = settings?.homepageArticlesSection;
+  const badgeText = homepageArticles?.badge?.[lang]?.trim() || str("badge");
+  const titleText = homepageArticles?.title?.[lang]?.trim() || str("title");
+  const titleHighlightText =
+    homepageArticles?.titleHighlight?.[lang]?.trim() || str("titleHighlight");
+  const subtitleText =
+    homepageArticles?.subtitle?.[lang]?.trim() || str("subtitle");
+  const viewAllText =
+    homepageArticles?.viewAllText?.[lang]?.trim() || str("viewAll");
 
   // GSAP animations
   useGSAP(() => {
@@ -126,14 +139,14 @@ export function ArticlesSection({ locale, articles }: ArticlesSectionProps) {
         <div className="text-center mb-14" dir={isRtl ? "rtl" : "ltr"}>
           <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#04524B]/10 text-[#04524B] text-sm font-medium rounded-full mb-4">
             <BookOpen className="w-4 h-4" />
-            {str("badge")}
+            {badgeText}
           </span>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            {str("title")}{" "}
-            <span className="text-[#04524B]">{str("titleHighlight")}</span>
+            {titleText}{" "}
+            <span className="text-[#04524B]">{titleHighlightText}</span>
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            {str("subtitle")}
+            {subtitleText}
           </p>
         </div>
 
@@ -223,7 +236,7 @@ export function ArticlesSection({ locale, articles }: ArticlesSectionProps) {
             href={`/${locale}/articles`}
             className="inline-flex items-center gap-2 px-8 py-4 bg-[#04524B] text-white font-bold rounded-full hover:bg-[#033D38] transition-colors shadow-lg hover:shadow-xl"
           >
-            <span>{str("viewAll")}</span>
+            <span>{viewAllText}</span>
             <ArrowUpRight className="w-5 h-5" />
           </Link>
         </div>

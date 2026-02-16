@@ -261,6 +261,36 @@ const booksPageHeroSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const localizedTextSchema = new mongoose.Schema(
+  {
+    ar: { type: String, default: "" },
+    en: { type: String, default: "" },
+  },
+  { _id: false }
+);
+
+const articlesPageHeroSchema = new mongoose.Schema(
+  {
+    badge: { type: localizedTextSchema, default: () => ({}) },
+    title: { type: localizedTextSchema, default: () => ({}) },
+    subtitle: { type: localizedTextSchema, default: () => ({}) },
+    latestArticles: { type: localizedTextSchema, default: () => ({}) },
+  },
+  { _id: false }
+);
+
+const homepageArticlesSectionSchema = new mongoose.Schema(
+  {
+    isEnabled: { type: Boolean, default: true },
+    badge: { type: localizedTextSchema, default: () => ({}) },
+    title: { type: localizedTextSchema, default: () => ({}) },
+    titleHighlight: { type: localizedTextSchema, default: () => ({}) },
+    subtitle: { type: localizedTextSchema, default: () => ({}) },
+    viewAllText: { type: localizedTextSchema, default: () => ({}) },
+  },
+  { _id: false }
+);
+
 // Authority Bar Settings Schema (NEW - Platform Recognition Badges)
 const authorityBarSchema = new mongoose.Schema({
   isEnabled: {
@@ -806,6 +836,26 @@ const settingsSchema = new mongoose.Schema(
           ar: "\u0645\u062c\u0645\u0648\u0639\u0629 \u0645\u0646\u062a\u0642\u0627\u0629 \u0645\u0646 \u0627\u0644\u0643\u062a\u0628 \u0627\u0644\u0631\u0642\u0645\u064a\u0629 \u0627\u0644\u062c\u0627\u0647\u0632\u0629 \u0644\u0644\u0634\u0631\u0627\u0621",
           en: "A curated collection of digital books ready for purchase",
         },
+      }),
+    },
+    articlesPageHero: {
+      type: articlesPageHeroSchema,
+      default: () => ({
+        badge: { ar: "", en: "" },
+        title: { ar: "", en: "" },
+        subtitle: { ar: "", en: "" },
+        latestArticles: { ar: "", en: "" },
+      }),
+    },
+    homepageArticlesSection: {
+      type: homepageArticlesSectionSchema,
+      default: () => ({
+        isEnabled: true,
+        badge: { ar: "", en: "" },
+        title: { ar: "", en: "" },
+        titleHighlight: { ar: "", en: "" },
+        subtitle: { ar: "", en: "" },
+        viewAllText: { ar: "", en: "" },
       }),
     },
     authorityBar: {
