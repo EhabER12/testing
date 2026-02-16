@@ -5,11 +5,11 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useTransition, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { login } from "@/store/services/authService";
 import { reset } from "@/store/slices/authSlice";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -37,22 +37,21 @@ export function LoginForm() {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pathname = usePathname();
+  const locale = useLocale();
   const dispatch = useAppDispatch();
   const { isLoading, isError, message } = useAppSelector((state) => state.auth);
   const redirect = searchParams.get("redirect");
-  const localePrefix = pathname?.split("/")[1] || "ar";
-  const isArabic = localePrefix === "ar";
+  const isArabic = locale === "ar";
   const safeRedirect =
     redirect && redirect.startsWith("/") && !redirect.startsWith("//")
       ? redirect
       : null;
   const registerHref = safeRedirect
-    ? `/${localePrefix}/register?redirect=${encodeURIComponent(safeRedirect)}`
-    : `/${localePrefix}/register`;
+    ? `/${locale}/register?redirect=${encodeURIComponent(safeRedirect)}`
+    : `/${locale}/register`;
   const localizedErrorMessage =
     isArabic &&
-    message?.includes("Please verify your email before logging in")
+      message?.includes("Please verify your email before logging in")
       ? "يرجى تفعيل بريدك الإلكتروني أولاً، ثم تسجيل الدخول."
       : message;
 
@@ -85,14 +84,14 @@ export function LoginForm() {
               router.push("/dashboard");
             } else {
               // Pending teacher - show pending message
-              router.push(`/${localePrefix}/login?message=teacher_pending`);
+              router.push(`/${locale}/login?message=teacher_pending`);
             }
           } else if (userRole === "admin" || userRole === "moderator") {
             // Admin/Moderator - go to dashboard
             router.push("/dashboard");
           } else {
             // Regular user - redirect back if requested
-            router.push(safeRedirect || `/${localePrefix}/account`);
+            router.push(safeRedirect || `/${locale}/account`);
           }
         }, 100);
       } catch (error) {
