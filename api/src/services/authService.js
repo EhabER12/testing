@@ -144,7 +144,7 @@ export class AuthService {
         user.email,
         "email_verification",
         {
-          name: user.fullName || user.name || "User",
+          name: user.fullName?.ar || user.fullName?.en || user.fullName || user.name || "User",
           verifyUrl: verifyUrl,
           year: new Date().getFullYear(),
         },
