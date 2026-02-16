@@ -165,9 +165,8 @@ export const createProduct = createAsyncThunk<
   { rejectValue: string }
 >("products/create", async (productData, thunkAPI) => {
   try {
-    const response = await axiosInstance.post("/products", productData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    // Don't manually set multipart Content-Type; the browser/axios must include the boundary.
+    const response = await axiosInstance.post("/products", productData);
     return response.data.product || response.data.data || response.data;
   } catch (error: any) {
     const message =
@@ -185,9 +184,8 @@ export const updateProduct = createAsyncThunk<
   { rejectValue: string }
 >("products/update", async ({ id, data }, thunkAPI) => {
   try {
-    const response = await axiosInstance.put(`/products/${id}`, data, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    // Don't manually set multipart Content-Type; the browser/axios must include the boundary.
+    const response = await axiosInstance.put(`/products/${id}`, data);
     return response.data.product || response.data.data || response.data;
   } catch (error: any) {
     const message =

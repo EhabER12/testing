@@ -1,14 +1,20 @@
 import axios from "axios";
 import NProgress from "nprogress";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-// Use the URL as-is without adding /api - backend routes don't use /api prefix
-let apiUrl = baseURL.replace(/\/+$/, ''); // Just remove trailing slashes
+// NEXT_PUBLIC_API_URL may be configured as either:
+// - https://api.example.com
+// - https://api.example.com/api
+// Normalize to always end with /api since backend routes are mounted under /api/*.
+const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const normalizedBase = baseURL.replace(/\/+$/, ""); // remove trailing slashes
+const apiUrl = normalizedBase.endsWith("/api")
+  ? normalizedBase
+  : `${normalizedBase}/api`;
 
 // Debug: Log the final API URL
 if (typeof window !== "undefined") {
   console.log('Environment NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
-  console.log('Axios Base URL (no /api prefix):', apiUrl);
+  console.log("Axios Base URL:", apiUrl);
 }
 
 const axiosInstance = axios.create({
