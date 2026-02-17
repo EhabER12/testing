@@ -239,8 +239,8 @@ export default function ProductsPage() {
 
                     {/* Price */}
                     <div className="flex items-center gap-2 mb-2">
-                      {product.compareAtPrice > 0 &&
-                        product.compareAtPrice > product.basePrice && (
+                      {(product.compareAtPrice ?? 0) > 0 &&
+                        product.compareAtPrice! > product.basePrice && (
                           <span className="text-sm text-muted-foreground line-through">
                             {product.currency || "SAR"} {product.compareAtPrice}
                           </span>
