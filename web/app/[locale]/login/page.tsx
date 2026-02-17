@@ -56,6 +56,11 @@ function LoginContent() {
           {message === "verify_email" && (
             <Alert className="bg-blue-50 border-blue-200">
               <AlertDescription className="text-blue-800">
+                <strong>يرجى تفعيل بريدك الإلكتروني أولاً</strong>
+                <br />
+                تم إرسال رابط التفعيل إلى بريدك الإلكتروني. الرجاء فتح الرسالة والضغط على الرابط.
+                <br />
+                <br />
                 <strong>Please verify your email first</strong>
                 <br />
                 A verification email has been sent to your inbox. Open it and click the verification link.
