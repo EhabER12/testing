@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import axios from "@/lib/axios";
 import Link from "next/link";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
     const params = useParams<{ locale: string }>();
     const locale = params?.locale || "ar";
     const searchParams = useSearchParams();
@@ -27,17 +27,14 @@ export default function VerifyEmailPage() {
 
         const verify = async () => {
             try {
-                await axios.post("/auth/verify-email", { token });
+                console.log("Verifying email with token:", token);
+                const response = await axios.post("/auth/verify-email", { token });
+                console.log("Verification response:", response.data);
                 setStatus("success");
-                // Redirect to login after 3 seconds
-                setTimeout(() => {
-                    // router.push(`/${locale}/login`); // Assuming login page or modal? 
-                    // If uses modal, maybe redirect to home?
-                    // I'll just provide a button.
-                }, 3000);
             } catch (error: any) {
+                console.error("Verification error:", error);
                 setStatus("error");
-                setMessage(error.response?.data?.message || (isRtl ? "فشل التفعيل" : "Verification failed"));
+                setMessage(error.response?.data?.message || (isRtl ? "فشل التفعيل. قد يكون الرابط منتهي الصلاحية." : "Verification failed. The link may have expired."));
             }
         };
 
@@ -83,7 +80,7 @@ export default function VerifyEmailPage() {
                             <div className="pt-4 w-full">
                                 <Button
                                     className="w-full bg-genoun-green hover:bg-genoun-green/90"
-                                    onClick={() => router.push(`/${locale}`)} // Redirect to home, assuming login modal is there
+                                    onClick={() => router.push(`/${locale}`)}
                                 >
                                     {isRtl ? "الذهاب للصفحة الرئيسية" : "Go to Homepage"}
                                 </Button>
@@ -114,5 +111,28 @@ export default function VerifyEmailPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function VerifyEmailPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+                        <div className="flex flex-col items-center text-center space-y-4">
+                            <div className="rounded-full bg-blue-50 p-4">
+                                <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+                            </div>
+                            <h1 className="text-2xl font-bold text-gray-900">
+                                جاري التحميل...
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+            }
+        >
+            <VerifyEmailContent />
+        </Suspense>
     );
 }
