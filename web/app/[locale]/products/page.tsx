@@ -206,7 +206,7 @@ export default function ProductsPage() {
                             {Math.round(
                               ((product.compareAtPrice - product.basePrice) /
                                 product.compareAtPrice) *
-                                100
+                              100
                             )}
                             % OFF
                           </Badge>
@@ -245,9 +245,11 @@ export default function ProductsPage() {
                             {product.currency || "SAR"} {product.compareAtPrice}
                           </span>
                         )}
-                      <span className="text-xl font-bold text-primary">
-                        {product.currency || "SAR"} {product.basePrice}
-                      </span>
+                      {product.basePrice > 0 && (
+                        <span className="text-xl font-bold text-primary">
+                          {product.currency || "SAR"} {product.basePrice}
+                        </span>
+                      )}
                     </div>
 
                     {/* Variants Count */}
