@@ -26,6 +26,7 @@ import { addToCart } from "@/store/slices/cartSlice";
 import { ProductOptionsModal } from "@/components/products/ProductOptionsModal";
 import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
+import { PriceDisplay } from "@/components/currency/PriceDisplay";
 
 // Get localized text helper
 const getLocalizedText = (
@@ -242,13 +243,21 @@ export default function ProductsPage() {
                       {(product.compareAtPrice ?? 0) > 0 &&
                         product.compareAtPrice! > product.basePrice && (
                           <span className="text-sm text-muted-foreground line-through">
-                            {product.currency || "SAR"} {product.compareAtPrice}
+                            <PriceDisplay
+                              amount={product.compareAtPrice!}
+                              currency={(product.currency as "SAR" | "EGP" | "USD") || "SAR"}
+                              locale={isRtl ? "ar" : "en"}
+                              className="text-sm text-muted-foreground line-through"
+                            />
                           </span>
                         )}
                       {product.basePrice > 0 && (
-                        <span className="text-xl font-bold text-primary">
-                          {product.currency || "SAR"} {product.basePrice}
-                        </span>
+                        <PriceDisplay
+                          amount={product.basePrice}
+                          currency={(product.currency as "SAR" | "EGP" | "USD") || "SAR"}
+                          locale={isRtl ? "ar" : "en"}
+                          className="text-xl font-bold text-primary"
+                        />
                       )}
                     </div>
 
