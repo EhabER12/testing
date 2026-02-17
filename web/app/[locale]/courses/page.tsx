@@ -9,25 +9,12 @@ import { addCourseToCart, openCart } from "@/store/slices/cartSlice";
 import { getCategories } from "@/store/slices/categorySlice";
 import { getPublicWebsiteSettingsThunk } from "@/store/services/settingsService";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Clock,
   BookOpen,
-  Users,
-  TrendingUp,
-  CheckCircle,
-  Star,
   Search,
+  Star,
 } from "lucide-react";
-import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { PriceDisplay } from "@/components/currency/PriceDisplay";
 import {
@@ -62,7 +49,6 @@ export default function CoursesPage() {
   const heroBadge = heroSettings?.badge?.[isRtl ? "ar" : "en"] || (isRtl ? "دوراتنا التعليمية" : "Our Educational Courses");
   const heroTitle = heroSettings?.title?.[isRtl ? "ar" : "en"] || (isRtl ? "ابدأ رحلتك في تحفيظ القرآن الكريم" : "Start Your Quran Memorization Journey");
   const heroSubtitle = heroSettings?.subtitle?.[isRtl ? "ar" : "en"] || (isRtl ? "مع دوراتنا المتخصصة" : "With Our Specialized Courses");
-
 
   // Debounce search
   useEffect(() => {
@@ -237,114 +223,120 @@ export default function CoursesPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredCourses.map((course) => (
-              <Card
+              <div
                 key={course.id || course._id}
-                className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 shadow-md"
-                onClick={() => handleCourseClick((course as any).slug)}
+                className="group flex flex-col bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100"
               >
                 {/* Course Thumbnail */}
-                <div className="relative h-56 bg-gray-200">
+                <div
+                  className="relative aspect-[4/3] overflow-hidden bg-gray-100 cursor-pointer"
+                  onClick={() => handleCourseClick((course as any).slug)}
+                >
                   {course.thumbnail ? (
-                    <Image
+                    <img
                       src={course.thumbnail}
                       alt={getTextValue(course.title)}
-                      fill
-                      className="object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-full bg-gradient-to-br from-genoun-green/20 to-green-600/20">
-                      <BookOpen className="h-16 w-16 text-genoun-green" />
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-genoun-green/20 to-green-600/20">
+                      <BookOpen className="h-12 w-12 text-genoun-green/50" />
                     </div>
                   )}
+
                   {/* Access Type Badge */}
-                  <div className={`absolute top-3 ${isRtl ? 'left-3' : 'right-3'}`}>
-                    <Badge
-                      className={
-                        course.accessType === "free"
-                          ? "bg-green-500 hover:bg-green-600"
-                          : "bg-blue-500 hover:bg-blue-600"
-                      }
-                    >
-                      {getAccessTypeText(course.accessType)}
+                  <Badge
+                    className={`absolute top-3 ${isRtl ? "left-3" : "right-3"} ${course.accessType === "free"
+                        ? "bg-green-500 hover:bg-green-600"
+                        : "bg-blue-500 hover:bg-blue-600"
+                      }`}
+                  >
+                    {getAccessTypeText(course.accessType)}
+                  </Badge>
+
+                  {/* Level Badge */}
+                  {course.level && (
+                    <Badge className={`absolute top-3 ${isRtl ? "right-3" : "left-3"} bg-amber-500 hover:bg-amber-600`}>
+                      {getLevelText(course.level)}
                     </Badge>
-                  </div>
+                  )}
                 </div>
 
-                <CardHeader className="pb-3">
-                  {/* Title */}
-                  <CardTitle className="line-clamp-2 text-lg font-bold mb-1">
-                    {getTextValue(course.title)}
-                  </CardTitle>
-
-                  {/* Description */}
-                  <CardDescription className="line-clamp-2 text-sm">
-                    {getTextValue(course.description)}
-                  </CardDescription>
-
+                {/* Course Info */}
+                <div className="flex-1 flex flex-col p-4">
                   {/* Instructor */}
                   {course.instructorId && (
-                    <p className="text-sm text-gray-700 mt-2">
+                    <p className="text-xs text-muted-foreground mb-1">
                       {getTextValue(course.instructorId.fullName)}
                     </p>
                   )}
-                </CardHeader>
 
-                <CardContent className="space-y-3">
-                  {/* Rating */}
-                  <div className="flex items-center gap-2 text-sm">
+                  {/* Title */}
+                  <h3
+                    className="font-semibold text-gray-900 mb-2 line-clamp-2 hover:text-primary transition-colors cursor-pointer"
+                    onClick={() => handleCourseClick((course as any).slug)}
+                  >
+                    {getTextValue(course.title)}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                    {getTextValue(course.description)}
+                  </p>
+
+                  {/* Rating & Stats */}
+                  <div className="flex items-center gap-2 text-sm mb-2">
                     <div className="flex items-center gap-1 text-amber-500">
                       <Star className="h-4 w-4 fill-current" />
-                      <span className="font-semibold">
+                      <span className="font-semibold text-xs">
                         {course.stats?.averageRating?.toFixed(1) || "4.5"}
                       </span>
                     </div>
-                    <span className="text-gray-500">
+                    <span className="text-muted-foreground text-xs">
                       ({course.stats?.totalReviews || 0})
                     </span>
-                  </div>
-
-                  {/* Stats in one line */}
-                  <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
                     {course.duration && (
                       <>
-                        <span className="font-medium">{course.duration} {isRtl ? "ساعة" : "total hours"}</span>
-                        <span>•</span>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="text-xs text-muted-foreground">
+                          {course.duration} {isRtl ? "ساعة" : "hrs"}
+                        </span>
                       </>
                     )}
-                    <span className="font-medium">
-                      {course.contentStats?.lessonsCount || 0} {isRtl ? "محاضرة" : "lectures"}
+                    <span className="text-muted-foreground">•</span>
+                    <span className="text-xs text-muted-foreground">
+                      {course.contentStats?.lessonsCount || 0} {isRtl ? "درس" : "lessons"}
                     </span>
-                    {course.level && (
-                      <>
-                        <span>•</span>
-                        <span className="font-medium">{getLevelText(course.level)}</span>
-                      </>
-                    )}
                   </div>
-                </CardContent>
 
-                <CardFooter className="pt-4 pb-4 flex items-center justify-between gap-3 sm:gap-4">
                   {/* Price */}
-                  <div className="text-base sm:text-xl md:text-2xl font-bold text-gray-900 whitespace-nowrap shrink-0 leading-none">
+                  <div className="flex items-center gap-2 mb-2">
                     {course.accessType === "free" ? (
-                      <span className="text-green-600">{isRtl ? "مجاني" : "Free"}</span>
+                      <span className="text-xl font-bold text-green-600">
+                        {isRtl ? "مجاني" : "Free"}
+                      </span>
                     ) : course.price ? (
                       <PriceDisplay
                         amount={course.price}
                         currency={course.currency as "SAR" | "EGP" | "USD"}
                         locale={isRtl ? "ar" : "en"}
-                        className="whitespace-nowrap leading-none"
+                        className="text-xl font-bold text-primary"
                       />
                     ) : (
-                      <span className="text-gray-600 text-base">{isRtl ? "السعر غير محدد" : "Price not set"}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {isRtl ? "السعر غير محدد" : "Price not set"}
+                      </span>
                     )}
                   </div>
 
-                  {/* Add to cart button */}
+                  {/* Spacer to push button to bottom */}
+                  <div className="flex-1" />
+
+                  {/* Action Button - Always at bottom */}
                   <Button
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-2 shadow-md hover:shadow-lg transition-all border border-purple-600 whitespace-nowrap"
+                    className="w-full"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (course.accessType === "paid") {
@@ -376,6 +368,7 @@ export default function CoursesPage() {
                       handleCourseClick((course as any).slug);
                     }}
                   >
+                    <BookOpen className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
                     {course.accessType === "free"
                       ? isRtl
                         ? "سجل مجاناً"
@@ -384,8 +377,8 @@ export default function CoursesPage() {
                         ? "أضف للسلة"
                         : "Add to cart"}
                   </Button>
-                </CardFooter>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}
