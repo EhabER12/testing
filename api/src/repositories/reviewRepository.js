@@ -1,5 +1,6 @@
 import { BaseRepository } from "./baseRepository.js";
 import Review from "../models/reviewModel.js";
+import mongoose from "mongoose";
 
 export class ReviewRepository extends BaseRepository {
   constructor() {
@@ -57,10 +58,15 @@ export class ReviewRepository extends BaseRepository {
   }
 
   async getCourseStats(courseId) {
+    const normalizedCourseId =
+      typeof courseId === "string" && mongoose.Types.ObjectId.isValid(courseId)
+        ? new mongoose.Types.ObjectId(courseId)
+        : courseId;
+
     const stats = await this.model.aggregate([
       {
         $match: {
-          courseId: courseId,
+          courseId: normalizedCourseId,
           status: "approved",
         },
       },

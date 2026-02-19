@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useAppSelector } from "@/store/hooks";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,16 @@ interface CourseReviewFormProps {
   locale: "ar" | "en";
 }
 
+type ReviewStatus = "pending" | "approved" | "rejected";
+
+const getErrorMessage = (error: any): string => {
+  return (
+    error?.response?.data?.error?.message ||
+    error?.response?.data?.message ||
+    "Request failed"
+  );
+};
+
 export function CourseReviewForm({
   courseId,
   onReviewSubmitted,
@@ -29,19 +39,104 @@ export function CourseReviewForm({
   const { userData } = useAuth();
   const { user } = useAppSelector((state) => state.auth);
   const { toast } = useToast();
-  const [rating, setRating] = useState(existingReview?.rating || 0);
+  const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
-  const [comment, setComment] = useState(existingReview?.comment || "");
+  const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [loadingMyReview, setLoadingMyReview] = useState(false);
+  const [myReview, setMyReview] = useState<any>(existingReview || null);
   const userId = userData?.id || (user as any)?.id || (user as any)?._id;
+
+  const text = useMemo(
+    () =>
+      isRtl
+        ? {
+            errorTitle: "خطأ",
+            successTitle: "تم الإرسال",
+            loginRequired: "يجب تسجيل الدخول لإرسال التقييم",
+            ratingRequired: "يرجى اختيار عدد النجوم",
+            commentRequired: "يرجى كتابة تعليق",
+            submitFailed: "فشل إرسال التقييم",
+            submittedPending: "تم إرسال تقييمك وهو الآن بانتظار المراجعة",
+            enrollFirstTitle: "يجب عليك الاشتراك أولاً",
+            enrollFirstDesc:
+              "يجب الاشتراك في الكورس لتتمكن من كتابة تقييم",
+            yourReview: "تقييمك",
+            yourReviewLoading: "جاري التحقق من تقييمك...",
+            writeReview: "اكتب تقييمك",
+            rating: "التقييم",
+            comment: "التعليق",
+            commentPlaceholder: "شارك تجربتك مع هذا الكورس...",
+            submitting: "جارٍ الإرسال...",
+            submit: "إرسال التقييم",
+            status: "الحالة",
+            status_pending: "قيد المراجعة",
+            status_approved: "مقبول",
+            status_rejected: "مرفوض",
+          }
+        : {
+            errorTitle: "Error",
+            successTitle: "Success",
+            loginRequired: "You must be logged in to submit a review",
+            ratingRequired: "Please select a rating",
+            commentRequired: "Please write a comment",
+            submitFailed: "Failed to submit review",
+            submittedPending: "Your review has been submitted and is pending approval",
+            enrollFirstTitle: "You must enroll first",
+            enrollFirstDesc:
+              "You need to enroll in this course before you can write a review",
+            yourReview: "Your Review",
+            yourReviewLoading: "Checking your review...",
+            writeReview: "Write a Review",
+            rating: "Rating",
+            comment: "Comment",
+            commentPlaceholder: "Share your experience with this course...",
+            submitting: "Submitting...",
+            submit: "Submit Review",
+            status: "Status",
+            status_pending: "Pending",
+            status_approved: "Approved",
+            status_rejected: "Rejected",
+          },
+    [isRtl]
+  );
+
+  useEffect(() => {
+    setMyReview(existingReview || null);
+  }, [existingReview]);
+
+  useEffect(() => {
+    if (!userId || !courseId || existingReview) return;
+
+    let active = true;
+    setLoadingMyReview(true);
+
+    axiosInstance
+      .get(`/reviews/course/${courseId}/my-review`)
+      .then((response) => {
+        if (!active) return;
+        setMyReview(response.data?.data || null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setMyReview(null);
+      })
+      .finally(() => {
+        if (active) setLoadingMyReview(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [userId, courseId, existingReview]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!userId) {
       toast({
-        title: "Error",
-        description: "You must be logged in to submit a review",
+        title: text.errorTitle,
+        description: text.loginRequired,
         variant: "destructive",
       });
       return;
@@ -49,8 +144,8 @@ export function CourseReviewForm({
 
     if (rating === 0) {
       toast({
-        title: "Error",
-        description: "Please select a rating",
+        title: text.errorTitle,
+        description: text.ratingRequired,
         variant: "destructive",
       });
       return;
@@ -58,8 +153,8 @@ export function CourseReviewForm({
 
     if (!comment.trim()) {
       toast({
-        title: "Error",
-        description: "Please write a comment",
+        title: text.errorTitle,
+        description: text.commentRequired,
         variant: "destructive",
       });
       return;
@@ -68,31 +163,33 @@ export function CourseReviewForm({
     setSubmitting(true);
 
     try {
-      await axiosInstance.post("/reviews", {
+      const response = await axiosInstance.post("/reviews", {
         courseId,
-        userId,
         rating,
         comment,
       });
 
-      toast({
-        title: "Success",
-        description: "Your review has been submitted and is pending approval",
-      });
-
+      const createdReview = response.data?.data;
+      setMyReview(
+        createdReview || {
+          rating,
+          comment,
+          status: "pending",
+        }
+      );
       setRating(0);
       setComment("");
 
-      if (onReviewSubmitted) {
-        onReviewSubmitted();
-      }
+      toast({
+        title: text.successTitle,
+        description: text.submittedPending,
+      });
+
+      onReviewSubmitted?.();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description:
-          error.response?.data?.error?.message ||
-          error.response?.data?.message ||
-          "Failed to submit review",
+        title: text.errorTitle,
+        description: getErrorMessage(error) || text.submitFailed,
         variant: "destructive",
       });
     } finally {
@@ -100,7 +197,6 @@ export function CourseReviewForm({
     }
   };
 
-  // Check if user is enrolled
   if (!isEnrolled) {
     return (
       <Card>
@@ -110,13 +206,9 @@ export function CourseReviewForm({
               <Lock className="h-8 w-8 text-gray-400" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold">
-                {isRtl ? "يجب عليك الاشتراك أولاً" : "You must enroll first"}
-              </h3>
+              <h3 className="text-lg font-semibold">{text.enrollFirstTitle}</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
-                {isRtl
-                  ? "يجب الاشتراك في الكورس لتتمكن من كتابة تقييم"
-                  : "You need to enroll in this course before you can write a review"}
+                {text.enrollFirstDesc}
               </p>
             </div>
           </div>
@@ -125,11 +217,29 @@ export function CourseReviewForm({
     );
   }
 
-  if (existingReview) {
+  if (loadingMyReview) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-sm text-muted-foreground">
+          {text.yourReviewLoading}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (myReview) {
+    const status = (myReview.status || "pending") as ReviewStatus;
+    const statusLabel =
+      status === "approved"
+        ? text.status_approved
+        : status === "rejected"
+        ? text.status_rejected
+        : text.status_pending;
+
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Your Review</CardTitle>
+          <CardTitle>{text.yourReview}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -137,16 +247,17 @@ export function CourseReviewForm({
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star
                   key={star}
-                  className={`h-5 w-5 ${star <= existingReview.rating
+                  className={`h-5 w-5 ${
+                    star <= (myReview.rating || 0)
                       ? "fill-yellow-400 text-yellow-400"
                       : "text-gray-300"
-                    }`}
+                  }`}
                 />
               ))}
             </div>
-            <p className="text-sm text-muted-foreground">{existingReview.comment}</p>
+            <p className="text-sm text-muted-foreground">{myReview.comment}</p>
             <p className="text-xs text-muted-foreground">
-              Status: <span className="font-medium">{existingReview.status}</span>
+              {text.status}: <span className="font-medium">{statusLabel}</span>
             </p>
           </div>
         </CardContent>
@@ -157,12 +268,12 @@ export function CourseReviewForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Write a Review</CardTitle>
+        <CardTitle>{text.writeReview}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Rating</label>
+            <label className="block text-sm font-medium mb-2">{text.rating}</label>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -174,10 +285,11 @@ export function CourseReviewForm({
                   className="focus:outline-none"
                 >
                   <Star
-                    className={`h-8 w-8 transition-colors ${star <= (hoverRating || rating)
+                    className={`h-8 w-8 transition-colors ${
+                      star <= (hoverRating || rating)
                         ? "fill-yellow-400 text-yellow-400"
                         : "text-gray-300"
-                      }`}
+                    }`}
                   />
                 </button>
               ))}
@@ -185,18 +297,18 @@ export function CourseReviewForm({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Comment</label>
+            <label className="block text-sm font-medium mb-2">{text.comment}</label>
             <Textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Share your experience with this course..."
+              placeholder={text.commentPlaceholder}
               rows={4}
               required
             />
           </div>
 
           <Button type="submit" disabled={submitting}>
-            {submitting ? "Submitting..." : "Submit Review"}
+            {submitting ? text.submitting : text.submit}
           </Button>
         </form>
       </CardContent>

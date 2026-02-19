@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, User } from "lucide-react";
 import axiosInstance from "@/lib/axios";
@@ -22,19 +22,44 @@ interface Review {
 interface ReviewsListProps {
   courseId: string;
   locale: "ar" | "en";
+  refreshKey?: number;
 }
 
-export function CourseReviewsList({ courseId, locale }: ReviewsListProps) {
+export function CourseReviewsList({
+  courseId,
+  locale,
+  refreshKey = 0,
+}: ReviewsListProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const isRtl = locale === "ar";
+
+  const text = useMemo(
+    () =>
+      isRtl
+        ? {
+            noReviews: "لا توجد تقييمات بعد",
+            reviewsWord: "تقييم",
+            user: "مستخدم",
+            anonymous: "مستخدم مجهول",
+          }
+        : {
+            noReviews: "No reviews yet",
+            reviewsWord: "reviews",
+            user: "User",
+            anonymous: "Anonymous",
+          },
+    [isRtl]
+  );
 
   useEffect(() => {
     fetchReviews();
-  }, [courseId]);
+  }, [courseId, refreshKey]);
 
   const fetchReviews = async () => {
     try {
+      setLoading(true);
       const response = await axiosInstance.get(
         `/reviews/course/${courseId}?status=approved&limit=20`
       );
@@ -49,7 +74,7 @@ export function CourseReviewsList({ courseId, locale }: ReviewsListProps) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return locale === "ar"
+    return isRtl
       ? date.toLocaleDateString("ar-SA")
       : date.toLocaleDateString("en-US", {
           year: "numeric",
@@ -80,18 +105,11 @@ export function CourseReviewsList({ courseId, locale }: ReviewsListProps) {
   }
 
   if (reviews.length === 0) {
-    return (
-      <div className="text-center py-12 text-muted-foreground">
-        {locale === "ar"
-          ? "لا توجد تقييمات بعد"
-          : "No reviews yet"}
-      </div>
-    );
+    return <div className="text-center py-12 text-muted-foreground">{text.noReviews}</div>;
   }
 
   return (
     <div className="space-y-6">
-      {/* Stats Summary */}
       {stats && (
         <Card>
           <CardContent className="p-6">
@@ -113,8 +131,7 @@ export function CourseReviewsList({ courseId, locale }: ReviewsListProps) {
                   ))}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  {stats.totalReviews}{" "}
-                  {locale === "ar" ? "تقييم" : "reviews"}
+                  {stats.totalReviews} {text.reviewsWord}
                 </div>
               </div>
 
@@ -128,9 +145,7 @@ export function CourseReviewsList({ courseId, locale }: ReviewsListProps) {
                         style={{
                           width: `${
                             stats.totalReviews > 0
-                              ? (stats.distribution[rating] /
-                                  stats.totalReviews) *
-                                100
+                              ? ((stats.distribution[rating] || 0) / stats.totalReviews) * 100
                               : 0
                           }%`,
                         }}
@@ -147,7 +162,6 @@ export function CourseReviewsList({ courseId, locale }: ReviewsListProps) {
         </Card>
       )}
 
-      {/* Reviews List */}
       <div className="space-y-4">
         {reviews.map((review) => (
           <Card key={review.id}>
@@ -156,7 +170,7 @@ export function CourseReviewsList({ courseId, locale }: ReviewsListProps) {
                 <Avatar>
                   <AvatarImage
                     src={review.userId?.avatar}
-                    alt={review.userId?.fullName?.[locale] || "User"}
+                    alt={review.userId?.fullName?.[locale] || text.user}
                   />
                   <AvatarFallback>
                     <User className="h-5 w-5" />
@@ -167,7 +181,7 @@ export function CourseReviewsList({ courseId, locale }: ReviewsListProps) {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-medium">
-                        {review.userId?.fullName?.[locale] || "Anonymous"}
+                        {review.userId?.fullName?.[locale] || text.anonymous}
                       </div>
                       <div className="flex items-center gap-1">
                         {[1, 2, 3, 4, 5].map((star) => (
@@ -187,9 +201,7 @@ export function CourseReviewsList({ courseId, locale }: ReviewsListProps) {
                     </div>
                   </div>
 
-                  <p className="text-sm text-muted-foreground">
-                    {review.comment}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{review.comment}</p>
                 </div>
               </div>
             </CardContent>

@@ -64,6 +64,7 @@ export default function CoursePage() {
   const [enrolling, setEnrolling] = useState(false);
   const [certificate, setCertificate] = useState<any>(null);
   const [downloadingCert, setDownloadingCert] = useState(false);
+  const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -603,8 +604,7 @@ export default function CoursePage() {
                   isEnrolled={isEnrolled}
                   locale={locale as "ar" | "en"}
                   onReviewSubmitted={() => {
-                    // Refresh the page to show updated reviews
-                    window.location.reload();
+                    setReviewsRefreshKey((prev) => prev + 1);
                   }}
                 />
 
@@ -617,6 +617,7 @@ export default function CoursePage() {
                   <CourseReviewsList
                     courseId={(currentCourse.id || currentCourse._id) as string}
                     locale={locale as "ar" | "en"}
+                    refreshKey={reviewsRefreshKey}
                   />
                 </div>
               </CardContent>

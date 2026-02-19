@@ -1,5 +1,6 @@
 import { ReviewRepository } from "../repositories/reviewRepository.js";
 import Course from "../models/courseModel.js";
+import Progress from "../models/progressModel.js";
 import { ApiError } from "../utils/apiError.js";
 import path from "path";
 import mongoose from "mongoose";
@@ -87,10 +88,16 @@ export class ReviewService {
         throw new ApiError(404, "Course not found");
       }
 
-      // Check if user has access to the course (enrolled or owns it)
-      const hasAccess = course.enrolledStudents?.some(
-        (student) => student.toString() === reviewData.userId.toString()
-      );
+      // Check if user has access to the course:
+      // 1) course instructor
+      // 2) enrolled student (tracked in Progress collection)
+      const isInstructor =
+        course.instructorId?.toString() === reviewData.userId.toString();
+      const enrollment = await Progress.findOne({
+        userId: reviewData.userId,
+        courseId: reviewData.courseId,
+      }).select("_id");
+      const hasAccess = isInstructor || !!enrollment;
 
       if (!hasAccess) {
         throw new ApiError(403, "You must be enrolled in the course to review it");
