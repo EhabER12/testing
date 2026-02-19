@@ -249,9 +249,12 @@ export const enrollCourse = createAsyncThunk(
 // Get enrolled courses
 export const getEnrolledCourses = createAsyncThunk(
   "courses/enrolled",
-  async (_, { rejectWithValue }) => {
+  async (
+    params: { page?: number; limit?: number } | undefined,
+    { rejectWithValue }
+  ) => {
     try {
-      const response = await axios.get("/courses/my/enrolled");
+      const response = await axios.get("/courses/my/enrolled", { params });
       return response.data.data;
     } catch (error: any) {
       return rejectWithValue(
