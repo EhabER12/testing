@@ -1224,6 +1224,10 @@ function TeacherDashboard({ stats }: { stats: TeacherStats }) {
     return (isRtl ? value.ar : value.en) || value.en || value.ar || "";
   };
 
+  const courseTransactions = (profitStats?.recentTransactions || []).filter(
+    (transaction) => transaction.revenueType === "course_sale"
+  );
+
   return (
     <div
       className={`flex-1 space-y-4 p-4 md:p-8 pt-4 md:pt-6 ${isRtl ? "text-right" : ""}`}
@@ -1325,7 +1329,7 @@ function TeacherDashboard({ stats }: { stats: TeacherStats }) {
 
       {profitStats ? (
         <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
             {/* Total Profit Card */}
             <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1362,27 +1366,10 @@ function TeacherDashboard({ stats }: { stats: TeacherStats }) {
               </CardContent>
             </Card>
 
-            {/* Subscription Profit */}
-            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {isRtl ? "أرباح الاشتراكات" : "Subscription Profit"}
-                </CardTitle>
-                <Users className="h-4 w-4 text-purple-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-700">
-                  {formatMoney(profitStats.subscriptions?.totalProfit || 0, profitStats.currency)}
-                </div>
-                <p className="text-xs text-purple-600 mt-1">
-                  {profitStats.subscriptions?.avgPercentage?.toFixed(1) || 0}% {isRtl ? "متوسط النسبة" : "avg rate"}
-                </p>
-              </CardContent>
-            </Card>
           </div>
 
           {/* Recent Profit Transactions Table */}
-          {profitStats.recentTransactions && profitStats.recentTransactions.length > 0 && (
+          {courseTransactions.length > 0 && (
             <Card className="mt-4">
               <CardHeader>
                 <CardTitle>{isRtl ? "المعاملات الأخيرة" : "Recent Transactions"}</CardTitle>
@@ -1401,15 +1388,13 @@ function TeacherDashboard({ stats }: { stats: TeacherStats }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {profitStats.recentTransactions.map((transaction) => (
+                      {courseTransactions.map((transaction) => (
                         <tr key={transaction.id} className="border-b hover:bg-muted/50">
                           <td className="p-2">
                             {new Date(transaction.transactionDate).toLocaleDateString(isRtl ? "ar-SA" : "en-US")}
                           </td>
                           <td className="p-2">
-                            {transaction.revenueType === "course_sale"
-                              ? (isRtl ? "مبيعات الدورات" : "Course Sale")
-                              : (isRtl ? "اشتراك" : "Subscription")}
+                            {isRtl ? "مبيعات الدورات" : "Course Sale"}
                           </td>
                           <td className="p-2 text-right">{formatMoney(transaction.totalAmount, transaction.currency)}</td>
                           <td className="p-2 text-right">{transaction.profitPercentage}%</td>
@@ -1458,8 +1443,8 @@ function TeacherDashboard({ stats }: { stats: TeacherStats }) {
             <DollarSign className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground text-center">
               {isRtl
-                ? "لا توجد بيانات أرباح بعد. ستظهر البيانات عند حدوث مبيعات أو اشتراكات."
-                : "No profit data available yet. Data will appear when sales or subscriptions occur."}
+                ? "لا توجد بيانات أرباح بعد. ستظهر البيانات عند حدوث مبيعات."
+                : "No profit data available yet. Data will appear when sales occur."}
             </p>
           </CardContent>
         </Card>

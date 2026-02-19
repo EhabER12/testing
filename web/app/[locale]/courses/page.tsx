@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { getCourses } from "@/store/services/courseService";
+import { getCourses, getEnrolledCourses } from "@/store/services/courseService";
 import { addCourseToCart, openCart } from "@/store/slices/cartSlice";
 import { getCategories } from "@/store/slices/categorySlice";
 import { getPublicWebsiteSettingsThunk } from "@/store/services/settingsService";
@@ -34,9 +34,10 @@ export default function CoursesPage() {
   const locale = params.locale as string;
   const isRtl = locale === "ar";
 
-  const { courses, isLoading } = useAppSelector((state) => state.courses);
+  const { courses, enrolledCourses, isLoading } = useAppSelector((state) => state.courses);
   const { categories } = useAppSelector((state) => state.categories);
   const { publicSettings } = useAppSelector((state) => state.settings);
+  const { user } = useAppSelector((state) => state.auth);
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedAccess, setSelectedAccess] = useState<string>("all");
@@ -70,6 +71,12 @@ export default function CoursesPage() {
     dispatch(getPublicWebsiteSettingsThunk());
   }, [dispatch, debouncedSearch, selectedCategory, selectedLevel, selectedAccess]);
 
+  useEffect(() => {
+    if (user) {
+      dispatch(getEnrolledCourses({ page: 1, limit: 500 }));
+    }
+  }, [dispatch, user]);
+
   const getTextValue = (value: any): string => {
     if (!value) return "";
     if (typeof value === "string") return value;
@@ -96,6 +103,14 @@ export default function CoursesPage() {
 
   // Courses are now filtered server-side
   const filteredCourses = courses;
+  const enrolledCourseIds = new Set(
+    (enrolledCourses || []).map((course: any) => String(course.id || course._id))
+  );
+
+  const isCourseEnrolled = (course: any) => {
+    const courseId = String(course.id || course._id || "");
+    return !!user && enrolledCourseIds.has(courseId);
+  };
 
   const handleCourseClick = (slug: string | undefined) => {
     if (slug) {
@@ -103,7 +118,7 @@ export default function CoursesPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && courses.length === 0) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-16 w-16 animate-spin rounded-full border-4 border-genoun-green border-t-transparent"></div>
@@ -339,6 +354,10 @@ export default function CoursesPage() {
                     className="w-full"
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (isCourseEnrolled(course)) {
+                        handleCourseClick((course as any).slug);
+                        return;
+                      }
                       if (course.accessType === "paid") {
                         const courseId = (course.id || course._id) as string;
                         dispatch(
@@ -369,7 +388,11 @@ export default function CoursesPage() {
                     }}
                   >
                     <BookOpen className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-                    {course.accessType === "free"
+                    {isCourseEnrolled(course)
+                      ? isRtl
+                        ? "متابعة التعلم"
+                        : "Continue Learning"
+                      : course.accessType === "free"
                       ? isRtl
                         ? "سجل مجاناً"
                         : "Enroll Free"
