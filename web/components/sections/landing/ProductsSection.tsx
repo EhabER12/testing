@@ -249,7 +249,7 @@ export function ProductsSection({
                     {/* Discount Badge */}
                     {hasDiscount && (
                       <div className="absolute top-3 right-3 px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                        OFF {discountPercent}%
+                        {isRtl ? `خصم ${discountPercent}%` : `${discountPercent}% OFF`}
                       </div>
                     )}
 

@@ -164,12 +164,17 @@ export function ProductOptionsModal({
               {product.compareAtPrice &&
                 product.compareAtPrice > product.basePrice && (
                   <Badge className="bg-red-500 hover:bg-red-600 shadow-lg">
-                    {Math.round(
-                      ((product.compareAtPrice - product.basePrice) /
-                        product.compareAtPrice) *
-                        100
-                    )}
-                    % OFF
+                    {isRtl
+                      ? `خصم ${Math.round(
+                          ((product.compareAtPrice - product.basePrice) /
+                            product.compareAtPrice) *
+                            100
+                        )}%`
+                      : `${Math.round(
+                          ((product.compareAtPrice - product.basePrice) /
+                            product.compareAtPrice) *
+                            100
+                        )}% OFF`}
                   </Badge>
                 )}
             </div>

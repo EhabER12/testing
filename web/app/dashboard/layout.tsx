@@ -137,7 +137,7 @@ const menuItems: MenuItem[] = [
       },
       {
         titleKey: "admin.sidebar.books",
-        title: "Books",
+        title: "Digital Books",
         icon: <BookAIcon className="h-4 w-4" />,
         href: "/dashboard/books",
         roles: ["admin", "moderator", "teacher"],

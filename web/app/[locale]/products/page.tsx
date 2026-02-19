@@ -204,12 +204,17 @@ export default function ProductsPage() {
                       {product.compareAtPrice &&
                         product.compareAtPrice > product.basePrice && (
                           <Badge className="absolute top-3 right-3 bg-red-500 hover:bg-red-600">
-                            {Math.round(
-                              ((product.compareAtPrice - product.basePrice) /
-                                product.compareAtPrice) *
-                              100
-                            )}
-                            % OFF
+                            {isRtl
+                              ? `خصم ${Math.round(
+                                  ((product.compareAtPrice - product.basePrice) /
+                                    product.compareAtPrice) *
+                                    100
+                                )}%`
+                              : `${Math.round(
+                                  ((product.compareAtPrice - product.basePrice) /
+                                    product.compareAtPrice) *
+                                    100
+                                )}% OFF`}
                           </Badge>
                         )}
                     </div>

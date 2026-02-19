@@ -182,9 +182,13 @@ export default function BooksDashboardPage() {
     <div className="space-y-6 p-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Books</h1>
+          <h1 className="text-3xl font-bold">
+            {locale === "ar" ? "كتب رقمية" : "Digital Books"}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Upload and manage digital books (PDF)
+            {locale === "ar"
+              ? "رفع وإدارة الكتب الرقمية (PDF)"
+              : "Upload and manage digital books (PDF)"}
           </p>
         </div>
         {isAdmin && (
@@ -196,7 +200,9 @@ export default function BooksDashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Upload New Book</CardTitle>
+          <CardTitle>
+            {locale === "ar" ? "إضافة كتاب رقمي جديد" : "Upload New Digital Book"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
@@ -393,7 +399,15 @@ export default function BooksDashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{isAdmin ? "All Books" : "My Books"}</CardTitle>
+          <CardTitle>
+            {isAdmin
+              ? locale === "ar"
+                ? "كل الكتب الرقمية"
+                : "All Digital Books"
+              : locale === "ar"
+                ? "كتبي الرقمية"
+                : "My Digital Books"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -435,4 +449,3 @@ export default function BooksDashboardPage() {
     </div>
   );
 }
-
