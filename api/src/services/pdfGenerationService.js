@@ -222,24 +222,25 @@ class PDFGenerationService {
    * NOTE: For Arabic text, Amiri is preferred as it has full Arabic glyph support
    */
   getFontFilename(fontFamily, fontWeight = "normal") {
-    const normalizedWeight = this.normalizeFontWeight(fontWeight);
     const isBold = this.isBoldWeight(fontWeight);
     
     // Font map with weight variants
-    // For Arabic fonts, we prioritize those with proper Arabic glyph coverage
-    // Use NotoKufiArabic as it has better Presentation Forms support
+    // Font map with local bundled fonts (plus aliases for extra Arabic families)
     const fontMap = {
-      "Cairo": { regular: "NotoKufiArabic-Regular.ttf", bold: "NotoKufiArabic-Regular.ttf" },
+      "Cairo": { regular: "Cairo-Regular.ttf", bold: "Cairo-Regular.ttf" },
       "Amiri": { regular: "Amiri-Regular.ttf", bold: "Amiri-Regular.ttf" },
       "Tajawal": { regular: "Tajawal-Regular.ttf", bold: "Tajawal-Regular.ttf" },
       "Almarai": { regular: "Almarai-Regular.ttf", bold: "Almarai-Regular.ttf" },
       "Noto Kufi Arabic": { regular: "NotoKufiArabic-Regular.ttf", bold: "NotoKufiArabic-Regular.ttf" },
+      "Changa": { regular: "Tajawal-Regular.ttf", bold: "Tajawal-Regular.ttf" },
+      "El Messiri": { regular: "Cairo-Regular.ttf", bold: "Cairo-Regular.ttf" },
+      "Reem Kufi": { regular: "NotoKufiArabic-Regular.ttf", bold: "NotoKufiArabic-Regular.ttf" },
       "Great Vibes": { regular: "GreatVibes-Regular.ttf", bold: "GreatVibes-Regular.ttf" },
       "Dancing Script": { regular: "DancingScript-Regular.ttf", bold: "DancingScript-Regular.ttf" },
       "Pacifico": { regular: "Pacifico-Regular.ttf", bold: "Pacifico-Regular.ttf" },
     };
 
-    const fontConfig = fontMap[fontFamily] || fontMap["Cairo"]; // Default to NotoKufiArabic via Cairo mapping
+    const fontConfig = fontMap[fontFamily] || fontMap["Cairo"];
     return isBold ? fontConfig.bold : fontConfig.regular;
   }
 
@@ -537,13 +538,13 @@ class PDFGenerationService {
         const rawFontFamily = placeholderConfig.fontFamily;
         const rawFontWeight = placeholderConfig.fontWeight;
 
-        // Build config - X is always center, only fontSize and color are configurable
+        // Build config
         const config = {
-          x: width / 2, // Always center horizontally
+          x: rawX !== undefined && rawX !== null ? Number(rawX) : width / 2,
           y: rawY !== undefined && rawY !== null ? Number(rawY) : defaultY,
           fontSize: rawFontSize !== undefined && rawFontSize !== null && rawFontSize > 0 ? Number(rawFontSize) : 24,
           color: this.hexToRgb(rawColor && typeof rawColor === 'string' ? rawColor : "#000000"),
-          align: "center", // Always center
+          align: rawAlign && typeof rawAlign === 'string' ? rawAlign : "center",
           fontFamily: rawFontFamily && typeof rawFontFamily === 'string' ? rawFontFamily : "Cairo",
           fontWeight: rawFontWeight && typeof rawFontWeight === 'string' ? rawFontWeight : "normal",
         };
@@ -592,8 +593,17 @@ class PDFGenerationService {
         const font = fontCache[config.fontFamily];
         const textWidth = font.widthOfTextAtSize(processedText, config.fontSize);
 
-        // Calculate X position - always centered
-        let xPosition = config.x - textWidth / 2;
+        // Calculate X position based on alignment.
+        // X represents:
+        // - left edge when align=left
+        // - center anchor when align=center
+        // - right edge when align=right
+        let xPosition = config.x;
+        if (config.align === "center") {
+          xPosition = config.x - textWidth / 2;
+        } else if (config.align === "right") {
+          xPosition = config.x - textWidth;
+        }
 
         // Ensure text doesn't go off the page
         xPosition = Math.max(10, Math.min(xPosition, width - textWidth - 10));

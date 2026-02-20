@@ -67,7 +67,28 @@ import axios from "@/lib/axios";
 import Link from "next/link";
 
 // Google Fonts URL for all required fonts
-const GOOGLE_FONTS_URL = "https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@200..1000&family=Changa:wght@200..800&family=Dancing+Script:wght@400..700&family=Great+Vibes&family=Noto+Kufi+Arabic:wght@100..900&family=Pacifico&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap";
+const GOOGLE_FONTS_URL =
+  "https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@200..1000&family=Changa:wght@200..800&family=Dancing+Script:wght@400..700&family=El+Messiri:wght@400;500;700&family=Great+Vibes&family=Noto+Kufi+Arabic:wght@100..900&family=Pacifico&family=Reem+Kufi:wght@400..700&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap";
+
+const FONT_OPTIONS = [
+  { value: "Cairo", ar: "Cairo - القاهرة", en: "Cairo" },
+  { value: "Amiri", ar: "Amiri - الأميري", en: "Amiri" },
+  { value: "Tajawal", ar: "Tajawal - تجوال", en: "Tajawal" },
+  { value: "Almarai", ar: "Almarai - المرعي", en: "Almarai" },
+  { value: "Noto Kufi Arabic", ar: "Noto Kufi Arabic", en: "Noto Kufi Arabic" },
+  { value: "Changa", ar: "Changa - شانجا", en: "Changa" },
+  { value: "El Messiri", ar: "El Messiri - المسيري", en: "El Messiri" },
+  { value: "Reem Kufi", ar: "Reem Kufi - ريم كوفي", en: "Reem Kufi" },
+  { value: "Great Vibes", ar: "Great Vibes (توقيع)", en: "Great Vibes (Signature)" },
+  { value: "Dancing Script", ar: "Dancing Script (توقيع)", en: "Dancing Script (Signature)" },
+  { value: "Pacifico", ar: "Pacifico (توقيع)", en: "Pacifico (Signature)" },
+] as const;
+
+const ALIGN_OPTIONS = [
+  { value: "left", ar: "يسار", en: "Left" },
+  { value: "center", ar: "منتصف", en: "Center" },
+  { value: "right", ar: "يمين", en: "Right" },
+] as const;
 
 export default function CertificateDesignerPage() {
   const dispatch = useAppDispatch();
@@ -395,14 +416,17 @@ export default function CertificateDesignerPage() {
 
   const updatePlaceholder = (key: string, updates: Partial<Placeholder>, type: "standard" | "custom" = "standard", index: number = -1) => {
     if (type === "standard") {
+      const current = design.placeholders[key as keyof typeof design.placeholders] as Placeholder | null;
+      if (!current) return;
       setDesign({
         ...design,
         placeholders: {
           ...design.placeholders,
-          [key]: { ...design.placeholders[key as keyof typeof design.placeholders] as Placeholder, ...updates },
+          [key]: { ...current, ...updates },
         },
       });
     } else {
+      if (!design.placeholders.customText[index]) return;
       const newCustom = [...design.placeholders.customText];
       newCustom[index] = { ...newCustom[index], ...updates };
       setDesign({
@@ -438,15 +462,18 @@ export default function CertificateDesignerPage() {
     
     if (type === "standard") {
       const k = indexOrKey as keyof typeof design.placeholders;
-      const p = design.placeholders[k] as Placeholder;
+      const p = design.placeholders[k] as Placeholder | null;
+      if (!p) return;
       elementX = p.x;
       elementY = p.y;
     } else if (type === "custom") {
       const p = design.placeholders.customText[indexOrKey as number];
+      if (!p) return;
       elementX = p.x;
       elementY = p.y;
     } else if (type === "image") {
       const img = design.placeholders.images[indexOrKey as number];
+      if (!img) return;
       elementX = img.x;
       elementY = img.y;
     }
@@ -507,6 +534,12 @@ export default function CertificateDesignerPage() {
     // Only move if we weren't just dragging
     // Implementation of drag usually prevents click.
     // We can just rely on drag.
+  };
+
+  const getTextTransform = (align?: string) => {
+    if (align === "right") return "translateX(-100%)";
+    if (align === "center") return "translateX(-50%)";
+    return "none";
   };
 
   if (isLoading && !isEditing) {
@@ -825,14 +858,23 @@ export default function CertificateDesignerPage() {
                       
                       return (
                         <div className="space-y-4">
-                          {/* Y Position Control - text is always centered horizontally */}
-                          <div className="space-y-1">
-                            <Label className="text-xs">{isRtl ? "الموقع الرأسي (Y)" : "Vertical Position (Y)"}</Label>
-                            <Input 
-                              type="number" 
-                              value={p.y} 
-                              onChange={(e) => updatePlaceholder(k, { y: parseInt(e.target.value) || 0 })} 
-                            />
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">{isRtl ? "الموقع X" : "Position X"}</Label>
+                              <Input
+                                type="number"
+                                value={p.x}
+                                onChange={(e) => updatePlaceholder(k, { x: parseInt(e.target.value) || 0 })}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{isRtl ? "الموقع Y" : "Position Y"}</Label>
+                              <Input
+                                type="number"
+                                value={p.y}
+                                onChange={(e) => updatePlaceholder(k, { y: parseInt(e.target.value) || 0 })}
+                              />
+                            </div>
                           </div>
                           <div className="space-y-2">
                             <div className="flex justify-between text-xs">
@@ -858,14 +900,29 @@ export default function CertificateDesignerPage() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="Cairo">Cairo - القاهرة</SelectItem>
-                                <SelectItem value="Amiri">Amiri - الأميري</SelectItem>
-                                <SelectItem value="Tajawal">Tajawal - تجوال</SelectItem>
-                                <SelectItem value="Almarai">Almarai - المرعى</SelectItem>
-                                <SelectItem value="Noto Kufi Arabic">Noto Kufi Arabic</SelectItem>
-                                <SelectItem value="Great Vibes">✍️ Great Vibes (Signature)</SelectItem>
-                                <SelectItem value="Dancing Script">✍️ Dancing Script (Signature)</SelectItem>
-                                <SelectItem value="Pacifico">✍️ Pacifico (Signature)</SelectItem>
+                                {FONT_OPTIONS.map((font) => (
+                                  <SelectItem key={font.value} value={font.value}>
+                                    {isRtl ? font.ar : font.en}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>{isRtl ? "المحاذاة" : "Alignment"}</Label>
+                            <Select
+                              value={p.align || "center"}
+                              onValueChange={(val) => updatePlaceholder(k, { align: val })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ALIGN_OPTIONS.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {isRtl ? option.ar : option.en}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -883,6 +940,7 @@ export default function CertificateDesignerPage() {
                                 <SelectItem value="bold">{isRtl ? "عريض" : "Bold"}</SelectItem>
                                 <SelectItem value="500">Medium</SelectItem>
                                 <SelectItem value="600">Semi Bold</SelectItem>
+                                <SelectItem value="700">Bold 700</SelectItem>
                                 <SelectItem value="800">Extra Bold</SelectItem>
                               </SelectContent>
                             </Select>
@@ -927,14 +985,23 @@ export default function CertificateDesignerPage() {
                                 onChange={(e) => updatePlaceholder("", { text: e.target.value }, "custom", activeIndex)}
                               />
                             </div>
-                            {/* Y Position Control - text is always centered horizontally */}
-                            <div className="space-y-1">
-                              <Label className="text-xs">{isRtl ? "الموقع الرأسي (Y)" : "Vertical Position (Y)"}</Label>
-                              <Input 
-                                type="number" 
-                                value={design.placeholders.customText[activeIndex].y} 
-                                onChange={(e) => updatePlaceholder("", { y: parseInt(e.target.value) || 0 }, "custom", activeIndex)} 
-                              />
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-1">
+                                <Label className="text-xs">{isRtl ? "الموقع X" : "Position X"}</Label>
+                                <Input
+                                  type="number"
+                                  value={design.placeholders.customText[activeIndex].x}
+                                  onChange={(e) => updatePlaceholder("", { x: parseInt(e.target.value) || 0 }, "custom", activeIndex)}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">{isRtl ? "الموقع Y" : "Position Y"}</Label>
+                                <Input
+                                  type="number"
+                                  value={design.placeholders.customText[activeIndex].y}
+                                  onChange={(e) => updatePlaceholder("", { y: parseInt(e.target.value) || 0 }, "custom", activeIndex)}
+                                />
+                              </div>
                             </div>
                             <div className="space-y-2">
                               <div className="flex justify-between text-xs">
@@ -955,14 +1022,44 @@ export default function CertificateDesignerPage() {
                               >
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="Cairo">Cairo - القاهرة</SelectItem>
-                                  <SelectItem value="Amiri">Amiri - الأميري</SelectItem>
-                                  <SelectItem value="Tajawal">Tajawal - تجوال</SelectItem>
-                                  <SelectItem value="Almarai">Almarai - المرعى</SelectItem>
-                                  <SelectItem value="Noto Kufi Arabic">Noto Kufi Arabic</SelectItem>
-                                  <SelectItem value="Great Vibes">✍️ Great Vibes (Signature)</SelectItem>
-                                  <SelectItem value="Dancing Script">✍️ Dancing Script (Signature)</SelectItem>
-                                  <SelectItem value="Pacifico">✍️ Pacifico (Signature)</SelectItem>
+                                  {FONT_OPTIONS.map((font) => (
+                                    <SelectItem key={font.value} value={font.value}>
+                                      {isRtl ? font.ar : font.en}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{isRtl ? "المحاذاة" : "Alignment"}</Label>
+                              <Select
+                                value={design.placeholders.customText[activeIndex].align || "center"}
+                                onValueChange={(val) => updatePlaceholder("", { align: val }, "custom", activeIndex)}
+                              >
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {ALIGN_OPTIONS.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {isRtl ? option.ar : option.en}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{isRtl ? "سُمك الخط" : "Font Weight"}</Label>
+                              <Select
+                                value={design.placeholders.customText[activeIndex].fontWeight || "normal"}
+                                onValueChange={(val) => updatePlaceholder("", { fontWeight: val }, "custom", activeIndex)}
+                              >
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="normal">{isRtl ? "عادي" : "Normal"}</SelectItem>
+                                  <SelectItem value="bold">{isRtl ? "عريض" : "Bold"}</SelectItem>
+                                  <SelectItem value="500">Medium</SelectItem>
+                                  <SelectItem value="600">Semi Bold</SelectItem>
+                                  <SelectItem value="700">Bold 700</SelectItem>
+                                  <SelectItem value="800">Extra Bold</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1074,7 +1171,7 @@ export default function CertificateDesignerPage() {
               </div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Move className="h-3 w-3" />
-                {isRtl ? "انقر على الصورة لتغيير مكان النص" : "Click image to position selected text"}
+                {isRtl ? "اسحب النصوص والصور بحرية داخل القالب" : "Drag text and images freely inside the template"}
               </p>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto p-8 flex items-start justify-center">
@@ -1115,22 +1212,20 @@ export default function CertificateDesignerPage() {
                     k === "issuedDate" ? "2026-01-25" :
                     "CERT-2026-XXXX";
 
-                  // Always centered horizontally
-                  const leftPos = (design.width / 2) * previewScale;
-                  const transform = "translateX(-50%)";
-
                   return (
                     <div
                       key={k}
-                      className={`absolute pointer-events-auto select-none border-2 transition-colors whitespace-nowrap ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
+                      onMouseDown={(e) => handleMouseDown(e, "standard", k)}
+                      className={`absolute pointer-events-auto select-none border-2 transition-colors whitespace-nowrap cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
                         top: p.y * previewScale,
-                        left: leftPos,
-                        transform: transform,
+                        left: p.x * previewScale,
+                        transform: getTextTransform(p.align),
                         color: p.color,
                         fontSize: p.fontSize * previewScale,
                         fontFamily: p.fontFamily,
                         fontWeight: p.fontWeight as any,
+                        textAlign: (p.align as any) || "center",
                         lineHeight: 1.2,
                         padding: `${4 * previewScale}px ${8 * previewScale}px`,
                         direction: isRtl || /[\u0600-\u06FF]/.test(sampleText) ? "rtl" : "ltr",
@@ -1146,26 +1241,20 @@ export default function CertificateDesignerPage() {
                   const isActive = activeType === "custom" && activeIndex === idx;
                   const text = p.text || "Custom Text";
                   
-                  // Always centered horizontally
-                  const leftPos = (design.width / 2) * previewScale;
-                  const transform = "translateX(-50%)";
-
                   return (
                     <div
                       key={`custom-${idx}`}
-                      onClick={() => {
-                        setActiveType("custom");
-                        setActiveIndex(idx);
-                      }}
-                      className={`absolute pointer-events-auto select-none border-2 transition-colors whitespace-nowrap cursor-pointer ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
+                      onMouseDown={(e) => handleMouseDown(e, "custom", idx)}
+                      className={`absolute pointer-events-auto select-none border-2 transition-colors whitespace-nowrap cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
                         top: p.y * previewScale,
-                        left: leftPos,
-                        transform: transform,
+                        left: p.x * previewScale,
+                        transform: getTextTransform(p.align),
                         color: p.color,
                         fontSize: p.fontSize * previewScale,
                         fontFamily: p.fontFamily,
                         fontWeight: p.fontWeight as any,
+                        textAlign: (p.align as any) || "center",
                         lineHeight: 1.2,
                         padding: `${4 * previewScale}px ${8 * previewScale}px`,
                         direction: /[\u0600-\u06FF]/.test(text) ? "rtl" : "ltr",
