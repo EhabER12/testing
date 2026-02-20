@@ -847,7 +847,7 @@ export default function SettingsDashboardPage() {
   }
 
   return (
-    <div className="p-6" dir={isRtl ? "rtl" : "ltr"}>
+    <div className="min-w-0 p-4 sm:p-6" dir={isRtl ? "rtl" : "ltr"}>
       <h1 className="text-2xl font-bold mb-6">
         {t("admin.settings.websiteSettings")}
       </h1>
@@ -870,13 +870,14 @@ export default function SettingsDashboardPage() {
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="min-w-0 space-y-8">
         <Tabs
           defaultValue="general"
           dir={isRtl ? "rtl" : "ltr"}
           onValueChange={setActiveTab}
         >
-          <TabsList className="mb-6">
+          <div className="mb-6 w-full overflow-x-auto pb-2">
+            <TabsList className="h-auto w-max min-w-max">
             <TabsTrigger value="general">
               {t("admin.settings.general")}
             </TabsTrigger>
@@ -931,7 +932,8 @@ export default function SettingsDashboardPage() {
             <TabsTrigger value="hero-stats">
               {isRtl ? "إحصائيات Hero Section" : "Hero Stats"}
             </TabsTrigger>
-          </TabsList>
+            </TabsList>
+          </div>
 
           <TabsContent value="general" className="space-y-6">
             {/* General Settings Card */}
@@ -2909,7 +2911,7 @@ export default function SettingsDashboardPage() {
 
         {/* Save Button */}
         {activeTab !== "ai-articles" && (
-          <div className="sticky bottom-0 z-10 flex justify-end bg-background p-4 border-t mt-6 -mx-6 px-6 shadow-sm">
+          <div className="sticky bottom-0 z-10 mt-6 flex justify-end border-t bg-background p-4 shadow-sm -mx-4 px-4 sm:-mx-6 sm:px-6">
             <Button
               type="submit"
               disabled={isLoading}

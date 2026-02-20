@@ -465,7 +465,7 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
       <aside
         dir={isRtl ? "rtl" : "ltr"}
         className={`fixed h-screen w-64 ${isRtl ? "border-l" : "border-r"
-          } bg-header-bg overflow-y-auto z-[60] transition-transform duration-300 ${isRtl ? "right-0" : "left-0"
+          } bg-header-bg overflow-y-auto overflow-x-hidden z-[60] transition-transform duration-300 ${isRtl ? "right-0" : "left-0"
           } ${sidebarOpen
             ? "translate-x-0"
             : isRtl
@@ -663,7 +663,7 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
       </aside >
       <main
         className={`${isRtl ? "lg:mr-64" : "lg:ml-64"
-          } flex-1 bg-gray-50 pt-14 lg:pt-0`}
+          } min-w-0 flex-1 bg-gray-50 pt-14 lg:pt-0`}
         dir={isRtl ? "rtl" : "ltr"}
       >
         {children}
