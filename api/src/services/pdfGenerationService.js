@@ -250,7 +250,6 @@ class PDFGenerationService {
    */
   isArabicCompatibleFont(fontFamily) {
     const arabicFonts = new Set([
-      "Cairo",
       "Amiri",
       "Tajawal",
       "Almarai",
@@ -269,7 +268,7 @@ class PDFGenerationService {
   getBestFontForText(text, requestedFontFamily) {
     const desiredFont = requestedFontFamily || "Cairo";
     if (this.containsArabic(String(text)) && !this.isArabicCompatibleFont(desiredFont)) {
-      return "Cairo";
+      return "Amiri";
     }
     return desiredFont;
   }
@@ -377,17 +376,26 @@ class PDFGenerationService {
           const regularBytes = await this.loadFontBytes(regularPath);
           return await pdfDoc.embedFont(regularBytes);
         } catch (e) {
-          // Continue to Cairo fallback
+          // Continue to fallback chain
         }
       }
       
-      // Fallback to Cairo
+      // Fallback to Amiri (Arabic-safe)
+      try {
+        const fallbackPath = path.join(FONTS_PATH, "Amiri-Regular.ttf");
+        const fallbackBytes = await this.loadFontBytes(fallbackPath);
+        return await pdfDoc.embedFont(fallbackBytes);
+      } catch (fallbackError) {
+        // Continue to Cairo fallback
+      }
+
+      // Secondary fallback to Cairo
       try {
         const fallbackPath = path.join(FONTS_PATH, "Cairo-Regular.ttf");
         const fallbackBytes = await this.loadFontBytes(fallbackPath);
         return await pdfDoc.embedFont(fallbackBytes);
       } catch (fallbackError) {
-        console.error("Cairo font not found, using Helvetica");
+        console.error("Amiri/Cairo fonts not found, using Helvetica");
         // Use standard PDF font
         const { StandardFonts } = await import('pdf-lib');
         return await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -529,12 +537,12 @@ class PDFGenerationService {
 
       const { width, height } = page.getSize();
 
-      // Load default font (Cairo) for fallback
-      const defaultFont = await this.loadFont(pdfDoc, "Cairo");
+      // Load default font (Amiri) for fallback
+      const defaultFont = await this.loadFont(pdfDoc, "Amiri");
 
       // Font cache to avoid loading same font multiple times
       const fontCache = {
-        "Cairo": defaultFont
+        "Amiri": defaultFont
       };
 
       // Try to load background image if provided
