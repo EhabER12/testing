@@ -542,6 +542,14 @@ export default function CertificateDesignerPage() {
     return "none";
   };
 
+  const getRenderableFontFamily = (fontFamily?: string) => {
+    if (!fontFamily) return "Cairo";
+    if (fontFamily === "Changa") return "Tajawal";
+    if (fontFamily === "El Messiri") return "Cairo";
+    if (fontFamily === "Reem Kufi") return "Noto Kufi Arabic";
+    return fontFamily;
+  };
+
   if (isLoading && !isEditing) {
     return (
       <div className="flex h-full items-center justify-center p-8">
@@ -1185,7 +1193,7 @@ export default function CertificateDesignerPage() {
                   width: design.width,
                   height: design.height,
                   transform: `scale(${previewScale})`,
-                  transformOrigin: "top center",
+                  transformOrigin: "top left",
                 }}
               >
                 {design.backgroundImage && (
@@ -1218,16 +1226,15 @@ export default function CertificateDesignerPage() {
                       onMouseDown={(e) => handleMouseDown(e, "standard", k)}
                       className={`absolute pointer-events-auto select-none border-2 transition-colors whitespace-nowrap cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
-                        top: p.y * previewScale,
-                        left: p.x * previewScale,
+                        top: p.y,
+                        left: p.x,
                         transform: getTextTransform(p.align),
                         color: p.color,
-                        fontSize: p.fontSize * previewScale,
-                        fontFamily: p.fontFamily,
+                        fontSize: p.fontSize,
+                        fontFamily: getRenderableFontFamily(p.fontFamily),
                         fontWeight: p.fontWeight as any,
                         textAlign: (p.align as any) || "center",
-                        lineHeight: 1.2,
-                        padding: `${4 * previewScale}px ${8 * previewScale}px`,
+                        lineHeight: 1,
                         direction: isRtl || /[\u0600-\u06FF]/.test(sampleText) ? "rtl" : "ltr",
                       }}
                     >
@@ -1247,16 +1254,15 @@ export default function CertificateDesignerPage() {
                       onMouseDown={(e) => handleMouseDown(e, "custom", idx)}
                       className={`absolute pointer-events-auto select-none border-2 transition-colors whitespace-nowrap cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
-                        top: p.y * previewScale,
-                        left: p.x * previewScale,
+                        top: p.y,
+                        left: p.x,
                         transform: getTextTransform(p.align),
                         color: p.color,
-                        fontSize: p.fontSize * previewScale,
-                        fontFamily: p.fontFamily,
+                        fontSize: p.fontSize,
+                        fontFamily: getRenderableFontFamily(p.fontFamily),
                         fontWeight: p.fontWeight as any,
                         textAlign: (p.align as any) || "center",
-                        lineHeight: 1.2,
-                        padding: `${4 * previewScale}px ${8 * previewScale}px`,
+                        lineHeight: 1,
                         direction: /[\u0600-\u06FF]/.test(text) ? "rtl" : "ltr",
                       }}
                     >
@@ -1278,10 +1284,10 @@ export default function CertificateDesignerPage() {
                       onMouseDown={(e) => handleMouseDown(e, "image", idx)}
                       className={`absolute pointer-events-auto select-none border-2 transition-colors cursor-move ${isActive ? 'border-genoun-green bg-genoun-green/10 z-10' : 'border-dashed border-gray-400/50 hover:border-genoun-green/50'}`}
                       style={{
-                        top: img.y * previewScale,
-                        left: img.x * previewScale,
-                        width: img.width * previewScale,
-                        height: img.height * previewScale,
+                        top: img.y,
+                        left: img.x,
+                        width: img.width,
+                        height: img.height,
                       }}
                     >
                       <img

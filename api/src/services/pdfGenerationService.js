@@ -605,9 +605,6 @@ class PDFGenerationService {
           xPosition = config.x - textWidth;
         }
 
-        // Ensure text doesn't go off the page
-        xPosition = Math.max(10, Math.min(xPosition, width - textWidth - 10));
-
         // Transform Y coordinate: Web uses top-down (Y from top), PDF uses bottom-up (Y from bottom)
         // In web/CSS: Y is the TOP of the text element (distance from page top)
         // In pdf-lib: Y is the BASELINE of the text (distance from page bottom)
@@ -616,15 +613,12 @@ class PDFGenerationService {
         const ascent = config.fontSize * 0.75;
         const pdfY = height - config.y - ascent;
 
-        // Ensure Y is within bounds
-        const safePdfY = Math.max(10, Math.min(pdfY, height - 10));
-
         // Check if we should simulate bold
         const isBold = this.isBoldWeight(config.fontWeight);
 
         console.log('Final draw position:', {
           xPosition,
-          safePdfY,
+          pdfY,
           textWidth,
           isBold,
         });
@@ -636,19 +630,19 @@ class PDFGenerationService {
           for (const [ox, oy] of offsets) {
             page.drawText(processedText, {
               x: xPosition + ox,
-              y: safePdfY + oy,
+              y: pdfY + oy,
               size: config.fontSize,
               font: font,
               color: config.color,
             });
           }
         } else {
-          page.drawText(processedText, {
-            x: xPosition,
-            y: safePdfY,
-            size: config.fontSize,
-            font: font,
-            color: config.color,
+            page.drawText(processedText, {
+              x: xPosition,
+              y: pdfY,
+              size: config.fontSize,
+              font: font,
+              color: config.color,
           });
         }
       };
