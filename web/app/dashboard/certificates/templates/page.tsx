@@ -135,6 +135,29 @@ const convertImageFileToPng = async (file: File): Promise<File> => {
   }
 };
 
+const getImageExtensionFromPath = (imagePath: string) => {
+  if (!imagePath) return "";
+
+  let cleanPath = imagePath.trim();
+  if (cleanPath.startsWith("http://") || cleanPath.startsWith("https://")) {
+    try {
+      cleanPath = new URL(cleanPath).pathname;
+    } catch (error) {
+      // Keep original path when URL parsing fails
+    }
+  }
+
+  cleanPath = cleanPath.split("?")[0].split("#")[0];
+  const ext = cleanPath.split(".").pop()?.toLowerCase() || "";
+  return ext;
+};
+
+const isPdfCompatibleImagePath = (imagePath: string) => {
+  const ext = getImageExtensionFromPath(imagePath);
+  if (!ext) return true;
+  return PDF_COMPATIBLE_IMAGE_EXTENSIONS.has(ext);
+};
+
 export default function CertificateDesignerPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -431,7 +454,8 @@ export default function CertificateDesignerPage() {
   };
 
   const handleSave = async () => {
-    if (!design.name) {
+    const normalizedName = design.name.trim();
+    if (!normalizedName) {
       toast.error(isRtl ? "يرجى إدخال اسم القالب" : "Please enter template name");
       return;
     }
@@ -440,8 +464,42 @@ export default function CertificateDesignerPage() {
       return;
     }
 
+    const selectedTemplateId = selectedTemplate?.id || (selectedTemplate as any)?._id;
+    const hasDuplicateName = templates.some((template) => {
+      const currentTemplateId = template.id || (template as any)._id;
+      return (
+        currentTemplateId !== selectedTemplateId &&
+        (template.name || "").trim().toLowerCase() === normalizedName.toLowerCase()
+      );
+    });
+    if (hasDuplicateName) {
+      toast.error(isRtl ? "Ø§Ø³Ù… Ø§Ù„Ù‚Ø§Ù„Ø¨ Ù…Ø³ØªØ®Ø¯Ù… Ø¨Ø§Ù„ÙØ¹Ù„ØŒ Ø§Ø®ØªØ± Ø§Ø³Ù…Ù‹Ø§ Ù…Ø®ØªÙ„ÙÙ‹Ø§" : "Template name already exists. Choose a different name.");
+      return;
+    }
+
+    if (!isPdfCompatibleImagePath(design.backgroundImage)) {
+      toast.error(
+        isRtl
+          ? "Ø®Ù„ÙÙŠØ© Ø§Ù„Ù‚Ø§Ù„Ø¨ Ù„Ø§Ø²Ù… ØªÙƒÙˆÙ† PNG Ø£Ùˆ JPG/JPEG"
+          : "Background image must be PNG or JPG/JPEG"
+      );
+      return;
+    }
+
+    const invalidExtraImage = (design.placeholders.images || []).find(
+      (img) => !isPdfCompatibleImagePath(img.url)
+    );
+    if (invalidExtraImage) {
+      toast.error(
+        isRtl
+          ? "Ø¨Ø¹Ø¶ Ø§Ù„ØµÙˆØ± Ø§Ù„Ù…Ø¶Ø§ÙØ© ØºÙŠØ± Ù…Ø¯Ø¹ÙˆÙ…Ø© ÙÙŠ PDF. Ø§Ø³ØªØ®Ø¯Ù… PNG Ø£Ùˆ JPG/JPEG."
+          : "Some added images are not PDF-compatible. Use PNG or JPG/JPEG."
+      );
+      return;
+    }
+
     // Clean up empty values before sending
-    const cleanedData = { ...design };
+    const cleanedData = { ...design, name: normalizedName };
     if (cleanedData.sheetName) {
       cleanedData.sheetName = cleanedData.sheetName.trim();
     }

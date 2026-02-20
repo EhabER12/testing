@@ -2,6 +2,15 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "@/lib/axios";
 import { BilingualText } from "./courseService";
 
+const getApiErrorMessage = (error: any, fallback: string) => {
+  return (
+    error?.response?.data?.error?.message ||
+    error?.response?.data?.message ||
+    error?.message ||
+    fallback
+  );
+};
+
 export interface Certificate {
   id: string;
   _id?: string;
@@ -368,9 +377,7 @@ export const createTemplate = createAsyncThunk(
       const response = await axios.post("/certificates/templates", data);
       return response.data.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to create template"
-      );
+      return rejectWithValue(getApiErrorMessage(error, "Failed to create template"));
     }
   }
 );
@@ -383,9 +390,7 @@ export const updateTemplate = createAsyncThunk(
       const response = await axios.put(`/certificates/templates/${id}`, data);
       return response.data.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to update template"
-      );
+      return rejectWithValue(getApiErrorMessage(error, "Failed to update template"));
     }
   }
 );
