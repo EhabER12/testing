@@ -246,6 +246,35 @@ class PDFGenerationService {
   }
 
   /**
+   * Check whether a font family supports Arabic glyphs in our bundled set
+   */
+  isArabicCompatibleFont(fontFamily) {
+    const arabicFonts = new Set([
+      "Cairo",
+      "Amiri",
+      "Tajawal",
+      "Almarai",
+      "Noto Kufi Arabic",
+      "Changa",
+      "El Messiri",
+      "Reem Kufi",
+    ]);
+
+    return arabicFonts.has(String(fontFamily || "").trim());
+  }
+
+  /**
+   * Select the safest font for the provided text
+   */
+  getBestFontForText(text, requestedFontFamily) {
+    const desiredFont = requestedFontFamily || "Cairo";
+    if (this.containsArabic(String(text)) && !this.isArabicCompatibleFont(desiredFont)) {
+      return "Cairo";
+    }
+    return desiredFont;
+  }
+
+  /**
    * Normalize font weight to standard values
    */
   normalizeFontWeight(fontWeight) {
@@ -602,6 +631,15 @@ class PDFGenerationService {
           fontWeight: rawFontWeight && typeof rawFontWeight === 'string' ? rawFontWeight : "normal",
         };
 
+        // Arabic text needs a font with Arabic glyph support, otherwise text may appear blank in exported PDFs
+        const safeFontFamily = this.getBestFontForText(text, config.fontFamily);
+        if (safeFontFamily !== config.fontFamily) {
+          console.warn(
+            `Font "${config.fontFamily}" does not support Arabic for text "${String(text).substring(0, 30)}". Falling back to Cairo.`
+          );
+          config.fontFamily = safeFontFamily;
+        }
+
         // Detect if text is RTL (Arabic)
         const textIsRtl = this.isRtlText(String(text));
         const textHasArabic = this.containsArabic(String(text));
@@ -776,11 +814,27 @@ class PDFGenerationService {
 
       // Normalize all placeholders before processing with appropriate default Y positions
       // Handle null values for deleted standard elements
+      const resolveStandardPlaceholder = (key, defaultY) => {
+        const hasKey = Object.prototype.hasOwnProperty.call(placeholders, key);
+
+        // If key is missing (older templates), use defaults instead of treating it as deleted
+        if (!hasKey) {
+          return normalizePlaceholderWithDefaultY(undefined, defaultY);
+        }
+
+        // Explicit null means user deleted that standard element
+        if (placeholders[key] === null) {
+          return null;
+        }
+
+        return normalizePlaceholderWithDefaultY(placeholders[key], defaultY);
+      };
+
       const normalizedPlaceholders = {
-        studentName: placeholders.studentName ? normalizePlaceholderWithDefaultY(placeholders.studentName, 300) : null,
-        courseName: placeholders.courseName ? normalizePlaceholderWithDefaultY(placeholders.courseName, 400) : null,
-        issuedDate: placeholders.issuedDate ? normalizePlaceholderWithDefaultY(placeholders.issuedDate, 500) : null,
-        certificateNumber: placeholders.certificateNumber ? normalizePlaceholderWithDefaultY(placeholders.certificateNumber, 600) : null,
+        studentName: resolveStandardPlaceholder("studentName", 300),
+        courseName: resolveStandardPlaceholder("courseName", 400),
+        issuedDate: resolveStandardPlaceholder("issuedDate", 500),
+        certificateNumber: resolveStandardPlaceholder("certificateNumber", 600),
         customText: (placeholders.customText || []).map(ct => this.normalizeplaceholder(ct, width, height, true)).filter(Boolean),
         images: placeholders.images || [],
       };

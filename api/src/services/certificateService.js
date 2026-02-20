@@ -895,49 +895,40 @@ class CertificateService {
     // ALWAYS use fresh data from populated relations for accuracy
     // Stored values in certificate might be stale or empty
     
-    // Get student name - prefer populated user data over stored values
-    let studentNameData = { ar: '', en: '' };
-    if (certificate.userId && certificate.userId.fullName) {
-      // Use fresh data from populated user
-      studentNameData = {
-        ar: certificate.userId.fullName.ar || certificate.userId.fullName.en || '',
-        en: certificate.userId.fullName.en || certificate.userId.fullName.ar || ''
-      };
-      console.log('Using fresh student name from populated user:', JSON.stringify(studentNameData));
-    } else if (certificate.studentName && (certificate.studentName.ar || certificate.studentName.en)) {
-      // Fallback to stored values if no populated user
-      studentNameData = certificate.studentName;
-      console.log('Using stored student name:', JSON.stringify(studentNameData));
-    }
+    const normalizeBilingual = (value) => ({
+      ar: (value?.ar || '').trim(),
+      en: (value?.en || '').trim(),
+    });
+
+    // Get student name by merging populated user data with stored certificate value.
+    // This preserves manually entered student names even when user profile is incomplete.
+    const userStudentName = normalizeBilingual(certificate.userId?.fullName || {});
+    const storedStudentName = normalizeBilingual(certificate.studentName || {});
+    let studentNameData = {
+      ar: userStudentName.ar || storedStudentName.ar || userStudentName.en || storedStudentName.en || '',
+      en: userStudentName.en || storedStudentName.en || userStudentName.ar || storedStudentName.ar || '',
+    };
+    console.log('Resolved student name (merged user + stored):', JSON.stringify(studentNameData));
 
     // Get course/package name - ALWAYS prefer populated relation data
-    let courseNameData = { ar: '', en: '' };
+    let sourceName = {};
     if (certificate.courseId && certificate.courseId.title) {
-      // Use fresh data from populated course
-      courseNameData = {
-        ar: certificate.courseId.title.ar || certificate.courseId.title.en || '',
-        en: certificate.courseId.title.en || certificate.courseId.title.ar || ''
-      };
-      console.log('Using fresh course name from populated course:', JSON.stringify(courseNameData));
+      sourceName = certificate.courseId.title;
+      console.log('Using course title as primary source');
     } else if (certificate.quizId && certificate.quizId.title) {
-      // Use fresh data from populated quiz
-      courseNameData = {
-        ar: certificate.quizId.title.ar || certificate.quizId.title.en || '',
-        en: certificate.quizId.title.en || certificate.quizId.title.ar || ''
-      };
-      console.log('Using fresh quiz name from populated quiz:', JSON.stringify(courseNameData));
+      sourceName = certificate.quizId.title;
+      console.log('Using quiz title as primary source');
     } else if (certificate.packageId && certificate.packageId.name) {
-      // Use fresh data from populated package
-      courseNameData = {
-        ar: certificate.packageId.name.ar || certificate.packageId.name.en || '',
-        en: certificate.packageId.name.en || certificate.packageId.name.ar || ''
-      };
-      console.log('Using fresh package name from populated package:', JSON.stringify(courseNameData));
-    } else if (certificate.courseName && (certificate.courseName.ar || certificate.courseName.en)) {
-      // Last resort: use stored values
-      courseNameData = certificate.courseName;
-      console.log('Using stored course name:', JSON.stringify(courseNameData));
+      sourceName = certificate.packageId.name;
+      console.log('Using package name as primary source');
     }
+    const primaryCourseName = normalizeBilingual(sourceName);
+    const storedCourseName = normalizeBilingual(certificate.courseName || {});
+    let courseNameData = {
+      ar: primaryCourseName.ar || storedCourseName.ar || primaryCourseName.en || storedCourseName.en || '',
+      en: primaryCourseName.en || storedCourseName.en || primaryCourseName.ar || storedCourseName.ar || '',
+    };
+    console.log('Resolved course name (merged source + stored):', JSON.stringify(courseNameData));
 
     // DEBUG: Log resolved values
     console.log('=== RESOLVED DATA FROM POPULATED RELATIONS ===');
@@ -993,8 +984,8 @@ class CertificateService {
     // Determine preferred locale - DEFAULT TO ARABIC
     // Only use English if Arabic data is completely missing
     let preferredLocale = 'ar';  // Default to Arabic for this platform
-    const studentNameAr = certificate.studentName?.ar || '';
-    const studentNameEn = certificate.studentName?.en || '';
+    const studentNameAr = finalStudentName.ar || '';
+    const studentNameEn = finalStudentName.en || '';
     
     // Only switch to English if there's absolutely no Arabic content
     if (!studentNameAr && studentNameEn) {
