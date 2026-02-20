@@ -232,31 +232,37 @@ class CertificateService {
     if (!course && !pkg && !sheetNameFromStudent && !quiz) {
       throw new Error("Source (Course/Package/Sheet/Quiz) not found");
     }
-
     // Determine Names (allow override)
-    let studentNameAr = "الطالب";
+    let studentNameAr = "\u0627\u0644\u0637\u0627\u0644\u0628";
     let studentNameEn = "Student";
+    const cleanName = (value) => (typeof value === "string" ? value.trim() : "");
 
     if (studentNameOverride) {
       if (typeof studentNameOverride === "string") {
-        studentNameAr = studentNameOverride || studentNameAr;
-        studentNameEn = studentNameOverride || studentNameEn;
+        const clean = cleanName(studentNameOverride);
+        studentNameAr = clean || studentNameAr;
+        studentNameEn = clean || studentNameEn;
       } else {
-        studentNameAr = studentNameOverride.ar || studentNameOverride.en || studentNameAr;
-        studentNameEn = studentNameOverride.en || studentNameOverride.ar || studentNameEn;
+        const arOverride = cleanName(studentNameOverride.ar);
+        const enOverride = cleanName(studentNameOverride.en);
+        studentNameAr = arOverride || enOverride || studentNameAr;
+        studentNameEn = enOverride || arOverride || studentNameEn;
       }
     } else if (studentMember) {
       // Handle both name and studentName properties
       const nameObj = studentMember.name || studentMember.studentName;
       if (nameObj) {
-        studentNameAr = nameObj.ar || nameObj.en || "الطالب";
-        studentNameEn = nameObj.en || nameObj.ar || "Student";
+        const arName = cleanName(nameObj.ar);
+        const enName = cleanName(nameObj.en);
+        studentNameAr = arName || enName || "\u0627\u0644\u0637\u0627\u0644\u0628";
+        studentNameEn = enName || arName || "Student";
       }
     } else if (user) {
-      studentNameAr = user.fullName?.ar || user.fullName?.en || "الطالب";
-      studentNameEn = user.fullName?.en || user.fullName?.ar || "Student";
+      const arUserName = cleanName(user.fullName?.ar);
+      const enUserName = cleanName(user.fullName?.en);
+      studentNameAr = arUserName || enUserName || "\u0627\u0644\u0637\u0627\u0644\u0628";
+      studentNameEn = enUserName || arUserName || "Student";
     }
-
     // Generate certificate
     const certificateNumber = this.generateCertificateNumber();
 
@@ -778,6 +784,7 @@ class CertificateService {
   async generateCertificatePDF(certificateId) {
     const certificate = await Certificate.findById(certificateId)
       .populate("userId", "fullName")
+      .populate("studentMemberId", "name studentName")
       .populate("courseId", "title certificateSettings")
       .populate("quizId", "title slug")
       .populate("packageId", "name");  // Add package populate
@@ -900,15 +907,18 @@ class CertificateService {
       en: (value?.en || '').trim(),
     });
 
-    // Get student name by merging populated user data with stored certificate value.
-    // This preserves manually entered student names even when user profile is incomplete.
-    const userStudentName = normalizeBilingual(certificate.userId?.fullName || {});
+    // Get student name with sheet/studentMember data as highest priority.
+    // This ensures extracted certificates always reflect the actual sheet member name.
+    const sheetStudentName = normalizeBilingual(
+      certificate.studentMemberId?.name || certificate.studentMemberId?.studentName || {}
+    );
     const storedStudentName = normalizeBilingual(certificate.studentName || {});
+    const userStudentName = normalizeBilingual(certificate.userId?.fullName || {});
     let studentNameData = {
-      ar: userStudentName.ar || storedStudentName.ar || userStudentName.en || storedStudentName.en || '',
-      en: userStudentName.en || storedStudentName.en || userStudentName.ar || storedStudentName.ar || '',
+      ar: sheetStudentName.ar || storedStudentName.ar || userStudentName.ar || sheetStudentName.en || storedStudentName.en || userStudentName.en || '',
+      en: sheetStudentName.en || storedStudentName.en || userStudentName.en || sheetStudentName.ar || storedStudentName.ar || userStudentName.ar || '',
     };
-    console.log('Resolved student name (merged user + stored):', JSON.stringify(studentNameData));
+    console.log('Resolved student name (sheet + stored + user):', JSON.stringify(studentNameData));
 
     // Get course/package name - ALWAYS prefer populated relation data
     let sourceName = {};
