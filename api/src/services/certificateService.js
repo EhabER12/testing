@@ -25,6 +25,40 @@ class CertificateService {
     return `${prefix}-${timestamp}-${random}`;
   }
 
+  getTemplateImageExtension(imagePath) {
+    if (!imagePath || typeof imagePath !== "string") return "";
+
+    let cleanPath = imagePath.trim();
+    if (cleanPath.startsWith("http://") || cleanPath.startsWith("https://")) {
+      try {
+        cleanPath = new URL(cleanPath).pathname;
+      } catch (error) {
+        // Use the original value if URL parsing fails
+      }
+    }
+
+    cleanPath = cleanPath.split("?")[0].split("#")[0];
+    const ext = path.extname(cleanPath).replace(".", "").toLowerCase();
+    return ext;
+  }
+
+  validateTemplateImagePath(imagePath, fieldLabel) {
+    if (!imagePath || typeof imagePath !== "string") return;
+
+    const allowedExtensions = new Set(["png", "jpg", "jpeg"]);
+    const ext = this.getTemplateImageExtension(imagePath);
+
+    // If no extension is present, keep backward compatibility and skip blocking.
+    if (!ext) return;
+
+    if (!allowedExtensions.has(ext)) {
+      throw new ApiError(
+        400,
+        `${fieldLabel} must be PNG or JPG/JPEG to be embeddable in generated PDF certificates.`
+      );
+    }
+  }
+
   // Issue certificate to a single user (Course or Package)
   async issueCertificate(
     userId,
@@ -1021,6 +1055,13 @@ class CertificateService {
     if (!cleanedData.sheetName || cleanedData.sheetName === '' || cleanedData.sheetName === 'none') {
       delete cleanedData.sheetName;
     }
+
+    this.validateTemplateImagePath(cleanedData.backgroundImage, "Background image");
+    if (Array.isArray(cleanedData?.placeholders?.images)) {
+      cleanedData.placeholders.images.forEach((img, index) => {
+        this.validateTemplateImagePath(img?.url, `Image placeholder #${index + 1}`);
+      });
+    }
     
     const template = await CertificateTemplate.create(cleanedData);
     return template;
@@ -1073,6 +1114,16 @@ class CertificateService {
     if (updates.sheetName === '' || updates.sheetName === null || updates.sheetName === 'none') {
       template.sheetName = undefined;
       delete updates.sheetName;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, "backgroundImage")) {
+      this.validateTemplateImagePath(updates.backgroundImage, "Background image");
+    }
+
+    if (Array.isArray(updates?.placeholders?.images)) {
+      updates.placeholders.images.forEach((img, index) => {
+        this.validateTemplateImagePath(img?.url, `Image placeholder #${index + 1}`);
+      });
     }
 
     Object.keys(updates).forEach((key) => {

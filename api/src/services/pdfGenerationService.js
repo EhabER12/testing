@@ -7,6 +7,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import axios from "axios";
+import { fileTypeFromBuffer } from "file-type";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -366,6 +367,65 @@ class PDFGenerationService {
   }
 
   /**
+   * Extract lowercase extension from a local path or URL (without query/hash)
+   */
+  getImageExtension(imagePath) {
+    if (!imagePath || typeof imagePath !== "string") return "";
+
+    let cleanPath = imagePath.trim();
+
+    if (cleanPath.startsWith("http://") || cleanPath.startsWith("https://")) {
+      try {
+        cleanPath = new URL(cleanPath).pathname;
+      } catch (error) {
+        // Keep the original value if URL parsing fails
+      }
+    }
+
+    cleanPath = cleanPath.split("?")[0].split("#")[0];
+    return path.extname(cleanPath).replace(".", "").toLowerCase();
+  }
+
+  /**
+   * Resolve embeddable PDF image format from bytes first, then extension fallback
+   * Returns "png", "jpg", or null if unsupported
+   */
+  async resolvePdfImageFormat(imageBytes, imagePath = "") {
+    try {
+      const detectedType = await fileTypeFromBuffer(imageBytes);
+
+      if (detectedType?.mime === "image/png") return "png";
+      if (detectedType?.mime === "image/jpeg") return "jpg";
+    } catch (error) {
+      console.warn("Could not detect image type from buffer:", error.message);
+    }
+
+    const ext = this.getImageExtension(imagePath);
+    if (ext === "png") return "png";
+    if (ext === "jpg" || ext === "jpeg") return "jpg";
+
+    return null;
+  }
+
+  /**
+   * Embed an image in a PDF using detected type
+   */
+  async embedImage(pdfDoc, imageBytes, imagePath = "") {
+    const imageFormat = await this.resolvePdfImageFormat(imageBytes, imagePath);
+
+    if (imageFormat === "png") {
+      return await pdfDoc.embedPng(imageBytes);
+    }
+    if (imageFormat === "jpg") {
+      return await pdfDoc.embedJpg(imageBytes);
+    }
+
+    throw new Error(
+      `Unsupported image format for PDF (path: ${imagePath || "unknown"}). Please use PNG or JPG/JPEG.`
+    );
+  }
+
+  /**
    * Generate certificate PDF
    * @param {Object} certificateData
    * @param {Object} template
@@ -452,14 +512,7 @@ class PDFGenerationService {
       if (template.backgroundImage) {
         try {
           const imageBytes = await this.loadImage(template.backgroundImage);
-          let image;
-
-          // Check image type and embed accordingly
-          if (template.backgroundImage.toLowerCase().endsWith(".png")) {
-            image = await pdfDoc.embedPng(imageBytes);
-          } else {
-            image = await pdfDoc.embedJpg(imageBytes);
-          }
+          const image = await this.embedImage(pdfDoc, imageBytes, template.backgroundImage);
 
           page.drawImage(image, {
             x: 0,
@@ -788,12 +841,7 @@ class PDFGenerationService {
         for (const imgConfig of normalizedPlaceholders.images) {
           try {
             const imgBytes = await this.loadImage(imgConfig.url);
-            let img;
-            if (imgConfig.url.toLowerCase().endsWith(".png")) {
-              img = await pdfDoc.embedPng(imgBytes);
-            } else {
-              img = await pdfDoc.embedJpg(imgBytes);
-            }
+            const img = await this.embedImage(pdfDoc, imgBytes, imgConfig.url);
 
             page.drawImage(img, {
               x: imgConfig.x,

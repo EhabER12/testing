@@ -90,6 +90,51 @@ const ALIGN_OPTIONS = [
   { value: "right", ar: "يمين", en: "Right" },
 ] as const;
 
+const PDF_COMPATIBLE_IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg"]);
+const PDF_COMPATIBLE_IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg"]);
+
+const getFileExtension = (fileName: string) => {
+  const parts = fileName.split(".");
+  return parts.length > 1 ? (parts.pop() || "").toLowerCase() : "";
+};
+
+const isPdfCompatibleImage = (file: File) => {
+  const mime = (file.type || "").toLowerCase();
+  if (PDF_COMPATIBLE_IMAGE_MIME_TYPES.has(mime)) return true;
+  return PDF_COMPATIBLE_IMAGE_EXTENSIONS.has(getFileExtension(file.name));
+};
+
+const convertImageFileToPng = async (file: File): Promise<File> => {
+  const imageUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Failed to decode image"));
+      image.src = imageUrl;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas context is unavailable");
+
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/png", 1);
+    });
+    if (!blob) throw new Error("Failed to create PNG blob");
+
+    const baseName = file.name.replace(/\.[^/.]+$/, "") || "image";
+    return new File([blob], `${baseName}.png`, { type: "image/png" });
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+};
+
 export default function CertificateDesignerPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -242,8 +287,28 @@ export default function CertificateDesignerPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    let uploadFile = file;
+    if (!isPdfCompatibleImage(file)) {
+      try {
+        uploadFile = await convertImageFileToPng(file);
+        toast.success(
+          isRtl
+            ? "تم تحويل الصورة تلقائيًا إلى PNG لضمان ظهورها في الشهادة"
+            : "Image was auto-converted to PNG for PDF compatibility"
+        );
+      } catch (error) {
+        toast.error(
+          isRtl
+            ? "نوع الصورة غير مدعوم. استخدم PNG أو JPG/JPEG."
+            : "Unsupported image format. Please use PNG or JPG/JPEG."
+        );
+        e.target.value = "";
+        return;
+      }
+    }
+
     const formData = new FormData();
-    formData.append("image", file);
+    formData.append("image", uploadFile, uploadFile.name);
 
     try {
       const response = await axios.post("/upload/image", formData);
@@ -252,7 +317,11 @@ export default function CertificateDesignerPage() {
       if (target === "background") {
         const img = new Image();
         img.onload = () => {
-          setDesign({ ...design, backgroundImage: url, width: img.width, height: img.height });
+          setDesign((prev) => ({ ...prev, backgroundImage: url, width: img.width, height: img.height }));
+        };
+        img.onerror = () => {
+          setDesign((prev) => ({ ...prev, backgroundImage: url }));
+          toast.error(isRtl ? "تم رفع الخلفية لكن تعذرت معاينتها" : "Background uploaded but preview failed");
         };
         img.src = url.startsWith("http") ? url : `${process.env.NEXT_PUBLIC_API_URL || ""}${url}`;
         toast.success(isRtl ? "تم رفع الخلفية بنجاح" : "Background uploaded successfully");
@@ -264,19 +333,22 @@ export default function CertificateDesignerPage() {
           width: 150,
           height: 150
         };
-        setDesign({
-          ...design,
+        const nextIndex = design.placeholders.images.length;
+        setDesign((prev) => ({
+          ...prev,
           placeholders: {
-            ...design.placeholders,
-            images: [...design.placeholders.images, newImage]
+            ...prev.placeholders,
+            images: [...prev.placeholders.images, newImage]
           }
-        });
+        }));
         setActiveType("image");
-        setActiveIndex(design.placeholders.images.length);
+        setActiveIndex(nextIndex);
         toast.success(isRtl ? "تمت إضافة الصورة" : "Image added");
       }
     } catch (error) {
       toast.error(isRtl ? "فشل رفع الصورة" : "Failed to upload image");
+    } finally {
+      e.target.value = "";
     }
   };
 
