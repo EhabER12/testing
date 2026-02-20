@@ -314,17 +314,9 @@ export default function CertificateDesignerPage() {
     if (!isPdfCompatibleImage(file)) {
       try {
         uploadFile = await convertImageFileToPng(file);
-        toast.success(
-          isRtl
-            ? "تم تحويل الصورة تلقائيًا إلى PNG لضمان ظهورها في الشهادة"
-            : "Image was auto-converted to PNG for PDF compatibility"
-        );
+        toast.success("Image was auto-converted to PNG for PDF compatibility");
       } catch (error) {
-        toast.error(
-          isRtl
-            ? "نوع الصورة غير مدعوم. استخدم PNG أو JPG/JPEG."
-            : "Unsupported image format. Please use PNG or JPG/JPEG."
-        );
+        toast.error("Unsupported image format. Please use PNG or JPG/JPEG.");
         e.target.value = "";
         return;
       }
@@ -344,7 +336,7 @@ export default function CertificateDesignerPage() {
         };
         img.onerror = () => {
           setDesign((prev) => ({ ...prev, backgroundImage: url }));
-          toast.error(isRtl ? "تم رفع الخلفية لكن تعذرت معاينتها" : "Background uploaded but preview failed");
+          toast.error("Background uploaded but preview failed");
         };
         img.src = url.startsWith("http") ? url : `${process.env.NEXT_PUBLIC_API_URL || ""}${url}`;
         toast.success(isRtl ? "تم رفع الخلفية بنجاح" : "Background uploaded successfully");
@@ -399,23 +391,21 @@ export default function CertificateDesignerPage() {
 
   const removeElement = (type: "custom" | "image" | "standard", indexOrKey: number | string) => {
     let confirmMessage = "";
-    
+
     if (type === "custom") {
-      confirmMessage = isRtl ? "هل أنت متأكد من حذف هذا النص؟" : "Are you sure you want to remove this text?";
+      confirmMessage = "Are you sure you want to remove this text?";
     } else if (type === "image") {
-      confirmMessage = isRtl ? "هل أنت متأكد من حذف هذه الصورة؟" : "Are you sure you want to remove this image?";
+      confirmMessage = "Are you sure you want to remove this image?";
     } else if (type === "standard") {
       const labels: any = {
-        studentName: isRtl ? "اسم الطالب" : "Student Name",
-        courseName: isRtl ? "اسم الدورة" : "Course Name",
-        issuedDate: isRtl ? "تاريخ الإصدار" : "Issue Date",
-        certificateNumber: isRtl ? "رقم الشهادة" : "Certificate Number"
+        studentName: "Student Name",
+        courseName: "Course Name",
+        issuedDate: "Issue Date",
+        certificateNumber: "Certificate Number"
       };
-      confirmMessage = isRtl 
-        ? `هل أنت متأكد من حذف عنصر "${labels[indexOrKey]}"؟ سيتم إخفاؤه من الشهادة.`
-        : `Are you sure you want to remove "${labels[indexOrKey]}"? It will be hidden from the certificate.`;
+      confirmMessage = `Are you sure you want to remove \"${labels[indexOrKey]}\"? It will be hidden from the certificate.`;
     }
-    
+
     if (!confirm(confirmMessage)) {
       return;
     }
@@ -430,7 +420,7 @@ export default function CertificateDesignerPage() {
       setActiveType("standard");
       setActivePlaceholder("studentName");
       setActiveIndex(-1);
-      toast.success(isRtl ? "تم حذف النص بنجاح" : "Text removed successfully");
+      toast.success("Text removed successfully");
     } else if (type === "image") {
       const newImages = [...design.placeholders.images];
       newImages.splice(indexOrKey as number, 1);
@@ -441,26 +431,25 @@ export default function CertificateDesignerPage() {
       setActiveType("standard");
       setActivePlaceholder("studentName");
       setActiveIndex(-1);
-      toast.success(isRtl ? "تم حذف الصورة بنجاح" : "Image removed successfully");
+      toast.success("Image removed successfully");
     } else if (type === "standard") {
-      // For standard elements, set them to null to indicate deletion
       const key = indexOrKey as keyof typeof design.placeholders;
       setDesign({
         ...design,
         placeholders: { ...design.placeholders, [key]: null as any }
       });
-      toast.success(isRtl ? "تم حذف العنصر بنجاح" : "Element removed successfully");
+      toast.success("Element removed successfully");
     }
   };
 
   const handleSave = async () => {
     const normalizedName = design.name.trim();
     if (!normalizedName) {
-      toast.error(isRtl ? "يرجى إدخال اسم القالب" : "Please enter template name");
+      toast.error("Please enter template name");
       return;
     }
     if (!design.backgroundImage) {
-      toast.error(isRtl ? "يرجى رفع صورة الخلفية" : "Please upload background image");
+      toast.error("Please upload background image");
       return;
     }
 
@@ -473,16 +462,12 @@ export default function CertificateDesignerPage() {
       );
     });
     if (hasDuplicateName) {
-      toast.error(isRtl ? "Ø§Ø³Ù… Ø§Ù„Ù‚Ø§Ù„Ø¨ Ù…Ø³ØªØ®Ø¯Ù… Ø¨Ø§Ù„ÙØ¹Ù„ØŒ Ø§Ø®ØªØ± Ø§Ø³Ù…Ù‹Ø§ Ù…Ø®ØªÙ„ÙÙ‹Ø§" : "Template name already exists. Choose a different name.");
+      toast.error("Template name already exists. Choose a different name.");
       return;
     }
 
     if (!isPdfCompatibleImagePath(design.backgroundImage)) {
-      toast.error(
-        isRtl
-          ? "Ø®Ù„ÙÙŠØ© Ø§Ù„Ù‚Ø§Ù„Ø¨ Ù„Ø§Ø²Ù… ØªÙƒÙˆÙ† PNG Ø£Ùˆ JPG/JPEG"
-          : "Background image must be PNG or JPG/JPEG"
-      );
+      toast.error("Background image must be PNG or JPG/JPEG");
       return;
     }
 
@@ -490,11 +475,7 @@ export default function CertificateDesignerPage() {
       (img) => !isPdfCompatibleImagePath(img.url)
     );
     if (invalidExtraImage) {
-      toast.error(
-        isRtl
-          ? "Ø¨Ø¹Ø¶ Ø§Ù„ØµÙˆØ± Ø§Ù„Ù…Ø¶Ø§ÙØ© ØºÙŠØ± Ù…Ø¯Ø¹ÙˆÙ…Ø© ÙÙŠ PDF. Ø§Ø³ØªØ®Ø¯Ù… PNG Ø£Ùˆ JPG/JPEG."
-          : "Some added images are not PDF-compatible. Use PNG or JPG/JPEG."
-      );
+      toast.error("Some added images are not PDF-compatible. Use PNG or JPG/JPEG.");
       return;
     }
 
@@ -528,10 +509,13 @@ export default function CertificateDesignerPage() {
       setIsEditing(false);
       dispatch(getAllTemplates());
     } catch (error: any) {
-      toast.error(error || "Failed to save template");
+      const errorMessage =
+        (typeof error === "string" ? error : null) ||
+        error?.message ||
+        "Failed to save template";
+      toast.error(errorMessage);
     }
   };
-
   const handleDelete = async (id: string) => {
     if (confirm(isRtl ? "هل أنت متأكد من حذف هذا القالب؟" : "Are you sure you want to delete this template?")) {
       try {
@@ -1466,3 +1450,4 @@ export default function CertificateDesignerPage() {
     </div>
   );
 }
+
