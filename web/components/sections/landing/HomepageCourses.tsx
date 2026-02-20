@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowLeft, ArrowRight, BookOpen, Users } from "lucide-react";
 import { PublicWebsiteSettingsData } from "@/store/services/settingsService";
 import axiosInstance from "@/lib/axios";
+import { PriceDisplay } from "@/components/currency/PriceDisplay";
 
 interface Course {
     _id: string;
@@ -20,6 +21,8 @@ interface Course {
     enrolledCount?: number;
     duration?: number;
     price?: number;
+    compareAtPrice?: number;
+    currency?: "SAR" | "EGP" | "USD";
     isPublished: boolean;
 }
 
@@ -171,6 +174,25 @@ export function HomepageCourses({ settings, locale }: HomepageCoursesProps) {
                                             <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                                                 {isRtl ? course.description.ar : course.description.en}
                                             </p>
+                                        )}
+
+                                        {typeof course.price === "number" && (
+                                            <div className="mb-3">
+                                                {course.compareAtPrice && course.compareAtPrice > course.price && (
+                                                    <PriceDisplay
+                                                        amount={course.compareAtPrice}
+                                                        currency={course.currency || "EGP"}
+                                                        locale={isRtl ? "ar" : "en"}
+                                                        className="text-sm [&>span:first-child]:text-muted-foreground [&>span:first-child]:font-medium [&>span:first-child]:line-through"
+                                                    />
+                                                )}
+                                                <PriceDisplay
+                                                    amount={course.price}
+                                                    currency={course.currency || "EGP"}
+                                                    locale={isRtl ? "ar" : "en"}
+                                                    className="text-lg"
+                                                />
+                                            </div>
                                         )}
 
                                         {/* Stats */}

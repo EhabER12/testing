@@ -261,6 +261,41 @@ const booksPageHeroSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Products Page Hero Settings Schema
+const productsPageHeroSchema = new mongoose.Schema(
+  {
+    isEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    badge: {
+      ar: { type: String, default: "\u0645\u0646\u062a\u062c\u0627\u062a\u0646\u0627 \u0627\u0644\u0631\u0642\u0645\u064a\u0629" },
+      en: { type: String, default: "Our Digital Products" },
+    },
+    title: {
+      ar: { type: String, default: "\u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a \u0627\u0644\u0631\u0642\u0645\u064a\u0629" },
+      en: { type: String, default: "Our Digital Products" },
+    },
+    subtitle: {
+      ar: {
+        type: String,
+        default:
+          "\u062d\u0644\u0648\u0644 \u0648\u0645\u0646\u062a\u062c\u0627\u062a \u0631\u0642\u0645\u064a\u0629 \u0628\u062c\u0648\u062f\u0629 \u0639\u0627\u0644\u064a\u0629 \u0644\u062a\u0637\u0648\u064a\u0631 \u0623\u0639\u0645\u0627\u0644\u0643",
+      },
+      en: {
+        type: String,
+        default:
+          "Premium digital services and products for your business",
+      },
+    },
+    backgroundImage: {
+      type: String,
+      default: "",
+    },
+  },
+  { _id: false }
+);
+
 const localizedTextSchema = new mongoose.Schema(
   {
     ar: { type: String, default: "" },
@@ -836,6 +871,25 @@ const settingsSchema = new mongoose.Schema(
           ar: "\u0645\u062c\u0645\u0648\u0639\u0629 \u0645\u0646\u062a\u0642\u0627\u0629 \u0645\u0646 \u0627\u0644\u0643\u062a\u0628 \u0627\u0644\u0631\u0642\u0645\u064a\u0629 \u0627\u0644\u062c\u0627\u0647\u0632\u0629 \u0644\u0644\u0634\u0631\u0627\u0621",
           en: "A curated collection of digital books ready for purchase",
         },
+      }),
+    },
+    productsPageHero: {
+      type: productsPageHeroSchema,
+      default: () => ({
+        isEnabled: true,
+        badge: {
+          ar: "\u0645\u0646\u062a\u062c\u0627\u062a\u0646\u0627 \u0627\u0644\u0631\u0642\u0645\u064a\u0629",
+          en: "Our Digital Products",
+        },
+        title: {
+          ar: "\u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a \u0627\u0644\u0631\u0642\u0645\u064a\u0629",
+          en: "Our Digital Products",
+        },
+        subtitle: {
+          ar: "\u062d\u0644\u0648\u0644 \u0648\u0645\u0646\u062a\u062c\u0627\u062a \u0631\u0642\u0645\u064a\u0629 \u0628\u062c\u0648\u062f\u0629 \u0639\u0627\u0644\u064a\u0629 \u0644\u062a\u0637\u0648\u064a\u0631 \u0623\u0639\u0645\u0627\u0644\u0643",
+          en: "Premium digital services and products for your business",
+        },
+        backgroundImage: "",
       }),
     },
     articlesPageHero: {

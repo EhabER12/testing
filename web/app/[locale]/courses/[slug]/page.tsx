@@ -373,11 +373,21 @@ export default function CoursePage() {
                   </div>
                   <div className="p-6 space-y-4">
                     {currentCourse.accessType === "paid" && currentCourse.price && (
-                      <div className="text-3xl font-bold text-genoun-green">
+                      <div className="space-y-1">
+                        {currentCourse.compareAtPrice &&
+                          currentCourse.compareAtPrice > currentCourse.price && (
+                            <PriceDisplay
+                              amount={currentCourse.compareAtPrice}
+                              currency={currentCourse.currency as "SAR" | "EGP" | "USD"}
+                              locale={isRtl ? "ar" : "en"}
+                              className="text-base [&>span:first-child]:text-muted-foreground [&>span:first-child]:font-medium [&>span:first-child]:line-through"
+                            />
+                          )}
                         <PriceDisplay
                           amount={currentCourse.price}
                           currency={currentCourse.currency as "SAR" | "EGP" | "USD"}
                           locale={isRtl ? "ar" : "en"}
+                          className="text-3xl"
                         />
                       </div>
                     )}

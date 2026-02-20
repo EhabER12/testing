@@ -70,6 +70,7 @@ export default function EditCoursePage() {
         categoryId: "",
         accessType: "free" as "free" | "paid" | "byPackage",
         price: "",
+        compareAtPrice: "",
         duration: "",
         level: "beginner" as "beginner" | "intermediate" | "advanced",
         language: "ar",
@@ -144,6 +145,7 @@ export default function EditCoursePage() {
                     : courseDataRaw.categoryId || "",
                 accessType: courseDataRaw.accessType || "free",
                 price: courseDataRaw.price?.toString() || "",
+                compareAtPrice: courseDataRaw.compareAtPrice?.toString() || "",
                 duration: courseDataRaw.duration?.toString() || "",
                 level: courseDataRaw.level || "beginner",
                 language: courseDataRaw.language || "ar",
@@ -219,10 +221,18 @@ export default function EditCoursePage() {
             }
 
             if (formData.accessType === "paid") {
-                courseData.price = formData.price ? parseFloat(formData.price) : 0;
+                const finalPrice = formData.price ? parseFloat(formData.price) : 0;
+                const originalPrice = formData.compareAtPrice
+                    ? parseFloat(formData.compareAtPrice)
+                    : undefined;
+
+                courseData.price = finalPrice;
+                courseData.compareAtPrice =
+                    originalPrice && originalPrice > finalPrice ? originalPrice : null;
                 courseData.currency = "EGP";
             } else {
                 courseData.price = 0;
+                courseData.compareAtPrice = null;
                 courseData.currency = "EGP";
             }
 
@@ -545,19 +555,34 @@ export default function EditCoursePage() {
                             </div>
 
                             {formData.accessType === "paid" && (
-                                <div className="space-y-2">
-                                    <Label htmlFor="price">{isRtl ? "السعر (ج.م)" : "Price (EGP)"}</Label>
-                                    <Input
-                                        id="price"
-                                        type="number"
-                                        step="0.01"
-                                        value={formData.price}
-                                        onChange={(e) => {
-                                            markDirty();
-                                            setFormData((prev) => ({ ...prev, price: e.target.value }));
-                                        }}
-                                    />
-                                </div>
+                                <>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="price">{isRtl ? "\u0627\u0644\u0633\u0639\u0631 \u0628\u0639\u062f \u0627\u0644\u062e\u0635\u0645 (\u062c.\u0645)" : "Discounted Price (EGP)"}</Label>
+                                        <Input
+                                            id="price"
+                                            type="number"
+                                            step="0.01"
+                                            value={formData.price}
+                                            onChange={(e) => {
+                                                markDirty();
+                                                setFormData((prev) => ({ ...prev, price: e.target.value }));
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="compareAtPrice">{isRtl ? "\u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0623\u0635\u0644\u064a (\u062c.\u0645)" : "Original Price (EGP)"}</Label>
+                                        <Input
+                                            id="compareAtPrice"
+                                            type="number"
+                                            step="0.01"
+                                            value={formData.compareAtPrice}
+                                            onChange={(e) => {
+                                                markDirty();
+                                                setFormData((prev) => ({ ...prev, compareAtPrice: e.target.value }));
+                                            }}
+                                        />
+                                    </div>
+                                </>
                             )}
 
                             <div className="space-y-2">
@@ -727,3 +752,4 @@ export default function EditCoursePage() {
         </div>
     );
 }
+

@@ -24,6 +24,7 @@ import { getProducts, Product } from "@/store/slices/productSlice";
 import { getCategories, Category } from "@/store/slices/categorySlice";
 import { addToCart } from "@/store/slices/cartSlice";
 import { ProductOptionsModal } from "@/components/products/ProductOptionsModal";
+import { getPublicWebsiteSettingsThunk } from "@/store/services/settingsService";
 import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
 import { PriceDisplay } from "@/components/currency/PriceDisplay";
@@ -47,6 +48,7 @@ export default function ProductsPage() {
   const dispatch = useAppDispatch();
   const { products, loading } = useAppSelector((state) => state.products);
   const { categories } = useAppSelector((state) => state.categories);
+  const { publicSettings } = useAppSelector((state) => state.settings);
 
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,7 +61,30 @@ export default function ProductsPage() {
   useEffect(() => {
     dispatch(getProducts({ active: true }));
     dispatch(getCategories({ active: true }));
+    dispatch(getPublicWebsiteSettingsThunk());
   }, [dispatch]);
+
+  const productsPageHero = publicSettings?.productsPageHero;
+  const heroEnabled = productsPageHero?.isEnabled !== false;
+  const heroBadge =
+    getLocalizedText(productsPageHero?.badge as any, locale) ||
+    (isRtl ? "منتجاتنا الرقمية" : "Our Digital Products");
+  const heroTitle =
+    getLocalizedText(productsPageHero?.title as any, locale) ||
+    (t("products.title") as string) ||
+    "Our Digital Products";
+  const heroSubtitle =
+    getLocalizedText(productsPageHero?.subtitle as any, locale) ||
+    (t("products.subtitle") as string) ||
+    "Premium digital services and products for your business";
+  const heroStyle =
+    productsPageHero?.backgroundImage
+      ? {
+          backgroundImage: `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.55)), url(${productsPageHero.backgroundImage})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }
+      : undefined;
 
   // Reset page when filter changes
   useEffect(() => {
@@ -108,18 +133,21 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-gray-50" dir={isRtl ? "rtl" : "ltr"}>
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary to-primary/80 py-16 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <ShoppingBag className="h-16 w-16 mx-auto mb-4 opacity-80" />
-          <h1 className="text-4xl font-bold mb-4">
-            {t("products.title") || "Our Digital Products"}
-          </h1>
-          <p className="text-lg opacity-90 max-w-2xl mx-auto">
-            {t("products.subtitle") ||
-              "Premium digital services and products for your business"}
-          </p>
-        </div>
-      </section>
+      {heroEnabled && (
+        <section
+          className="bg-gradient-to-br from-primary to-primary/80 py-16 text-white"
+          style={heroStyle}
+        >
+          <div className="container mx-auto px-4 text-center">
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-5">
+              <ShoppingBag className="h-4 w-4" />
+              <span className="text-sm font-medium">{heroBadge}</span>
+            </div>
+            <h1 className="text-4xl font-bold mb-4">{heroTitle}</h1>
+            <p className="text-lg opacity-90 max-w-2xl mx-auto">{heroSubtitle}</p>
+          </div>
+        </section>
+      )}
 
       {/* Filters */}
       <div className="container mx-auto px-4 py-8">

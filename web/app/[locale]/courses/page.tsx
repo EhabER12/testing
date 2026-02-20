@@ -277,6 +277,14 @@ export default function CoursesPage() {
                       {getLevelText(course.level)}
                     </Badge>
                   )}
+
+                  {course.compareAtPrice &&
+                    course.price &&
+                    course.compareAtPrice > course.price && (
+                      <Badge className={`absolute bottom-3 ${isRtl ? "left-3" : "right-3"} bg-red-500 hover:bg-red-600`}>
+                        {`${Math.round(((course.compareAtPrice - course.price) / course.compareAtPrice) * 100)}% ${isRtl ? "\u062e\u0635\u0645" : "OFF"}`}
+                      </Badge>
+                    )}
                 </div>
 
                 {/* Course Info */}
@@ -330,18 +338,28 @@ export default function CoursesPage() {
                   <div className="flex items-center gap-2 mb-2">
                     {course.accessType === "free" ? (
                       <span className="text-xl font-bold text-green-600">
-                        {isRtl ? "مجاني" : "Free"}
+                        {isRtl ? "\u0645\u062c\u0627\u0646\u064a" : "Free"}
                       </span>
                     ) : course.price ? (
-                      <PriceDisplay
-                        amount={course.price}
-                        currency={course.currency as "SAR" | "EGP" | "USD"}
-                        locale={isRtl ? "ar" : "en"}
-                        className="text-xl font-bold text-primary"
-                      />
+                      <div className="flex flex-col gap-1">
+                        {course.compareAtPrice && course.compareAtPrice > course.price && (
+                          <PriceDisplay
+                            amount={course.compareAtPrice}
+                            currency={course.currency as "SAR" | "EGP" | "USD"}
+                            locale={isRtl ? "ar" : "en"}
+                            className="text-sm [&>span:first-child]:text-muted-foreground [&>span:first-child]:font-medium [&>span:first-child]:line-through"
+                          />
+                        )}
+                        <PriceDisplay
+                          amount={course.price}
+                          currency={course.currency as "SAR" | "EGP" | "USD"}
+                          locale={isRtl ? "ar" : "en"}
+                          className="text-xl"
+                        />
+                      </div>
                     ) : (
                       <span className="text-sm text-muted-foreground">
-                        {isRtl ? "السعر غير محدد" : "Price not set"}
+                        {isRtl ? "\u0627\u0644\u0633\u0639\u0631 \u063a\u064a\u0631 \u0645\u062d\u062f\u062f" : "Price not set"}
                       </span>
                     )}
                   </div>
@@ -409,3 +427,4 @@ export default function CoursesPage() {
     </div>
   );
 }
+

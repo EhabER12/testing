@@ -23,6 +23,7 @@ export interface Course {
   categoryId?: string | { id: string; _id?: string; name: BilingualText };
   accessType: "free" | "paid" | "byPackage";
   price?: number;
+  compareAtPrice?: number;
   currency?: "SAR" | "EGP" | "USD";
   duration?: number;
   level?: "beginner" | "intermediate" | "advanced";
@@ -68,6 +69,7 @@ export interface CreateCourseData {
   categoryId?: string;
   accessType: "free" | "paid" | "byPackage";
   price?: number;
+  compareAtPrice?: number;
   currency?: "SAR" | "EGP" | "USD";
   duration?: number;
   level?: "beginner" | "intermediate" | "advanced";

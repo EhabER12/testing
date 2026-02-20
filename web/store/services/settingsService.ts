@@ -161,6 +161,14 @@ export interface BooksPageHeroSettings {
   subtitle: { ar: string; en: string };
 }
 
+export interface ProductsPageHeroSettings {
+  isEnabled: boolean;
+  badge: { ar: string; en: string };
+  title: { ar: string; en: string };
+  subtitle: { ar: string; en: string };
+  backgroundImage?: string;
+}
+
 export interface ArticlesPageHeroSettings {
   badge: { ar: string; en: string };
   title: { ar: string; en: string };
@@ -335,6 +343,7 @@ export interface WebsiteSettingsData {
   homepageCourses?: HomepageCoursesSettings;
   coursesPageHero?: CoursesPageHeroSettings;
   booksPageHero?: BooksPageHeroSettings;
+  productsPageHero?: ProductsPageHeroSettings;
   articlesPageHero?: ArticlesPageHeroSettings;
   homepageArticlesSection?: HomepageArticlesSectionSettings;
   authorityBar?: AuthorityBarSettings;
@@ -381,6 +390,7 @@ export interface PublicWebsiteSettingsData {
   homepageCourses?: HomepageCoursesSettings;
   coursesPageHero?: CoursesPageHeroSettings;
   booksPageHero?: BooksPageHeroSettings;
+  productsPageHero?: ProductsPageHeroSettings;
   articlesPageHero?: ArticlesPageHeroSettings;
   homepageArticlesSection?: HomepageArticlesSectionSettings;
   authorityBar?: AuthorityBarSettings;

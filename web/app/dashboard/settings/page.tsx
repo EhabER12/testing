@@ -43,6 +43,7 @@ import {
   ApiKeysSettings,
   CoursesPageHeroSettings as CoursesPageHeroSettingsType,
   BooksPageHeroSettings as BooksPageHeroSettingsType,
+  ProductsPageHeroSettings as ProductsPageHeroSettingsType,
   HeroStatsSettings as HeroStatsSettingsType,
   ArticlesPageHeroSettings as ArticlesPageHeroSettingsType,
   HomepageArticlesSectionSettings as HomepageArticlesSectionSettingsType,
@@ -81,6 +82,7 @@ import { WhyGenounSettings as WhyGenounSettingsComponent } from "@/components/da
 import { ApiKeysSettings as ApiKeysSettingsComponent } from "@/components/dashboard/settings/ApiKeysSettings";
 import { CoursesPageHeroSettings as CoursesPageHeroSettingsComponent } from "@/components/dashboard/settings/CoursesPageHeroSettings";
 import { BooksPageHeroSettings as BooksPageHeroSettingsComponent } from "@/components/dashboard/settings/BooksPageHeroSettings";
+import { ProductsPageHeroSettings as ProductsPageHeroSettingsComponent } from "@/components/dashboard/settings/ProductsPageHeroSettings";
 import { HeroStatsSettings as HeroStatsSettingsComponent } from "@/components/dashboard/settings/HeroStatsSettings";
 
 interface SettingsFormData extends Partial<WebsiteSettingsData> {
@@ -356,6 +358,7 @@ export default function SettingsDashboardPage() {
         address_ar: settings.address_ar || "",
         coursesPageHero: settings.coursesPageHero || undefined,
         booksPageHero: settings.booksPageHero || undefined,
+        productsPageHero: settings.productsPageHero || undefined,
       });
 
       setLogoPreview(settings.logo);
@@ -719,6 +722,7 @@ export default function SettingsDashboardPage() {
       promoModal,
       homepageBanner,
       homepageCourses,
+      productsPageHero: formData.productsPageHero,
       articlesPageHero,
       homepageArticlesSection,
       authorityBar,
@@ -917,6 +921,9 @@ export default function SettingsDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="books-hero">
               {isRtl ? "صفحة الكتب" : "Books Page"}
+            </TabsTrigger>
+            <TabsTrigger value="products-hero">
+              {isRtl ? "\u0635\u0641\u062d\u0629 \u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a" : "Products Page"}
             </TabsTrigger>
             <TabsTrigger value="teacher-profit">
               {isRtl ? "أرباح المعلمين" : "Teacher Profit"}
@@ -2869,6 +2876,26 @@ export default function SettingsDashboardPage() {
               locale={formLang}
             />
           </TabsContent>
+          <TabsContent value="products-hero" className="space-y-6">
+            <ProductsPageHeroSettingsComponent
+              settings={
+                (formData.productsPageHero as ProductsPageHeroSettingsType) || {
+                  isEnabled: true,
+                  badge: { ar: "", en: "" },
+                  title: { ar: "", en: "" },
+                  subtitle: { ar: "", en: "" },
+                  backgroundImage: "",
+                }
+              }
+              onUpdate={(settings) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  productsPageHero: settings,
+                }))
+              }
+              locale={formLang}
+            />
+          </TabsContent>
 
           {/* Hero Stats Settings Tab */}
           <TabsContent value="hero-stats">
@@ -2906,3 +2933,4 @@ export default function SettingsDashboardPage() {
     </div>
   );
 }
+
