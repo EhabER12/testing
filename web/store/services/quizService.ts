@@ -17,6 +17,8 @@ export interface Quiz {
   _id?: string;
   courseId: any; // Can be object or ID
   sectionId?: any;
+  certificateTemplateId?: any;
+  hasCertificateTemplate?: boolean;
   title: BilingualText;
   description?: BilingualText;
   linkedTo: "course" | "section" | "general";
@@ -45,6 +47,7 @@ export interface Quiz {
 export interface CreateQuizData {
   courseId?: string;
   sectionId?: string;
+  certificateTemplateId?: string;
   linkedTo: "course" | "section" | "general";
   title: BilingualText;
   description?: BilingualText;

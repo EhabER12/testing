@@ -9,6 +9,7 @@ import {
   Quiz,
   QuizQuestion,
 } from "@/store/services/quizService";
+import { getAllTemplates } from "@/store/services/certificateService";
 import { getCourses } from "@/store/services/courseService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
 import { Button } from "@/components/ui/button";
@@ -65,12 +66,14 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
   const searchParams = useSearchParams();
   const { t, isRtl } = useAdminLocale();
   const { courses } = useAppSelector((state) => state.courses);
+  const { templates } = useAppSelector((state) => state.certificates);
 
   const [formData, setFormData] = useState({
     title: { ar: "", en: "" },
     description: { ar: "", en: "" },
     courseId: searchParams.get("courseId") || "",
     sectionId: searchParams.get("sectionId") || "",
+    certificateTemplateId: "",
     linkedTo: (searchParams.get("linkedTo") as "course" | "section" | "general") || "course",
     passingScore: 70,
     timeLimit: null as number | null,
@@ -87,6 +90,7 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
 
   useEffect(() => {
     dispatch(getCourses({}));
+    dispatch(getAllTemplates());
   }, [dispatch]);
 
   useEffect(() => {
@@ -96,6 +100,9 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
         description: initialData.description || { ar: "", en: "" },
         courseId: typeof initialData.courseId === 'string' ? initialData.courseId : (initialData.courseId?.id || initialData.courseId?._id || ""),
         sectionId: typeof initialData.sectionId === 'string' ? initialData.sectionId : (initialData.sectionId?.id || initialData.sectionId?._id || ""),
+        certificateTemplateId: typeof initialData.certificateTemplateId === "string"
+          ? initialData.certificateTemplateId
+          : (initialData.certificateTemplateId?.id || initialData.certificateTemplateId?._id || ""),
         linkedTo: initialData.linkedTo || "course",
         passingScore: initialData.passingScore || 70,
         timeLimit: initialData.timeLimit || null,
@@ -112,6 +119,11 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
 
   const selectedCourse = courses.find((c) => (c.id || c._id) === formData.courseId);
   const courseSections = (selectedCourse as any)?.sections || [];
+  const availableCertificateTemplates = templates.filter((template) => {
+    if (!template) return false;
+    const templateId = template.id || template._id;
+    return !!templateId && template.isActive !== false;
+  });
 
   const getTextValue = (value: any): string => {
     if (!value) return "";
@@ -212,12 +224,16 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
 
     setLoading(true);
     try {
-      const { courseId, sectionId, ...restFormData } = formData;
+      const { courseId, sectionId, certificateTemplateId, ...restFormData } = formData;
       const data = { 
         ...restFormData, 
         questions,
         courseId: formData.linkedTo === "general" ? undefined : (courseId || undefined),
-        sectionId: formData.linkedTo === "section" ? (sectionId || undefined) : undefined
+        sectionId: formData.linkedTo === "section" ? (sectionId || undefined) : undefined,
+        certificateTemplateId:
+          formData.linkedTo === "general"
+            ? (certificateTemplateId || undefined)
+            : undefined,
       };
       let result;
       if (isEdit && initialData) {
@@ -480,7 +496,16 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
                   <Label>{isRtl ? "نوع الربط" : "Linked To"}</Label>
                   <Select 
                     value={formData.linkedTo} 
-                    onValueChange={(val: any) => setFormData({ ...formData, linkedTo: val })}
+                    onValueChange={(val: any) =>
+                      setFormData({
+                        ...formData,
+                        linkedTo: val,
+                        courseId: val === "general" ? "" : formData.courseId,
+                        sectionId: val === "section" ? formData.sectionId : "",
+                        certificateTemplateId:
+                          val === "general" ? formData.certificateTemplateId : "",
+                      })
+                    }
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -490,6 +515,49 @@ function QuizFormContent({ initialData, isEdit = false }: QuizFormProps) {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {formData.linkedTo === "general" && (
+                  <div className="space-y-2">
+                    <Label>{isRtl ? "قالب شهادة الاختبار" : "Quiz Certificate Template"}</Label>
+                    <Select
+                      value={formData.certificateTemplateId || "none"}
+                      onValueChange={(val) =>
+                        setFormData({
+                          ...formData,
+                          certificateTemplateId: val === "none" ? "" : val,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            isRtl
+                              ? "اختر قالب الشهادة"
+                              : "Select certificate template"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          {isRtl ? "بدون شهادة" : "No certificate"}
+                        </SelectItem>
+                        {availableCertificateTemplates.map((template) => (
+                          <SelectItem
+                            key={template.id || template._id}
+                            value={(template.id || template._id)!}
+                          >
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {isRtl
+                        ? "بعد نجاح الطالب، سيتمكن من استخراج شهادة الاختبار بهذا القالب."
+                        : "After passing, students can claim a quiz certificate using this template."}
+                    </p>
+                  </div>
+                )}
 
                 {formData.linkedTo !== "general" && (
                   <div className="space-y-2">

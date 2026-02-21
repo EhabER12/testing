@@ -3,6 +3,7 @@ import QuizAttempt from "../models/quizAttemptModel.js";
 import Progress from "../models/progressModel.js";
 import Course from "../models/courseModel.js";
 import Section from "../models/sectionModel.js";
+import CertificateTemplate from "../models/certificateTemplateModel.js";
 import notificationService from "./notificationService.js";
 
 class QuizService {
@@ -23,6 +24,67 @@ class QuizService {
     return cleanObj;
   }
 
+  _normalizeTemplateId(templateId) {
+    if (
+      templateId === "" ||
+      templateId === null ||
+      templateId === undefined ||
+      templateId === "none"
+    ) {
+      return undefined;
+    }
+
+    if (typeof templateId === "object") {
+      return templateId.id || templateId._id || undefined;
+    }
+
+    return templateId;
+  }
+
+  async _validateCertificateTemplate(templateId) {
+    const template = await CertificateTemplate.findById(templateId).select(
+      "_id isActive"
+    );
+
+    if (!template) {
+      throw new Error("Certificate template not found");
+    }
+
+    if (!template.isActive) {
+      throw new Error("Selected certificate template is not active");
+    }
+  }
+
+  async _attachCertificateTemplate(quizDoc, quizJson) {
+    const directTemplate = quizJson.certificateTemplateId;
+    const directIsActive =
+      !directTemplate ||
+      typeof directTemplate !== "object" ||
+      directTemplate.isActive !== false;
+
+    if (!directTemplate || !directIsActive) {
+      const fallbackTemplate = await CertificateTemplate.findOne({
+        quizId: quizDoc._id,
+        isActive: true,
+      }).select("_id name isActive");
+
+      if (fallbackTemplate) {
+        quizJson.certificateTemplateId =
+          typeof fallbackTemplate.toJSON === "function"
+            ? fallbackTemplate.toJSON()
+            : fallbackTemplate;
+      }
+    }
+
+    const resolvedTemplate = quizJson.certificateTemplateId;
+    const hasActiveTemplate =
+      !!resolvedTemplate &&
+      (typeof resolvedTemplate !== "object" ||
+        resolvedTemplate.isActive !== false);
+
+    quizJson.hasCertificateTemplate = hasActiveTemplate;
+  }
+
   // Create Quiz (Admin/Teacher)
   async createQuiz(data, createdBy) {
     // Handle empty strings for optional IDs
@@ -31,6 +93,15 @@ class QuizService {
     }
     if (data.courseId === "" || data.courseId === null) {
       delete data.courseId;
+    }
+    data.certificateTemplateId = this._normalizeTemplateId(
+      data.certificateTemplateId
+    );
+    if (data.linkedTo !== "general") {
+      delete data.certificateTemplateId;
+    }
+    if (data.certificateTemplateId) {
+      await this._validateCertificateTemplate(data.certificateTemplateId);
     }
 
     // Clean bilingual fields
@@ -60,13 +131,15 @@ class QuizService {
   // Get Quiz by Slug (Public)
   async getQuizBySlug(slug, includeAnswers = false) {
     const quizDoc = await Quiz.findOne({ slug, isPublished: true })
-      .populate("createdBy", "fullName");
+      .populate("createdBy", "fullName")
+      .populate("certificateTemplateId", "name isActive");
 
     if (!quizDoc) {
       throw new Error("Quiz not found");
     }
 
     const quiz = quizDoc.toJSON();
+    await this._attachCertificateTemplate(quizDoc, quiz);
 
     if (!includeAnswers) {
       quiz.questions = quiz.questions.map((q) => {
@@ -83,13 +156,15 @@ class QuizService {
     const quizDoc = await Quiz.findById(quizId)
       .populate("courseId", "title slug")
       .populate("sectionId", "title")
-      .populate("createdBy", "fullName email");
+      .populate("createdBy", "fullName email")
+      .populate("certificateTemplateId", "name isActive");
 
     if (!quizDoc) {
       throw new Error("Quiz not found");
     }
 
     const quiz = quizDoc.toJSON();
+    await this._attachCertificateTemplate(quizDoc, quiz);
 
     // Remove correct answers if student is viewing
     if (!includeAnswers) {
@@ -171,6 +246,24 @@ class QuizService {
     }
     if (updates.courseId === "" || updates.courseId === null) {
       updates.courseId = null;
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "certificateTemplateId")) {
+      updates.certificateTemplateId = this._normalizeTemplateId(
+        updates.certificateTemplateId
+      );
+    }
+
+    const targetLinkedTo = updates.linkedTo || quiz.linkedTo;
+    if (
+      targetLinkedTo !== "general" &&
+      (Object.prototype.hasOwnProperty.call(updates, "certificateTemplateId") ||
+        (updates.linkedTo && updates.linkedTo !== "general"))
+    ) {
+      updates.certificateTemplateId = null;
+    }
+
+    if (updates.certificateTemplateId) {
+      await this._validateCertificateTemplate(updates.certificateTemplateId);
     }
 
     // Clean bilingual fields

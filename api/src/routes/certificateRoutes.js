@@ -88,13 +88,13 @@ router.post(
 router.get(
   "/templates",
   protect,
-  authorize("admin", "moderator"),
+  authorize("admin", "moderator", "teacher"),
   getAllTemplates
 );
 router.get(
   "/templates/:id",
   protect,
-  authorize("admin", "moderator"),
+  authorize("admin", "moderator", "teacher"),
   getTemplateById
 );
 router.put(

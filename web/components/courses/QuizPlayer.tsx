@@ -169,6 +169,12 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
   }
 
   if (!currentQuiz) return null;
+  const directTemplate = (currentQuiz as any).certificateTemplateId;
+  const directTemplateIsActive =
+    !!directTemplate &&
+    (typeof directTemplate !== "object" || directTemplate.isActive !== false);
+  const hasQuizCertificateTemplate =
+    !!(currentQuiz as any).hasCertificateTemplate || directTemplateIsActive;
 
   if (gameState === "start") {
     const requiresLogin = !user && !!currentQuiz.requiresRegistration;
@@ -440,7 +446,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
                 {isRtl ? "إعادة المحاولة" : "Try Again"}
               </Button>
             )}
-            {passed && user && (
+            {passed && user && hasQuizCertificateTemplate && (
               <Button
                 onClick={handleClaimQuizCertificate}
                 variant="outline"

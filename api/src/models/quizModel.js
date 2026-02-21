@@ -83,6 +83,11 @@ const quizSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    certificateTemplateId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "CertificateTemplate",
+      default: null,
+    },
 
     // Settings
     passingScore: {
@@ -173,6 +178,7 @@ const quizSchema = new mongoose.Schema(
 quizSchema.index({ courseId: 1, linkedTo: 1 });
 quizSchema.index({ sectionId: 1 });
 quizSchema.index({ slug: 1 });
+quizSchema.index({ certificateTemplateId: 1 });
 
 // Pre-save: Generate slug for general quizzes
 quizSchema.pre("save", async function (next) {

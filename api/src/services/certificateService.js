@@ -280,6 +280,17 @@ class CertificateService {
       if (sheetTemplate) templateId = sheetTemplate._id;
     }
     if (!templateId && quiz) {
+      if (quiz.certificateTemplateId) {
+        const selectedQuizTemplate = await CertificateTemplate.findOne({
+          _id: quiz.certificateTemplateId,
+          isActive: true,
+        });
+        if (selectedQuizTemplate) {
+          templateId = selectedQuizTemplate._id;
+        }
+      }
+    }
+    if (!templateId && quiz) {
       const quizTemplate = await CertificateTemplate.findOne({
         quizId: quiz._id,
         isActive: true,
@@ -386,7 +397,7 @@ class CertificateService {
     return certificate;
   }
 
-  // Issue certificate for a quiz (user must pass and template must be linked to quiz)
+  // Issue certificate for a quiz (user must pass and template must be configured for quiz)
   async issueQuizCertificate(userId, quizId, issuerUserId) {
     if (!userId) {
       throw new Error("User ID is required");
@@ -395,7 +406,9 @@ class CertificateService {
       throw new Error("Quiz ID is required");
     }
 
-    const quiz = await Quiz.findById(quizId).select("title isPublished");
+    const quiz = await Quiz.findById(quizId).select(
+      "title isPublished certificateTemplateId"
+    );
     if (!quiz) {
       throw new Error("Quiz not found");
     }
@@ -413,10 +426,20 @@ class CertificateService {
       throw new Error("You must pass this quiz before claiming its certificate");
     }
 
-    const linkedTemplate = await CertificateTemplate.findOne({
-      quizId,
-      isActive: true,
-    }).sort({ isDefault: -1, createdAt: -1 });
+    let linkedTemplate = null;
+    if (quiz.certificateTemplateId) {
+      linkedTemplate = await CertificateTemplate.findOne({
+        _id: quiz.certificateTemplateId,
+        isActive: true,
+      });
+    }
+
+    if (!linkedTemplate) {
+      linkedTemplate = await CertificateTemplate.findOne({
+        quizId,
+        isActive: true,
+      }).sort({ isDefault: -1, createdAt: -1 });
+    }
 
     if (!linkedTemplate) {
       throw new Error("No certificate template is linked to this quiz");
