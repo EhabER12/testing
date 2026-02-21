@@ -258,8 +258,8 @@ class CertificateService {
         studentNameEn = enName || arName || "Student";
       }
     } else if (user) {
-      const arUserName = cleanName(user.fullName?.ar);
-      const enUserName = cleanName(user.fullName?.en);
+      const arUserName = cleanName(user.fullName?.ar || user.name?.ar || user.name);
+      const enUserName = cleanName(user.fullName?.en || user.name?.en || user.name);
       studentNameAr = arUserName || enUserName || "\u0627\u0644\u0637\u0627\u0644\u0628";
       studentNameEn = enUserName || arUserName || "Student";
     }
@@ -925,23 +925,71 @@ class CertificateService {
     // ALWAYS use fresh data from populated relations for accuracy
     // Stored values in certificate might be stale or empty
     
-    const normalizeBilingual = (value) => ({
-      ar: (value?.ar || '').trim(),
-      en: (value?.en || '').trim(),
-    });
+    const normalizeBilingual = (value) => {
+      if (!value) {
+        return { ar: "", en: "" };
+      }
 
-    // Get student name with sheet/studentMember data as highest priority.
-    // This ensures extracted certificates always reflect the actual sheet member name.
+      if (typeof value === "string") {
+        const clean = value.trim();
+        return { ar: clean, en: clean };
+      }
+
+      return {
+        ar: (value?.ar || "").trim(),
+        en: (value?.en || "").trim(),
+      };
+    };
+
+    // Resolve student name source:
+    // - Sheet certificates: sheet member name first
+    // - Course/Quiz user certificates: user profile name first
     const sheetStudentName = normalizeBilingual(
       certificate.studentMemberId?.name || certificate.studentMemberId?.studentName || {}
     );
     const storedStudentName = normalizeBilingual(certificate.studentName || {});
-    const userStudentName = normalizeBilingual(certificate.userId?.fullName || {});
-    let studentNameData = {
-      ar: sheetStudentName.ar || storedStudentName.ar || userStudentName.ar || sheetStudentName.en || storedStudentName.en || userStudentName.en || '',
-      en: sheetStudentName.en || storedStudentName.en || userStudentName.en || sheetStudentName.ar || storedStudentName.ar || userStudentName.ar || '',
-    };
-    console.log('Resolved student name (sheet + stored + user):', JSON.stringify(studentNameData));
+    const userStudentName = normalizeBilingual(
+      certificate.userId?.fullName || certificate.userId?.name || {}
+    );
+
+    const preferSheetName = !!certificate.studentMemberId;
+    let studentNameData;
+    if (preferSheetName) {
+      studentNameData = {
+        ar:
+          sheetStudentName.ar ||
+          userStudentName.ar ||
+          storedStudentName.ar ||
+          sheetStudentName.en ||
+          userStudentName.en ||
+          storedStudentName.en ||
+          "",
+        en:
+          sheetStudentName.en ||
+          userStudentName.en ||
+          storedStudentName.en ||
+          sheetStudentName.ar ||
+          userStudentName.ar ||
+          storedStudentName.ar ||
+          "",
+      };
+    } else {
+      studentNameData = {
+        ar:
+          userStudentName.ar ||
+          storedStudentName.ar ||
+          userStudentName.en ||
+          storedStudentName.en ||
+          "",
+        en:
+          userStudentName.en ||
+          storedStudentName.en ||
+          userStudentName.ar ||
+          storedStudentName.ar ||
+          "",
+      };
+    }
+    console.log("Resolved student name (source-aware):", JSON.stringify(studentNameData));
 
     // Get course/package name - ALWAYS prefer populated relation data
     let sourceName = {};
@@ -1005,6 +1053,10 @@ class CertificateService {
       issuedAt: certificate.issuedAt,
       metadata: certificate.metadata,
     };
+
+    // Persist corrected names so old certificates with placeholder names get fixed permanently.
+    certificate.studentName = finalStudentName;
+    certificate.courseName = finalCourseName;
 
     // DEBUG: Log the certificate data being sent to PDF generation
     console.log('=== CERTIFICATE DATA FOR PDF ===');
