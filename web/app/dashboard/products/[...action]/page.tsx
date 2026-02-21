@@ -619,7 +619,7 @@ export default function ProductFormPage() {
                   <SelectContent>
                     <SelectItem value="SAR">SAR</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="EGP">EGP</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

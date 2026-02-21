@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { BookOpen, Loader2, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAppDispatch } from "@/store/hooks";
 import { addToCart } from "@/store/slices/cartSlice";
 import { bookService, Book } from "@/store/services/bookService";
@@ -162,6 +163,13 @@ export default function BooksPage() {
         {!loading && !error && books.length > 0 && (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {books.map((book) => {
+              const compareAtPrice = Number(book.compareAtPrice || 0);
+              const basePrice = Number(book.basePrice || 0);
+              const hasDiscount = compareAtPrice > basePrice && compareAtPrice > 0;
+              const discountPercent = hasDiscount
+                ? Math.round(((compareAtPrice - basePrice) / compareAtPrice) * 100)
+                : 0;
+
               const converted = format(
                 convert(book.basePrice || 0, normalizeCurrency(book.currency), selectedCurrency),
                 selectedCurrency,
@@ -174,7 +182,16 @@ export default function BooksPage() {
                   className="overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:shadow-lg"
                 >
                   <Link href={`/${locale}/books/${book.slug}`}>
-                    <div className="aspect-[4/3] bg-gray-100">
+                    <div className="relative aspect-[4/3] bg-gray-100">
+                      {hasDiscount && (
+                        <Badge
+                          className={`absolute top-3 z-10 bg-red-600 text-white ${
+                            isRtl ? "left-3" : "right-3"
+                          }`}
+                        >
+                          {isRtl ? `خصم ${discountPercent}%` : `${discountPercent}% OFF`}
+                        </Badge>
+                      )}
                       {book.bookCoverPath || book.coverImage ? (
                         <img
                           src={book.bookCoverPath || book.coverImage}
