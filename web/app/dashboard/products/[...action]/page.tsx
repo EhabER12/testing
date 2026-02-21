@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save, Loader2, Plus, Trash, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ import {
 import { getCategories } from "@/store/slices/categorySlice";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
 import { LanguageSwitcher } from "@/components/dashboard/common/LanguageSwitcher";
+import { bookService } from "@/store/services/bookService";
 import toast from "react-hot-toast";
 
 interface BilingualText {
@@ -85,9 +86,12 @@ const initialFormData: ProductFormData = {
   order: 0,
 };
 
+type ProductCreationMode = "default" | "digital_book";
+
 export default function ProductFormPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const { locale, t } = useAdminLocale();
 
@@ -119,6 +123,8 @@ export default function ProductFormPage() {
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const [existingGallery, setExistingGallery] = useState<string[]>([]);
+  const [creationMode, setCreationMode] = useState<ProductCreationMode>("default");
+  const [bookFile, setBookFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Sync formLang with admin locale
@@ -132,6 +138,14 @@ export default function ProductFormPage() {
   useEffect(() => {
     dispatch(getCategories({}));
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!isCreate) return;
+    const requestedType = searchParams.get("type");
+    if (requestedType === "digital_book") {
+      setCreationMode("digital_book");
+    }
+  }, [isCreate, searchParams]);
 
   // Load product if editing
   useEffect(() => {
@@ -169,6 +183,7 @@ export default function ProductFormPage() {
       if (currentProduct.gallery) {
         setExistingGallery(currentProduct.gallery);
       }
+      setCreationMode("default");
     }
   }, [isEdit, currentProduct]);
 
@@ -363,7 +378,7 @@ export default function ProductFormPage() {
       data.append("customFields", JSON.stringify(customFields));
 
       if (coverImage) {
-        data.append("coverImage", coverImage);
+        data.append(creationMode === "digital_book" ? "cover" : "coverImage", coverImage);
       }
 
       galleryFiles.forEach((file) => {
@@ -374,7 +389,20 @@ export default function ProductFormPage() {
         data.append("existingGallery", JSON.stringify(existingGallery));
       }
 
-      if (isEdit && productId) {
+      if (isCreate && creationMode === "digital_book") {
+        if (!bookFile) {
+          toast.error(
+            locale === "ar" ? "من فضلك ارفع ملف الكتاب PDF" : "Please upload the book PDF file"
+          );
+          return;
+        }
+        data.append("pdf", bookFile);
+        await bookService.createBook(data);
+        toast.success(
+          locale === "ar" ? "تم إضافة منتج الكتاب الرقمي بنجاح" : "Digital book product created successfully"
+        );
+        router.push("/dashboard/books");
+      } else if (isEdit && productId) {
         await dispatch(updateProduct({ id: productId, data })).unwrap();
         toast.success(t("admin.products.productUpdated"));
       } else {
@@ -413,13 +441,40 @@ export default function ProductFormPage() {
           <h1 className="text-2xl font-bold text-gray-900">
             {isEdit
               ? t("admin.products.editProduct")
-              : t("admin.products.createProduct")}
+              : creationMode === "digital_book"
+                ? locale === "ar"
+                  ? "إضافة منتج كتاب رقمي"
+                  : "Create Digital Book Product"
+                : t("admin.products.createProduct")}
           </h1>
         </div>
 
         {/* Language Switcher - Same component used in services */}
         <LanguageSwitcher />
       </div>
+
+      {isCreate && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={creationMode === "default" ? "default" : "outline"}
+                onClick={() => setCreationMode("default")}
+              >
+                {locale === "ar" ? "إضافة منتج عادي" : "Add Regular Product"}
+              </Button>
+              <Button
+                type="button"
+                variant={creationMode === "digital_book" ? "default" : "outline"}
+                onClick={() => setCreationMode("digital_book")}
+              >
+                {locale === "ar" ? "إضافة منتج كتاب رقمي" : "Add Digital Book Product"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Info */}
@@ -615,6 +670,23 @@ export default function ProductFormPage() {
                 </label>
               )}
             </div>
+            {isCreate && creationMode === "digital_book" && (
+              <div className="space-y-2 pt-4">
+                <Label>{locale === "ar" ? "ملف الكتاب (PDF)" : "Book File (PDF)"}</Label>
+                <Input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => setBookFile(e.target.files?.[0] || null)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {bookFile
+                    ? bookFile.name
+                    : locale === "ar"
+                      ? "ارفع ملف PDF ليتاح للشراء بعد المراجعة."
+                      : "Upload a PDF file to be sold after approval."}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -907,7 +979,15 @@ export default function ProductFormPage() {
             ) : (
               <Save className="w-4 h-4" />
             )}
-            {t("common.save")}
+            {submitting
+              ? locale === "ar"
+                ? "جاري الحفظ..."
+                : "Saving..."
+              : isCreate && creationMode === "digital_book"
+                ? locale === "ar"
+                  ? "إضافة منتج كتاب رقمي"
+                  : "Create Digital Book Product"
+                : t("common.save")}
           </Button>
         </div>
       </form>

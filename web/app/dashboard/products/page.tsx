@@ -46,6 +46,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Loader2,
   Plus,
+  BookOpen,
   MoreHorizontal,
   Pencil,
   Trash,
@@ -192,6 +193,12 @@ export default function ProductsPage() {
               {t("admin.products.createProduct")}
             </Button>
           </Link>
+          <Link href="/dashboard/products/create?type=digital_book">
+            <Button variant="outline">
+              <BookOpen className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+              {locale === "ar" ? "إضافة منتج كتاب رقمي" : "Add Digital Book Product"}
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -243,12 +250,20 @@ export default function ProductsPage() {
                 <p className="text-muted-foreground mt-1 mb-4">
                   {t("admin.products.createFirst")}
                 </p>
-                <Link href="/dashboard/products/create">
-                  <Button>
-                    <Plus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-                    {t("admin.products.createProduct")}
-                  </Button>
-                </Link>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Link href="/dashboard/products/create">
+                    <Button>
+                      <Plus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+                      {t("admin.products.createProduct")}
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard/products/create?type=digital_book">
+                    <Button variant="outline">
+                      <BookOpen className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+                      {locale === "ar" ? "إضافة منتج كتاب رقمي" : "Add Digital Book Product"}
+                    </Button>
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
