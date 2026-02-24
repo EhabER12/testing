@@ -408,7 +408,7 @@ class EmailTemplateService {
     if (name === 'password_reset') {
       return await this.saveTemplate({
         name: "password_reset",
-        type: "auth",
+        type: "password_reset",
         subject: {
           ar: "طلب إعادة تعيين كلمة المرور",
           en: "Password Reset Request",
@@ -472,7 +472,7 @@ class EmailTemplateService {
     if (name === 'password_reset_confirmation') {
       return await this.saveTemplate({
         name: "password_reset_confirmation",
-        type: "auth",
+        type: "password_reset",
         subject: {
           ar: "تم تغيير كلمة المرور بنجاح",
           en: "Password Changed Successfully",
