@@ -6,7 +6,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/store";
 import AccountClient from "./AccountClient";
 import { getUserPaymentHistoryThunk } from "@/store/services/paymentService";
-import { getUserReviewsThunk } from "@/store/services/reviewService";
+
 import { getPublicWebsiteSettingsThunk } from "@/store/services/settingsService";
 import { getEnrolledCourses } from "@/store/services/courseService";
 import { getMySubscriptions } from "@/store/services/studentMemberService";
@@ -20,9 +20,7 @@ export default function AccountPage() {
   const { payments, isLoading: paymentsLoading } = useSelector(
     (state: RootState) => state.payments
   );
-  const { reviews, isLoading: reviewsLoading } = useSelector(
-    (state: RootState) => state.reviews
-  );
+
   const { enrolledCourses, isLoading: coursesLoading } = useSelector(
     (state: RootState) => state.courses
   );
@@ -46,7 +44,7 @@ export default function AccountPage() {
     // Fetch user data if logged in
     if (user?.token && !hasFetched) {
       dispatch(getUserPaymentHistoryThunk());
-      dispatch(getUserReviewsThunk());
+
       dispatch(getEnrolledCourses());
       dispatch(getMySubscriptions());
       dispatch(getMyQuizzes());
@@ -55,7 +53,7 @@ export default function AccountPage() {
   }, [user, dispatch, publicSettings, hasFetched]);
 
   const isInitialLoading =
-    (paymentsLoading || reviewsLoading || coursesLoading || settingsLoading || subscriptionsLoading || quizzesLoading) && !hasFetched;
+    (paymentsLoading || coursesLoading || settingsLoading || subscriptionsLoading || quizzesLoading) && !hasFetched;
 
   if (isInitialLoading) {
     return (
@@ -73,7 +71,7 @@ export default function AccountPage() {
     }>
       <AccountClient
         initialOrders={payments || []}
-        initialReviews={reviews || []}
+
         initialEnrolledCourses={enrolledCourses || []}
         initialSubscriptions={mySubscriptions || []}
         initialQuizzes={quizzes || []}

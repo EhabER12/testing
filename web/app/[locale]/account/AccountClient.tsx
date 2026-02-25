@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info, Clock, CheckCircle2 } from "lucide-react";
 import { OrdersTab } from "@/components/account/OrdersTab";
-import { ReviewsTab } from "@/components/account/ReviewsTab";
+
 import { SubscriptionsTab } from "@/components/account/SubscriptionsTab";
 import {
   Card,
@@ -19,13 +19,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { setPayments } from "@/store/slices/paymentSlice"; // Need to export this
-import { setReviews } from "@/store/slices/reviewSlice";
 import { QuizzesTab } from "../../../components/account/QuizzesTab";
 import CertificatesTab from "../../../components/account/CertificatesTab";
 
 interface AccountClientProps {
   initialOrders: any[];
-  initialReviews: any[];
   initialEnrolledCourses: any[];
   initialSubscriptions: any[];
   initialQuizzes: any[];
@@ -35,7 +33,6 @@ interface AccountClientProps {
 
 export default function AccountClient({
   initialOrders,
-  initialReviews,
   initialEnrolledCourses,
   initialSubscriptions,
   initialQuizzes,
@@ -57,10 +54,7 @@ export default function AccountClient({
     if (initialOrders && initialOrders.length > 0) {
       dispatch(setPayments(initialOrders));
     }
-    if (initialReviews && initialReviews.length > 0) {
-      dispatch(setReviews(initialReviews));
-    }
-  }, [initialOrders, initialReviews, dispatch]);
+  }, [initialOrders, dispatch]);
 
   useEffect(() => {
     if (!user) {
@@ -93,12 +87,11 @@ export default function AccountClient({
           onValueChange={setActiveTab}
           dir={locale === "ar" ? "rtl" : "ltr"}
         >
-          <TabsList className="grid w-full grid-cols-5 max-w-[900px] mb-8">
+          <TabsList className="grid w-full grid-cols-4 max-w-[800px] mb-8">
             <TabsTrigger value="orders">{t("tabs.orders")}</TabsTrigger>
             <TabsTrigger value="subscriptions">{isArabic ? "اشتراكاتي" : "My Subscriptions"}</TabsTrigger>
             <TabsTrigger value="quizzes">{isArabic ? "الاختبارات" : "Quizzes"}</TabsTrigger>
             <TabsTrigger value="certificates">{isArabic ? "الشهادات" : "Certificates"}</TabsTrigger>
-            <TabsTrigger value="reviews">{t("tabs.reviews")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders">
@@ -113,17 +106,7 @@ export default function AccountClient({
             </Card>
           </TabsContent>
 
-          <TabsContent value="reviews">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("reviews.title")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* Pass initial data if we refactor ReviewsTab */}
-                <ReviewsTab initialData={initialReviews} isArabic={locale === "ar"} />
-              </CardContent>
-            </Card>
-          </TabsContent>
+
 
           <TabsContent value="quizzes">
             <Card>
