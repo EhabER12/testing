@@ -26,7 +26,19 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Loader2, Search, Eye } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  Eye,
+  ChevronDown,
+  ChevronUp,
+  ShoppingBag,
+  Calendar,
+  DollarSign,
+  Tag,
+  X,
+  FileImage,
+} from "lucide-react";
 
 export function OrdersTab({
   initialData = [],
@@ -53,6 +65,7 @@ export function OrdersTab({
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isProofDialogOpen, setIsProofDialogOpen] = useState(false);
   const [hasFetched, setHasFetched] = useState(initialData.length > 0);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
   const currentPayments =
     payments.length > 0 ? payments : initialData.length > 0 ? initialData : [];
@@ -70,6 +83,22 @@ export function OrdersTab({
     }
   }, [dispatch, user, hasFetched, payments.length, initialData.length]);
 
+  const getStatusVariant = (status: string) => {
+    if (status === "success") return "default";
+    if (status === "pending") return "secondary";
+    return "destructive";
+  };
+
+  const getStatusColor = (status: string) => {
+    if (status === "success") return "bg-emerald-100 text-emerald-700 border-emerald-200";
+    if (status === "pending") return "bg-amber-100 text-amber-700 border-amber-200";
+    return "bg-red-100 text-red-700 border-red-200";
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpandedOrderId((prev) => (prev === id ? null : id));
+  };
+
   // Show loading if we haven't fetched yet OR if we're currently loading with no data
   if ((!hasFetched || isPaymentLoading) && currentPayments.length === 0) {
     return (
@@ -82,7 +111,8 @@ export function OrdersTab({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border bg-white dark:bg-gray-950">
+      {/* ─── DESKTOP TABLE (hidden on mobile) ─── */}
+      <div className="hidden sm:block rounded-md border bg-white dark:bg-gray-950">
         <Table>
           <TableHeader>
             <TableRow>
@@ -125,13 +155,7 @@ export function OrdersTab({
                   </TableCell>
                   <TableCell className="text-start">
                     <Badge
-                      variant={
-                        payment.status === "success"
-                          ? "default"
-                          : payment.status === "pending"
-                          ? "secondary"
-                          : "destructive"
-                      }
+                      variant={getStatusVariant(payment.status)}
                     >
                       {t(`statuses.${payment.status}`)}
                     </Badge>
@@ -194,8 +218,166 @@ export function OrdersTab({
         </Table>
       </div>
 
+      {/* ─── MOBILE CARDS (visible only on mobile) ─── */}
+      <div className="sm:hidden space-y-3">
+        {isPaymentLoading ? (
+          <div className="flex justify-center items-center py-10">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="ms-2">{tCommon("loading")}</span>
+          </div>
+        ) : currentPayments.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground">
+            {t("orders.noOrders")}
+          </div>
+        ) : (
+          currentPayments.map((payment: any) => {
+            const orderId = String(payment.id || (payment as any)._id);
+            const shortId = orderId.slice(-6);
+            const isExpanded = expandedOrderId === orderId;
+
+            return (
+              <div
+                key={orderId}
+                className="rounded-xl border bg-white dark:bg-gray-950 shadow-sm overflow-hidden transition-all duration-200"
+              >
+                {/* ── Summary Row (always visible) ── */}
+                <button
+                  className="w-full text-start px-4 py-3 flex items-center gap-3 active:bg-gray-50 dark:active:bg-gray-900 transition-colors"
+                  onClick={() => toggleExpand(orderId)}
+                >
+                  {/* Order icon */}
+                  <span className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                    <ShoppingBag className="h-4 w-4 text-primary" />
+                  </span>
+
+                  {/* Main info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-sm">
+                        #{shortId}
+                      </span>
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full border ${getStatusColor(payment.status)}`}
+                      >
+                        {t(`statuses.${payment.status}`)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(payment.createdAt || "").toLocaleDateString()}
+                      </span>
+                      <span className="flex items-center gap-1 font-medium text-foreground">
+                        <DollarSign className="h-3 w-3" />
+                        {payment.amount} {payment.currency}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Chevron */}
+                  <span className="flex-shrink-0 text-muted-foreground">
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </span>
+                </button>
+
+                {/* ── Expanded Details Panel ── */}
+                {isExpanded && (
+                  <div className="border-t bg-gray-50 dark:bg-gray-900 px-4 py-3 space-y-3 animate-in slide-in-from-top-2 duration-200">
+                    {/* Detail rows */}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">
+                          {t("orders.orderId")}
+                        </p>
+                        <p className="font-medium">#{shortId}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">
+                          {t("orders.date")}
+                        </p>
+                        <p className="font-medium">
+                          {new Date(payment.createdAt || "").toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">
+                          {t("orders.amount")}
+                        </p>
+                        <p className="font-semibold text-primary">
+                          {payment.amount} {payment.currency}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">
+                          {t("orders.status")}
+                        </p>
+                        <span
+                          className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full border ${getStatusColor(payment.status)}`}
+                        >
+                          {t(`statuses.${payment.status}`)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {payment.paymentDetails?.items && (
+                        <button
+                          className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                          onClick={() => {
+                            setSelectedPayment(payment);
+                            setIsDetailsDialogOpen(true);
+                          }}
+                        >
+                          <Search className="h-3.5 w-3.5" />
+                          {t("orders.viewDetails")}
+                        </button>
+                      )}
+                      {payment.paymentProofUrl && (
+                        <button
+                          className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                          onClick={() => {
+                            setSelectedPayment(payment);
+                            setIsProofDialogOpen(true);
+                          }}
+                        >
+                          <FileImage className="h-3.5 w-3.5" />
+                          {t("orders.viewProof")}
+                        </button>
+                      )}
+                      {payment.status === "pending" && (
+                        <button
+                          className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                          onClick={() => {
+                            if (confirm(t("orders.confirmCancel"))) {
+                              dispatch(
+                                cancelPaymentThunk(
+                                  payment.id || (payment as any)._id
+                                )
+                              );
+                            }
+                          }}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          {t("orders.cancelOrder")}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* ─── Order Details Dialog ─── */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="max-w-3xl" dir={isArabic ? "rtl" : "ltr"}>
+        <DialogContent className="max-w-3xl w-[95vw]" dir={isArabic ? "rtl" : "ltr"}>
           <DialogHeader>
             <DialogTitle className="text-start">
               {t("orders.viewDetails")}
@@ -204,12 +386,12 @@ export function OrdersTab({
               {t("orders.orderId")} #
               {selectedPayment
                 ? String(
-                    selectedPayment.id || (selectedPayment as any)._id
-                  ).slice(-6)
+                  selectedPayment.id || (selectedPayment as any)._id
+                ).slice(-6)
                 : ""}
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4">
+          <div className="mt-4 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -236,25 +418,25 @@ export function OrdersTab({
                     const lineTotal =
                       Number(item.totalPrice ?? unitPrice * Number(item.quantity || 0)) || 0;
                     return (
-                    <TableRow key={index}>
-                      <TableCell className="text-start">
-                        {item.name}
-                        {item.productType === "digital_book" && (
-                          <Badge variant="secondary" className="ms-2">
-                            {isArabic ? "كتاب رقمي" : "Digital Book"}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-start">
-                        {item.quantity}
-                      </TableCell>
-                      <TableCell className="text-start">
-                        {unitPrice} {selectedPayment.currency}
-                      </TableCell>
-                      <TableCell className="text-start">
-                        {lineTotal} {selectedPayment.currency}
-                      </TableCell>
-                    </TableRow>
+                      <TableRow key={index}>
+                        <TableCell className="text-start">
+                          {item.name}
+                          {item.productType === "digital_book" && (
+                            <Badge variant="secondary" className="ms-2">
+                              {isArabic ? "كتاب رقمي" : "Digital Book"}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-start">
+                          {item.quantity}
+                        </TableCell>
+                        <TableCell className="text-start">
+                          {unitPrice} {selectedPayment.currency}
+                        </TableCell>
+                        <TableCell className="text-start">
+                          {lineTotal} {selectedPayment.currency}
+                        </TableCell>
+                      </TableRow>
                     );
                   }
                 )}
@@ -272,8 +454,9 @@ export function OrdersTab({
         </DialogContent>
       </Dialog>
 
+      {/* ─── Payment Proof Dialog ─── */}
       <Dialog open={isProofDialogOpen} onOpenChange={setIsProofDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl w-[95vw]">
           <DialogHeader>
             <DialogTitle className="text-start">
               {t("orders.paymentProof")}
