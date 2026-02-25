@@ -298,6 +298,36 @@ export const importMembers = async (req, res, next) => {
   }
 };
 
+// @desc    Import simple members from CSV (name + date only)
+// @route   POST /api/student-members/import-simple
+// @access  Private (Admin)
+export const importSimpleMembers = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      throw new Error('No file uploaded');
+    }
+
+    const sheetName = req.body?.sheetName?.trim();
+    if (!sheetName) {
+      throw new Error('Sheet name is required');
+    }
+
+    const result = await studentMemberService.importSimpleMembers(
+      req.file.buffer,
+      req.user._id,
+      sheetName
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Import processed: ${result.success} succeeded, ${result.failed} failed`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Export members to CSV
 // @route   GET /api/student-members/export
 // @access  Private (Admin, Moderator)

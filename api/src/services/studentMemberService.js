@@ -233,18 +233,18 @@ export class StudentMemberService {
             }
           } else {
             const parsedBilling = parseInt(rawBilling);
-          // If it's a simple number like "5"
-          if (!isNaN(parsedBilling) && parsedBilling >= 1 && parsedBilling <= 31) {
-            billingDay = Math.min(parsedBilling, 28); // Cap at 28 for safety
-          } else {
-            // Maybe it's a date string
-            const bDate = parseDateValue(rawBilling);
-            if (isValid(bDate)) {
-              billingDay = Math.min(bDate.getDate(), 28);
+            // If it's a simple number like "5"
+            if (!isNaN(parsedBilling) && parsedBilling >= 1 && parsedBilling <= 31) {
+              billingDay = Math.min(parsedBilling, 28); // Cap at 28 for safety
             } else {
-              throw new Error(`Invalid billing day: ${record.billingDay}`);
+              // Maybe it's a date string
+              const bDate = parseDateValue(rawBilling);
+              if (isValid(bDate)) {
+                billingDay = Math.min(bDate.getDate(), 28);
+              } else {
+                throw new Error(`Invalid billing day: ${record.billingDay}`);
+              }
             }
-          }
           }
         } else if (startDate) {
           billingDay = Math.min(startDate.getDate(), 28);
@@ -340,6 +340,97 @@ export class StudentMemberService {
     return results;
   }
 
+  // Import simple members from CSV (name + date only)
+  async importSimpleMembers(fileBuffer, createdBy, sheetName = "") {
+    const records = parse(fileBuffer, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true
+    });
+
+    const results = {
+      total: records.length,
+      success: 0,
+      failed: 0,
+      errors: []
+    };
+
+    const parseDateValue = (dateStr) => {
+      if (!dateStr) return null;
+      const raw = String(dateStr).trim();
+      if (!raw) return null;
+      let date = new Date(raw);
+      if (isValid(date)) return date;
+      const parts = raw.split(/[/-]/);
+      if (parts.length === 3) {
+        let day, month, year;
+        if (parts[0].length === 4) {
+          year = parseInt(parts[0]);
+          month = parseInt(parts[1]) - 1;
+          day = parseInt(parts[2]);
+        } else {
+          day = parseInt(parts[0]);
+          month = parseInt(parts[1]) - 1;
+          year = parseInt(parts[2]);
+        }
+        date = new Date(year, month, day);
+        if (isValid(date)) return date;
+      }
+      return null;
+    };
+
+    for (const [index, record] of records.entries()) {
+      try {
+        const nameValue = (record.name || record.الاسم || "").trim();
+        if (!nameValue) {
+          throw new Error('Missing required field: name');
+        }
+
+        const dateInput =
+          record.date ||
+          record.التاريخ ||
+          record['start date'] ||
+          record['start time'] ||
+          record.startDate ||
+          "";
+
+        const issuedDate = parseDateValue(dateInput);
+        const dateRaw = String(dateInput || "").trim();
+        if (dateRaw && !issuedDate) {
+          throw new Error(`Invalid date: ${dateInput}`);
+        }
+
+        const startDate = issuedDate || new Date();
+        // For simple sheets, nextDueDate = startDate (no renewal logic needed)
+        const nextDueDate = issuedDate || new Date();
+
+        const memberData = {
+          name: { ar: nameValue, en: nameValue },
+          phone: "",
+          governorate: "",
+          startDate,
+          nextDueDate,
+          billingDay: Math.min(startDate.getDate(), 28),
+          sheetName: sheetName || "",
+          // Mark as simple sheet via notes
+          notes: `simple_sheet:${sheetName}`,
+        };
+
+        await this.createMember(memberData, createdBy);
+        results.success++;
+      } catch (error) {
+        results.failed++;
+        results.errors.push({
+          row: index + 2,
+          name: record.name || record.الاسم || "",
+          error: error.message
+        });
+      }
+    }
+
+    return results;
+  }
+
   // Get all student members with filters
   async getAllMembers(filters = {}, options = {}) {
     const { status, assignedTeacherId, governorate, packageId, search } = filters;
@@ -411,10 +502,10 @@ export class StudentMemberService {
   // Create new member
   async createMember(memberData, createdBy) {
     const startDate = memberData.startDate || new Date();
-    
+
     // Use provided endDate/nextDueDate directly, or calculate if not provided
     let nextDueDate = memberData.nextDueDate || memberData.endDate;
-    
+
     const member = new StudentMember({
       ...memberData,
       startDate,
@@ -715,11 +806,11 @@ export class StudentMemberService {
     ];
 
     const rows = members.map(member => {
-      const teacherName = member.assignedTeacherId 
+      const teacherName = member.assignedTeacherId
         ? (member.assignedTeacherId.fullName?.ar || member.assignedTeacherId.fullName?.en || member.assignedTeacherId.email || "")
         : (member.assignedTeacherName || "");
 
-      const packageName = member.packageId 
+      const packageName = member.packageId
         ? (member.packageId.name?.ar || member.packageId.name?.en || "")
         : "";
 

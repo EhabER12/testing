@@ -194,6 +194,32 @@ export const importStudentMembers = createAsyncThunk(
   }
 );
 
+// Import simple student members from CSV (name + date only)
+export const importSimpleStudentMembers = createAsyncThunk(
+  "studentMembers/importSimple",
+  async (
+    { file, sheetName }: { file: File; sheetName: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("sheetName", sheetName);
+
+      const response = await axios.post("/student-members/import-simple", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to import simple student members"
+      );
+    }
+  }
+);
+
 // Export student members to CSV
 export const exportStudentMembers = async (filters: {
   status?: string;
@@ -214,6 +240,6 @@ export const exportStudentMembers = async (filters: {
   const response = await axios.get(`/student-members/export?${params.toString()}`, {
     responseType: "blob",
   });
-  
+
   return response.data;
 };

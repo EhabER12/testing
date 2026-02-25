@@ -13,6 +13,7 @@ import {
   getStatistics,
   getMySubscriptions,
   importMembers,
+  importSimpleMembers,
   exportMembers,
 } from "../controllers/studentMemberController.js";
 import multer from "multer";
@@ -44,6 +45,7 @@ router.get("/due-soon", getMembersDueSoon);
 router.post("/bulk-reminders", sendBulkReminders);
 router.post("/update-statuses", updateStatuses);
 router.post("/import", upload.single("file"), importMembers);
+router.post("/import-simple", upload.single("file"), importSimpleMembers);
 
 // CRUD operations
 router.route("/")

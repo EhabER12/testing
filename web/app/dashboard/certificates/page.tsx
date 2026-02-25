@@ -20,6 +20,7 @@ import { getAllUsers } from "@/store/services/userService";
 import {
   getStudentMembers,
   importStudentMembers,
+  importSimpleStudentMembers,
   deleteStudentMember,
 } from "@/store/services/studentMemberService";
 import { resetStatus } from "@/store/slices/certificateSlice";
@@ -109,6 +110,19 @@ export default function CertificatesPage() {
   const [bulkTeacher, setBulkTeacher] = useState<string>("all");
   const [bulkSheet, setBulkSheet] = useState<string>("all");
   const [sheetDeleteLoading, setSheetDeleteLoading] = useState<string | null>(null);
+  // ─── Simple Sheet State ───
+  const [simpleSheet, setSimpleSheet] = useState<string>("all");
+  const [simpleImportDialogOpen, setSimpleImportDialogOpen] = useState(false);
+  const [simpleImportFile, setSimpleImportFile] = useState<File | null>(null);
+  const [simpleImportSheetName, setSimpleImportSheetName] = useState("");
+  const [simpleImportResult, setSimpleImportResult] = useState<any>(null);
+  const [simpleImportLoading, setSimpleImportLoading] = useState(false);
+  const [simpleGenerateLoading, setSimpleGenerateLoading] = useState(false);
+  const [simpleSheetDeleteLoading, setSimpleSheetDeleteLoading] = useState<string | null>(null);
+  const [simpleBulkActionDialog, setSimpleBulkActionDialog] = useState<{
+    open: boolean;
+    mode: "download" | "export" | null;
+  }>({ open: false, mode: null });
   const [issueDialog, setIssueDialog] = useState({
     open: false,
     userId: "",
@@ -208,11 +222,11 @@ export default function CertificatesPage() {
   const handleReissue = async (id: string) => {
     const cert = certificates.find(c => (c.id || c._id) === id);
     const isRevoked = cert?.status === "revoked";
-    
+
     if (
       confirm(
         isRtl
-          ? isRevoked 
+          ? isRevoked
             ? "هل أنت متأكد من استعادة هذه الشهادة إلى حالة مصدرة؟"
             : "هل أنت متأكد من إلغاء هذه الشهادة؟"
           : isRevoked
@@ -224,9 +238,9 @@ export default function CertificatesPage() {
       try {
         await dispatch(reissueCertificate(id)).unwrap();
         toast.success(
-          isRtl 
-            ? isRevoked 
-              ? "تم استعادة الشهادة بنجاح" 
+          isRtl
+            ? isRevoked
+              ? "تم استعادة الشهادة بنجاح"
               : "تم إلغاء الشهادة بنجاح"
             : isRevoked
               ? "Certificate restored successfully"
@@ -338,7 +352,7 @@ export default function CertificatesPage() {
 
   const handleGenerateCertificates = async (mode: "download" | "export") => {
     setBulkActionDialog({ open: false, mode: null });
-    
+
     const filteredStudents = studentMembers
       .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
       .filter((s) => s.status === "active")
@@ -404,7 +418,7 @@ export default function CertificatesPage() {
             ).unwrap();
 
             const certId = certificate?.id || certificate?._id;
-            
+
             // Store certificate data for export
             issuedCertificates.push({
               studentName: nameValue || "Unknown",
@@ -590,6 +604,247 @@ export default function CertificatesPage() {
     document.body.removeChild(link);
   };
 
+  const downloadSimpleTemplate = () => {
+    const headers = ["name", "date"];
+    const exampleRow = ["اسم الطالب", new Date().toISOString().split("T")[0]];
+    const BOM = "\uFEFF";
+    const csvContent = BOM + headers.join(",") + "\n" + exampleRow.join(",");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "simple_sheet_template.csv";
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleImportSimple = async () => {
+    if (!simpleImportFile || !simpleImportSheetName.trim()) return;
+    setSimpleImportLoading(true);
+    try {
+      const sheetName = simpleImportSheetName.trim();
+      const result = await dispatch(importSimpleStudentMembers({ file: simpleImportFile, sheetName })).unwrap();
+      setSimpleImportResult(result.data);
+      dispatch(getStudentMembers());
+      setSimpleSheet(sheetName);
+      toast.success(isRtl ? "تم استيراد الشيت المبسط" : "Simple sheet imported");
+    } catch (err: any) {
+      console.error("Simple import failed:", err);
+      toast.error(typeof err === "string" ? err : "Import failed");
+    } finally {
+      setSimpleImportLoading(false);
+    }
+  };
+
+  const handleGenerateSimpleCertificates = async (mode: "download" | "export") => {
+    setSimpleBulkActionDialog({ open: false, mode: null });
+
+    // Simple sheet students: sheetName matches AND notes starts with "simple_sheet:"
+    const simpleStudents = studentMembers
+      .filter((s) => s.sheetName && (s.notes || "").startsWith("simple_sheet:"))
+      .filter((s) => simpleSheet === "all" || s.sheetName === simpleSheet);
+
+    if (simpleStudents.length === 0) {
+      toast.error(isRtl ? "لا يوجد طلاب في الشيت المبسط" : "No students in simple sheet");
+      return;
+    }
+
+    const confirmMsg = mode === "download"
+      ? (isRtl ? "هل أنت متأكد من استخراج وتحميل شهادات الشيت المبسط؟" : "Generate and download certificates for simple sheet?")
+      : (isRtl ? "هل أنت متأكد من إصدار أرقام شهادات الشيت المبسط؟" : "Issue certificate numbers for simple sheet?");
+
+    if (!confirm(confirmMsg)) return;
+
+    setSimpleGenerateLoading(true);
+    try {
+      let successCount = 0;
+      let failedCount = 0;
+      const failedNames: string[] = [];
+      const missingTemplateNames: string[] = [];
+      const issuedCertificates: Array<{
+        studentName: string;
+        certificateNumber: string;
+        courseName: string;
+        issuedAt: string;
+        sheetName?: string;
+      }> = [];
+
+      for (const student of simpleStudents) {
+        const studentId = student.id || student._id;
+        if (!studentId) {
+          failedCount += 1;
+          failedNames.push(getTextValue(student.studentName || student.name) || "Unknown");
+          continue;
+        }
+
+        const sheetTemplate = student.sheetName
+          ? templates.find((t: any) => t.sheetName === student.sheetName)
+          : null;
+
+        if (!sheetTemplate) {
+          failedCount += 1;
+          missingTemplateNames.push(getTextValue(student.studentName || student.name) || "Unknown");
+          continue;
+        }
+
+        try {
+          const nameValue = getTextValue(student.studentName || student.name);
+          // Use issuedDate from the student's startDate
+          const issuedDate = student.startDate ? new Date(student.startDate) : new Date();
+
+          const certificate = await dispatch(
+            issueCertificate({
+              studentMemberId: studentId,
+              templateId: sheetTemplate.id || sheetTemplate._id,
+              studentName: nameValue ? { ar: nameValue, en: nameValue } : undefined,
+            })
+          ).unwrap();
+
+          const certId = certificate?.id || certificate?._id;
+
+          issuedCertificates.push({
+            studentName: nameValue || "Unknown",
+            certificateNumber: certificate?.certificateNumber || "-",
+            courseName: student.sheetName || "-",
+            issuedAt: certificate?.issuedAt
+              ? format(new Date(certificate.issuedAt), "yyyy-MM-dd")
+              : format(issuedDate, "yyyy-MM-dd"),
+            sheetName: student.sheetName,
+          });
+
+          if (mode === "download" && certId) {
+            const blob = await dispatch(downloadCertificate(certId)).unwrap();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            const studentName = nameValue || "student";
+            link.download = `certificate-${studentName.replace(/\s+/g, "_")}.pdf`;
+            link.click();
+            window.URL.revokeObjectURL(url);
+          }
+          successCount += 1;
+        } catch (err) {
+          failedCount += 1;
+          failedNames.push(getTextValue(student.studentName || student.name) || "Unknown");
+          console.error("Failed to issue simple certificate for student:", studentId, err);
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(
+          isRtl
+            ? `تم إصدار ${successCount} شهادة بنجاح`
+            : `Successfully issued ${successCount} certificates`
+        );
+        await dispatch(getCertificates()).unwrap();
+
+        if (mode === "export" && issuedCertificates.length > 0) {
+          exportCertificatesToCSV(issuedCertificates);
+          toast.success(
+            isRtl ? "تم تصدير بيانات الشهادات إلى CSV" : "Exported to CSV"
+          );
+        }
+      }
+
+      if (missingTemplateNames.length > 0) {
+        const msg = isRtl
+          ? `يجب إنشاء قالب شهادة مرتبط بالشيت: ${missingTemplateNames.join("، ")}.`
+          : `Missing template for sheet. Affected: ${missingTemplateNames.join(", ")}.`;
+        toast.error(msg, { duration: 6000 });
+      }
+
+      if (failedCount > 0) {
+        const msg = isRtl
+          ? `فشل إصدار ${failedCount} شهادة. الطلاب: ${failedNames.join("، ")}.`
+          : `Failed: ${failedCount} certificates. Students: ${failedNames.join(", ")}.`;
+        toast.error(msg, { duration: 6000 });
+      }
+    } catch (err: any) {
+      console.error("Simple bulk generation failed:", err);
+      toast.error(err || "Failed to generate certificates");
+    } finally {
+      setSimpleGenerateLoading(false);
+    }
+  };
+
+  const handleDeleteSimpleSheet = async (sheetName: string) => {
+    const normalizedSheet = (sheetName || "").trim();
+    if (!normalizedSheet || normalizedSheet === "all") {
+      toast.error(isRtl ? "اختر شيت أولاً" : "Select a sheet first");
+      return;
+    }
+
+    const simpleStudentsInSheet = studentMembers.filter(
+      (s) => (s.sheetName || "").trim() === normalizedSheet &&
+        (s.notes || "").startsWith("simple_sheet:")
+    );
+    const certificatesInSheet = certificates.filter(
+      (c) => (c.sheetName || "").trim() === normalizedSheet
+    );
+
+    if (simpleStudentsInSheet.length === 0 && certificatesInSheet.length === 0) {
+      toast.error(isRtl ? "لا توجد بيانات مرتبطة بهذا الشيت" : "No data found for this sheet");
+      return;
+    }
+
+    const confirmed = confirm(
+      isRtl
+        ? `سيتم حذف الشيت المبسط "${normalizedSheet}" بالكامل، بما في ذلك ${simpleStudentsInSheet.length} طالب و${certificatesInSheet.length} شهادة. لا يمكن التراجع. هل تريد المتابعة؟`
+        : `Delete simple sheet "${normalizedSheet}" with ${simpleStudentsInSheet.length} students and ${certificatesInSheet.length} certificates? Cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setSimpleSheetDeleteLoading(normalizedSheet);
+    let deletedStudents = 0;
+    let deletedCertificates = 0;
+    let failedOps = 0;
+
+    try {
+      for (const cert of certificatesInSheet) {
+        const certId = cert.id || cert._id;
+        if (!certId) continue;
+        try {
+          await dispatch(deleteCertificate(certId)).unwrap();
+          deletedCertificates += 1;
+        } catch (err) {
+          failedOps += 1;
+        }
+      }
+
+      for (const student of simpleStudentsInSheet) {
+        const studentId = student.id || student._id;
+        if (!studentId) continue;
+        try {
+          await dispatch(deleteStudentMember(studentId)).unwrap();
+          deletedStudents += 1;
+        } catch (err) {
+          failedOps += 1;
+        }
+      }
+
+      await Promise.all([
+        dispatch(getStudentMembers()).unwrap(),
+        dispatch(getCertificates()).unwrap(),
+      ]);
+
+      setSimpleSheet("all");
+
+      toast.success(
+        isRtl
+          ? `تم حذف الشيت: ${deletedStudents} طالب و${deletedCertificates} شهادة`
+          : `Sheet deleted: ${deletedStudents} students and ${deletedCertificates} certificates`
+      );
+
+      if (failedOps > 0) {
+        toast.error(
+          isRtl ? `حدثت ${failedOps} عملية فاشلة` : `${failedOps} delete operations failed`
+        );
+      }
+    } finally {
+      setSimpleSheetDeleteLoading(null);
+    }
+  };
+
   const handleVerify = async () => {
     if (!verifyDialog.certificateNumber) return;
 
@@ -729,6 +984,9 @@ export default function CertificatesPage() {
           <TabsTrigger value="bulk" className="px-4 py-2">
             {isRtl ? "شهادات الشيت" : "Sheet Certificates"}
           </TabsTrigger>
+          <TabsTrigger value="simple" className="px-4 py-2">
+            {isRtl ? "شيت مبسط" : "Simple Sheet"}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="certificates" className="space-y-4">
@@ -850,111 +1108,111 @@ export default function CertificatesPage() {
                     {certificates
                       .filter(c => selectedGovernorate === "all" || c.governorate === selectedGovernorate)
                       .map((certificate, index) => (
-                      <TableRow key={certificate.id || certificate._id || `cert-${index}`}>
-                        <TableCell className="py-2 align-middle text-start font-mono font-medium">
-                          {certificate.certificateNumber}
-                        </TableCell>
-                        <TableCell className="py-2 align-middle text-start">
-                          <div className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}>
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            {certificate.userId
-                              ? getTextValue(certificate.userId.fullName)
-                              : (certificate.studentName ? getTextValue(certificate.studentName) : "-")}
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-2 align-middle text-start">
-                          <span className="text-sm text-muted-foreground">{certificate.governorate || "-"}</span>
-                        </TableCell>
-                        <TableCell className="py-2 align-middle text-start">
-                          {certificate.courseId
-                            ? getTextValue(certificate.courseId.title)
-                            : (certificate.packageId ? (isRtl ? `باقة: ${getTextValue(certificate.packageId.name)}` : `Package: ${getTextValue(certificate.packageId.name)}`) : "-")}
-                        </TableCell>
-                        <TableCell className="py-2 align-middle text-start">
-                          <div className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}>
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            {certificate.issuedAt ? format(new Date(certificate.issuedAt), "yyyy-MM-dd") : "-"}
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-2 align-middle text-start">{getStatusBadge(certificate.status)}</TableCell>
-                        <TableCell className="py-2 align-middle text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>
-                                {isRtl ? "الإجراءات" : "Actions"}
-                              </DropdownMenuLabel>
-                              <DropdownMenuItem
-                                onClick={() => handleDownload((certificate.id || certificate._id)!)}
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                {isRtl ? "تحميل PDF" : "Download PDF"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleRegeneratePDF((certificate.id || certificate._id)!)}
-                                disabled={regenerateLoading === (certificate.id || certificate._id)}
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                {regenerateLoading === (certificate.id || certificate._id)
-                                  ? isRtl ? "جاري التجديد..." : "Regenerating..."
-                                  : isRtl ? "تجديد PDF" : "Regenerate PDF"}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleReissue((certificate.id || certificate._id)!)}
-                                disabled={reissueLoading === (certificate.id || certificate._id)}
-                                className={certificate.status === "revoked" ? "" : "text-orange-600"}
-                              >
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                {reissueLoading === (certificate.id || certificate._id)
-                                  ? isRtl ? "جاري التغيير..." : "Toggling..."
-                                  : certificate.status === "revoked"
-                                    ? isRtl ? "استعادة الشهادة" : "Restore Certificate"
-                                    : isRtl ? "إلغاء الشهادة" : "Revoke Certificate"}
-                              </DropdownMenuItem>
-                              {certificate.status === "issued" && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-red-600"
-                                    onClick={() => handleRevoke((certificate.id || certificate._id)!)}
-                                    disabled={revokeLoading === (certificate.id || certificate._id)}
-                                  >
-                                    <XCircle className="h-4 w-4 mr-2" />
-                                    {revokeLoading === (certificate.id || certificate._id)
-                                      ? isRtl
-                                        ? "جاري الإلغاء..."
-                                        : "Revoking..."
-                                      : isRtl
-                                        ? "إلغاء الشهادة"
-                                        : "Revoke"}
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => handleDelete((certificate.id || certificate._id)!)}
-                                disabled={deleteLoading === (certificate.id || certificate._id)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                {deleteLoading === (certificate.id || certificate._id)
-                                  ? isRtl
-                                    ? "جاري الحذف..."
-                                    : "Deleting..."
-                                  : isRtl
-                                    ? "حذف نهائي"
-                                    : "Delete Permanently"}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                        <TableRow key={certificate.id || certificate._id || `cert-${index}`}>
+                          <TableCell className="py-2 align-middle text-start font-mono font-medium">
+                            {certificate.certificateNumber}
+                          </TableCell>
+                          <TableCell className="py-2 align-middle text-start">
+                            <div className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}>
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              {certificate.userId
+                                ? getTextValue(certificate.userId.fullName)
+                                : (certificate.studentName ? getTextValue(certificate.studentName) : "-")}
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-2 align-middle text-start">
+                            <span className="text-sm text-muted-foreground">{certificate.governorate || "-"}</span>
+                          </TableCell>
+                          <TableCell className="py-2 align-middle text-start">
+                            {certificate.courseId
+                              ? getTextValue(certificate.courseId.title)
+                              : (certificate.packageId ? (isRtl ? `باقة: ${getTextValue(certificate.packageId.name)}` : `Package: ${getTextValue(certificate.packageId.name)}`) : "-")}
+                          </TableCell>
+                          <TableCell className="py-2 align-middle text-start">
+                            <div className={`flex items-center gap-2 ${isRtl ? "flex-row-reverse" : ""}`}>
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              {certificate.issuedAt ? format(new Date(certificate.issuedAt), "yyyy-MM-dd") : "-"}
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-2 align-middle text-start">{getStatusBadge(certificate.status)}</TableCell>
+                          <TableCell className="py-2 align-middle text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>
+                                  {isRtl ? "الإجراءات" : "Actions"}
+                                </DropdownMenuLabel>
+                                <DropdownMenuItem
+                                  onClick={() => handleDownload((certificate.id || certificate._id)!)}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  {isRtl ? "تحميل PDF" : "Download PDF"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleRegeneratePDF((certificate.id || certificate._id)!)}
+                                  disabled={regenerateLoading === (certificate.id || certificate._id)}
+                                >
+                                  <FileText className="h-4 w-4 mr-2" />
+                                  {regenerateLoading === (certificate.id || certificate._id)
+                                    ? isRtl ? "جاري التجديد..." : "Regenerating..."
+                                    : isRtl ? "تجديد PDF" : "Regenerate PDF"}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleReissue((certificate.id || certificate._id)!)}
+                                  disabled={reissueLoading === (certificate.id || certificate._id)}
+                                  className={certificate.status === "revoked" ? "" : "text-orange-600"}
+                                >
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  {reissueLoading === (certificate.id || certificate._id)
+                                    ? isRtl ? "جاري التغيير..." : "Toggling..."
+                                    : certificate.status === "revoked"
+                                      ? isRtl ? "استعادة الشهادة" : "Restore Certificate"
+                                      : isRtl ? "إلغاء الشهادة" : "Revoke Certificate"}
+                                </DropdownMenuItem>
+                                {certificate.status === "issued" && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-red-600"
+                                      onClick={() => handleRevoke((certificate.id || certificate._id)!)}
+                                      disabled={revokeLoading === (certificate.id || certificate._id)}
+                                    >
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      {revokeLoading === (certificate.id || certificate._id)
+                                        ? isRtl
+                                          ? "جاري الإلغاء..."
+                                          : "Revoking..."
+                                        : isRtl
+                                          ? "إلغاء الشهادة"
+                                          : "Revoke"}
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-red-600"
+                                  onClick={() => handleDelete((certificate.id || certificate._id)!)}
+                                  disabled={deleteLoading === (certificate.id || certificate._id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  {deleteLoading === (certificate.id || certificate._id)
+                                    ? isRtl
+                                      ? "جاري الحذف..."
+                                      : "Deleting..."
+                                    : isRtl
+                                      ? "حذف نهائي"
+                                      : "Delete Permanently"}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     {certificates.filter(c => selectedGovernorate === "all" || c.governorate === selectedGovernorate).length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} className="h-24 text-center">
@@ -1085,12 +1343,12 @@ export default function CertificatesPage() {
                         .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
                         .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
                         .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={7} className="h-24 text-center">
-                            {isRtl ? "لا توجد بيانات تطابق الفلتر" : "No rows match the filters"}
-                          </TableCell>
-                        </TableRow>
-                      )}
+                          <TableRow>
+                            <TableCell colSpan={7} className="h-24 text-center">
+                              {isRtl ? "لا توجد بيانات تطابق الفلتر" : "No rows match the filters"}
+                            </TableCell>
+                          </TableRow>
+                        )}
                     </TableBody>
                   </Table>
                 </div>
@@ -1195,18 +1453,311 @@ export default function CertificatesPage() {
               <p className="text-xs text-purple-700">
                 {isRtl
                   ? `عدد الطلاب بعد الفلتر: ${studentMembers
-                      .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
-                      .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
-                      .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher).length}`
+                    .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
+                    .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
+                    .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher).length}`
                   : `Students after filters: ${studentMembers
-                      .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
-                      .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
-                      .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher).length}`}
+                    .filter((s) => bulkSheet === "all" || s.sheetName === bulkSheet)
+                    .filter((s) => bulkGovernorate === "all" || s.governorate === bulkGovernorate)
+                    .filter((s) => bulkTeacher === "all" || getTeacherLabel(s) === bulkTeacher).length}`}
               </p>
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ─── Simple Sheet Tab ─── */}
+        <TabsContent value="simple" className="space-y-4">
+          {(() => {
+            const simpleSheetStats = Array.from(
+              studentMembers
+                .filter((s) => (s.notes || "").startsWith("simple_sheet:"))
+                .reduce((acc, student) => {
+                  const name = student.sheetName?.trim();
+                  if (!name) return acc;
+                  acc.set(name, (acc.get(name) || 0) + 1);
+                  return acc;
+                }, new Map<string, number>())
+            ).sort((a, b) => a[0].localeCompare(b[0]));
+
+            const simpleStudents = studentMembers
+              .filter((s) => (s.notes || "").startsWith("simple_sheet:"))
+              .filter((s) => simpleSheet === "all" || s.sheetName === simpleSheet);
+
+            return (
+              <>
+                {simpleSheetStats.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{isRtl ? "الشيتات المبسطة" : "Simple Sheets"}</CardTitle>
+                      <CardDescription>
+                        {isRtl ? "اختر شيت مبسط للعمل عليه" : "Pick a simple sheet to work with"}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap gap-2">
+                      <Button
+                        variant={simpleSheet === "all" ? "default" : "outline"}
+                        onClick={() => setSimpleSheet("all")}
+                      >
+                        {isRtl ? "كل الشيتات" : "All Sheets"}
+                      </Button>
+                      {simpleSheetStats.map(([name, count]) => (
+                        <Button
+                          key={name}
+                          variant={simpleSheet === name ? "default" : "outline"}
+                          onClick={() => setSimpleSheet(name)}
+                        >
+                          {name} ({count})
+                        </Button>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Students table */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>{isRtl ? "طلاب الشيت المبسط" : "Simple Sheet Students"}</CardTitle>
+                        <CardDescription>
+                          {isRtl ? `${simpleStudents.length} طالب` : `${simpleStudents.length} students`}
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {simpleStudents.length === 0 ? (
+                      <div className="text-center py-10">
+                        <User className="mx-auto h-10 w-10 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-semibold text-gray-900">
+                          {isRtl ? "لا توجد بيانات" : "No data"}
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-500">
+                          {isRtl ? "قم برفع شيت مبسط أولاً" : "Upload a simple sheet first"}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="h-10">
+                              <TableHead className="py-2 align-middle text-start whitespace-nowrap">
+                                {isRtl ? "الاسم" : "Name"}
+                              </TableHead>
+                              <TableHead className="py-2 align-middle text-start whitespace-nowrap">
+                                {isRtl ? "التاريخ" : "Date"}
+                              </TableHead>
+                              <TableHead className="py-2 align-middle text-start whitespace-nowrap">
+                                {isRtl ? "الشيت" : "Sheet"}
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {simpleStudents.map((student, index) => (
+                              <TableRow key={student.id || student._id || `simple-${index}`}>
+                                <TableCell className="py-2 align-middle text-start font-medium">
+                                  {getTextValue(student.studentName || student.name) || "-"}
+                                </TableCell>
+                                <TableCell className="py-2 align-middle text-start">
+                                  {student.startDate ? format(new Date(student.startDate), "yyyy-MM-dd") : "-"}
+                                </TableCell>
+                                <TableCell className="py-2 align-middle text-start">
+                                  {student.sheetName || "-"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Actions card */}
+                <Card className="border-teal-200 bg-teal-50">
+                  <CardHeader>
+                    <CardTitle className="text-teal-900">
+                      {isRtl ? "إدارة الشيت المبسط" : "Simple Sheet Management"}
+                    </CardTitle>
+                    <CardDescription className="text-teal-700">
+                      {isRtl
+                        ? "ارفع شيت يحتوي على الاسم والتاريخ فقط، ثم أصدر الشهادات"
+                        : "Upload a sheet with name and date only, then issue certificates"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-4">
+                    <div className="flex flex-wrap gap-2 items-end">
+                      {/* Sheet filter */}
+                      <div className="grid gap-2">
+                        <Label>{isRtl ? "الشيت" : "Sheet"}</Label>
+                        <Select value={simpleSheet} onValueChange={setSimpleSheet}>
+                          <SelectTrigger className="w-[220px]">
+                            <SelectValue placeholder={isRtl ? "اختر الشيت" : "Select Sheet"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">{isRtl ? "كل الشيتات" : "All Sheets"}</SelectItem>
+                            {Array.from(new Set(
+                              studentMembers
+                                .filter((s) => (s.notes || "").startsWith("simple_sheet:"))
+                                .map((s) => s.sheetName)
+                                .filter(Boolean)
+                            ))
+                              .sort()
+                              .map((sheet) => (
+                                <SelectItem key={sheet} value={sheet!}>{sheet}</SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {simpleSheet !== "all" && (
+                        <Button
+                          variant="destructive"
+                          onClick={() => handleDeleteSimpleSheet(simpleSheet)}
+                          disabled={simpleSheetDeleteLoading === simpleSheet}
+                        >
+                          <Trash2 className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+                          {simpleSheetDeleteLoading === simpleSheet
+                            ? (isRtl ? "جاري الحذف..." : "Deleting...")
+                            : (isRtl ? "حذف الشيت" : "Delete Sheet")}
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setSimpleImportDialogOpen(true);
+                          setSimpleImportResult(null);
+                          setSimpleImportFile(null);
+                          setSimpleImportSheetName("");
+                        }}
+                      >
+                        <Upload className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+                        {isRtl ? "رفع شيت مبسط" : "Upload Simple Sheet"}
+                      </Button>
+                      <Button
+                        onClick={() => setSimpleBulkActionDialog({ open: true, mode: null })}
+                        disabled={simpleGenerateLoading || simpleStudents.length === 0}
+                        className="bg-teal-600 hover:bg-teal-700 text-white"
+                      >
+                        <Award className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+                        {simpleGenerateLoading
+                          ? (isRtl ? "جاري الإصدار..." : "Generating...")
+                          : (isRtl ? "إصدار شهادات" : "Issue Certificates")}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-teal-700">
+                      {isRtl
+                        ? `عدد الطلاب: ${simpleStudents.length}`
+                        : `Students: ${simpleStudents.length}`}
+                    </p>
+                  </CardContent>
+                </Card>
+              </>
+            );
+          })()}
+        </TabsContent>
       </Tabs>
+
+      {/* ─── Simple Sheet Import Dialog ─── */}
+      <Dialog open={simpleImportDialogOpen} onOpenChange={setSimpleImportDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isRtl ? "رفع شيت مبسط" : "Upload Simple Sheet"}</DialogTitle>
+            <DialogDescription>
+              {isRtl
+                ? "الملف يجب أن يحتوي على عمودين فقط: name (الاسم) و date (التاريخ)"
+                : "The file must contain two columns: name and date"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid gap-2">
+              <Label>{isRtl ? "اسم الشيت" : "Sheet Name"}</Label>
+              <Input
+                placeholder={isRtl ? "مثال: شيت يناير 2025" : "e.g. January 2025 Sheet"}
+                value={simpleImportSheetName}
+                onChange={(e) => setSimpleImportSheetName(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>{isRtl ? "ملف CSV" : "CSV File"}</Label>
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setSimpleImportFile(e.target.files?.[0] || null)}
+              />
+            </div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={downloadSimpleTemplate}
+            >
+              <Download className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+              {isRtl ? "تحميل نموذج CSV" : "Download CSV Template"}
+            </Button>
+            {simpleImportResult && (
+              <div className="rounded-md bg-muted p-3 text-sm space-y-1">
+                <p className="font-medium">{isRtl ? "نتيجة الاستيراد:" : "Import result:"}</p>
+                <p>{isRtl ? `إجمالي: ${simpleImportResult.total}` : `Total: ${simpleImportResult.total}`}</p>
+                <p className="text-green-700">{isRtl ? `نجح: ${simpleImportResult.success}` : `Success: ${simpleImportResult.success}`}</p>
+                {simpleImportResult.failed > 0 && (
+                  <p className="text-red-700">{isRtl ? `فشل: ${simpleImportResult.failed}` : `Failed: ${simpleImportResult.failed}`}</p>
+                )}
+                {simpleImportResult.errors?.length > 0 && (
+                  <div className="max-h-28 overflow-y-auto">
+                    {simpleImportResult.errors.map((e: any, i: number) => (
+                      <p key={i} className="text-xs text-red-600">Row {e.row}: {e.error}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSimpleImportDialogOpen(false)}>
+              {isRtl ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button
+              onClick={handleImportSimple}
+              disabled={simpleImportLoading || !simpleImportFile || !simpleImportSheetName.trim()}
+            >
+              {simpleImportLoading ? (isRtl ? "جاري الرفع..." : "Uploading...") : (isRtl ? "رفع واستيراد" : "Upload & Import")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Simple Bulk Action Dialog ─── */}
+      <Dialog
+        open={simpleBulkActionDialog.open}
+        onOpenChange={(open) => !open && setSimpleBulkActionDialog({ open: false, mode: null })}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{isRtl ? "اختر طريقة الإصدار" : "Choose Issue Method"}</DialogTitle>
+            <DialogDescription>
+              {isRtl
+                ? "هل تريد تحميل ملفات PDF مباشرة أم تصدير بيانات الشهادات فقط؟"
+                : "Download PDFs directly or just export certificate data?"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 flex-col sm:flex-row">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => handleGenerateSimpleCertificates("export")}
+            >
+              {isRtl ? "تصدير CSV فقط" : "Export CSV Only"}
+            </Button>
+            <Button
+              className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
+              onClick={() => handleGenerateSimpleCertificates("download")}
+            >
+              <Download className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+              {isRtl ? "تحميل PDF" : "Download PDFs"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={verifyDialog.open}
