@@ -47,7 +47,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
   const dispatch = useAppDispatch();
   const router = useRouter();
   const isRtl = locale === "ar";
-  
+
   const { currentQuiz, bestAttempt, lastAttempt, isLoading, isSubmitting } = useAppSelector(
     (state) => state.quizzes
   );
@@ -227,10 +227,10 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
                 </div>
               ) : (
                 !user && currentQuiz.linkedTo === "general" && (
-                <div className="bg-blue-50 p-3 rounded-lg flex items-center gap-3 text-blue-800 border border-blue-100 text-sm">
-                  <AlertCircle className="h-4 w-4" />
-                  <p>{isRtl ? "ستتمكن من إجراء الاختبار كضيف، لكن لن يتم حفظ نتائجك في حساب." : "You can take the quiz as a guest, but your results won't be saved to an account."}</p>
-                </div>
+                  <div className="bg-blue-50 p-3 rounded-lg flex items-center gap-3 text-blue-800 border border-blue-100 text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    <p>{isRtl ? "ستتمكن من إجراء الاختبار كضيف، لكن لن يتم حفظ نتائجك في حساب." : "You can take the quiz as a guest, but your results won't be saved to an account."}</p>
+                  </div>
                 )
               )}
               {requiresLogin ? (
@@ -244,7 +244,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => router.push(`/${locale}/register`)}
+                    onClick={() => router.push(`/${locale}/register${redirectPath ? `?redirect=${encodeURIComponent(redirectPath)}` : ""}`)}
                     className="h-12"
                   >
                     <UserPlus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
@@ -293,14 +293,14 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <RadioGroup 
-              value={answers[questionId]?.toString()} 
+            <RadioGroup
+              value={answers[questionId]?.toString()}
               onValueChange={(val) => setAnswers({ ...answers, [questionId]: parseInt(val) })}
               className="space-y-3"
             >
               {question.choices.map((choice, idx) => (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className={`flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer ${answers[questionId] === idx ? 'border-genoun-green bg-genoun-green/5' : ''}`}
                   onClick={() => setAnswers({ ...answers, [questionId]: idx })}
                 >
@@ -313,8 +313,8 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
         </Card>
 
         <div className="flex justify-between">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             disabled={currentQuestionIndex === 0}
             onClick={() => setCurrentIndex(currentQuestionIndex - 1)}
           >
@@ -322,7 +322,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
           </Button>
 
           {currentQuestionIndex === currentQuiz.questionsCount - 1 ? (
-            <Button 
+            <Button
               className="bg-genoun-green hover:bg-genoun-green/90 px-8"
               onClick={handleSubmit}
               disabled={isSubmitting}
@@ -335,7 +335,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
               {isRtl ? "إنهاء الاختبار" : "Finish Quiz"}
             </Button>
           ) : (
-            <Button 
+            <Button
               onClick={() => setCurrentIndex(currentQuestionIndex + 1)}
               className="px-8"
             >

@@ -93,7 +93,7 @@ class CertificateService {
 
     // Check if certificate already exists
     const query = {};
-    
+
     // Build query based on what we have
     if (studentMemberId && packageId) {
       // For package students, check by studentMemberId + packageId
@@ -124,10 +124,10 @@ class CertificateService {
 
     console.log('=== CHECKING EXISTING CERTIFICATE ===');
     console.log('Query:', JSON.stringify(query));
-    
+
     const existing = await Certificate.findOne(query);
     console.log('Existing certificate found:', existing ? existing.certificateNumber : 'None');
-    
+
     if (existing) {
       console.log('Certificate already exists:', existing.certificateNumber);
       console.log('Existing cert details:', {
@@ -139,7 +139,7 @@ class CertificateService {
         pdfGenerated: existing.pdfGenerated,
         pdfUrl: existing.pdfUrl
       });
-      
+
       // Generate PDF if not already generated
       if (!existing.pdfGenerated || !existing.pdfUrl) {
         console.log('Generating PDF for existing certificate');
@@ -189,7 +189,7 @@ class CertificateService {
         console.error('Error fetching user:', err.message);
       }
     }
-    
+
     if (studentMemberId) {
       try {
         studentMember = await StudentMember.findById(studentMemberId).populate('packageId');
@@ -342,16 +342,16 @@ class CertificateService {
       if (createErr.code === 11000) {
         console.log('Duplicate key error caught, trying to find existing certificate');
         console.log('Error details:', createErr.message);
-        
+
         // Try one more time to find the certificate with a broader query
         const retryQuery = {};
         if (studentMemberId) retryQuery.studentMemberId = studentMemberId;
         if (userId) retryQuery.userId = userId;
         if (quizId) retryQuery.quizId = quizId;
-        
+
         certificate = await Certificate.findOne(retryQuery)
           .sort({ createdAt: -1 }); // Get the most recent one
-        
+
         if (certificate) {
           console.log('Found certificate on retry:', certificate.certificateNumber);
           // Generate PDF if needed
@@ -924,7 +924,7 @@ class CertificateService {
     // Prepare certificate data with locale hint
     // ALWAYS use fresh data from populated relations for accuracy
     // Stored values in certificate might be stale or empty
-    
+
     const normalizeBilingual = (value) => {
       if (!value) {
         return { ar: "", en: "" };
@@ -1017,10 +1017,10 @@ class CertificateService {
     console.log('courseNameData:', JSON.stringify(courseNameData));
 
     // Check if data is valid (has actual content)
-    const hasValidStudentName = (studentNameData.ar && studentNameData.ar.trim()) || 
-                                (studentNameData.en && studentNameData.en.trim());
-    const hasValidCourseName = (courseNameData.ar && courseNameData.ar.trim()) || 
-                               (courseNameData.en && courseNameData.en.trim());
+    const hasValidStudentName = (studentNameData.ar && studentNameData.ar.trim()) ||
+      (studentNameData.en && studentNameData.en.trim());
+    const hasValidCourseName = (courseNameData.ar && courseNameData.ar.trim()) ||
+      (courseNameData.en && courseNameData.en.trim());
 
     console.log('hasValidStudentName:', hasValidStudentName);
     console.log('hasValidCourseName:', hasValidCourseName);
@@ -1066,15 +1066,18 @@ class CertificateService {
     console.log('issuedAt:', certificateData.issuedAt);
     console.log('=================================');
 
-    // Determine preferred locale - DEFAULT TO ARABIC
-    // Only use English if Arabic data is completely missing
-    let preferredLocale = 'ar';  // Default to Arabic for this platform
-    const studentNameAr = finalStudentName.ar || '';
-    const studentNameEn = finalStudentName.en || '';
-    
-    // Only switch to English if there's absolutely no Arabic content
-    if (!studentNameAr && studentNameEn) {
+    // Determine preferred locale
+    // Quiz (general test) certificates always use English name
+    // Other certificates default to Arabic
+    let preferredLocale;
+    if (certificate.quizId) {
+      // General test certificates → always show English name
       preferredLocale = 'en';
+    } else {
+      const studentNameAr = finalStudentName.ar || '';
+      const studentNameEn = finalStudentName.en || '';
+      // Default to Arabic; fall back to English only when Arabic is missing
+      preferredLocale = studentNameAr ? 'ar' : (studentNameEn ? 'en' : 'ar');
     }
 
     // Generate PDF with locale preference
@@ -1138,7 +1141,7 @@ class CertificateService {
         this.validateTemplateImagePath(img?.url, `Image placeholder #${index + 1}`);
       });
     }
-    
+
     const template = await CertificateTemplate.create(cleanedData);
     return template;
   }
@@ -1235,7 +1238,7 @@ class CertificateService {
       // Remove template link from any courses that use it
       await Course.updateMany(
         { "certificateSettings.templateId": templateId },
-        { 
+        {
           $unset: { "certificateSettings.templateId": "" },
           $set: { "certificateSettings.enabled": false }
         }
