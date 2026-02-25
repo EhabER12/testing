@@ -312,7 +312,7 @@ export default function TeachersManagementPage() {
 
   const handleSaveProfitConfig = async () => {
     if (!selectedTeacherForProfit) return;
-    
+
     try {
       await dispatch(
         updateTeacherProfitPercentagesThunk({
@@ -321,7 +321,7 @@ export default function TeachersManagementPage() {
           subscriptions: profitPercentages.subscriptions || undefined,
         })
       ).unwrap();
-      
+
       // Refresh teachers list
       await dispatch(getAllTeachersWithStats());
       setIsProfitConfigOpen(false);
@@ -408,27 +408,15 @@ export default function TeachersManagementPage() {
           </h2>
           <p className="text-muted-foreground text-sm md:text-base">{t("admin.teachers.description")}</p>
         </div>
-        <Button
-          className="bg-genoun-green hover:bg-genoun-green/90 w-full sm:w-auto"
-          onClick={() => {
-            resetForm();
-            setIsCreateDialogOpen(true);
-          }}
-        >
-          <Plus className={`h-4 w-4 ${isRtl ? "ml-2" : "mr-2"}`} />
-          {t("admin.teachers.createGroup")}
-        </Button>
       </div>
 
-      <Tabs defaultValue="groups" className="space-y-4">
+      <Tabs defaultValue="teachers" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="groups">{t("admin.teachers.teacherGroups")}</TabsTrigger>
-          {isTeacher() && <TabsTrigger value="my-students">{t("admin.teachers.myStudents")}</TabsTrigger>}
           {isAdmin() && <TabsTrigger value="teachers">{t("admin.teachers.allTeachers")}</TabsTrigger>}
         </TabsList>
 
-        {/* Groups Tab */}
-        <TabsContent value="groups" className="space-y-4">
+        {/* Groups Tab - Hidden */}
+        {false && <TabsContent value="groups" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>{t("admin.teachers.teacherGroups")}</CardTitle>
@@ -450,186 +438,186 @@ export default function TeachersManagementPage() {
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="h-10"></TableHead>
-                      <TableHead className="h-10">{t("admin.teachers.groupName")}</TableHead>
-                      <TableHead className="h-10">{t("admin.teachers.teacher")}</TableHead>
-                      <TableHead className="h-10">{t("admin.teachers.groupType")}</TableHead>
-                      <TableHead className="h-10">{t("admin.teachers.students")}</TableHead>
-                      <TableHead className="h-10">{t("admin.teachers.expectedRevenue")}</TableHead>
-                      <TableHead className="text-right h-10">{t("admin.teachers.actions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {teacherGroups.map((group) => {
-                      const groupId = (group.id || group._id)!;
-                      return (
-                        <>
-                          <TableRow key={groupId} className="cursor-pointer hover:bg-muted/50">
-                            <TableCell onClick={() => toggleGroupExpand(groupId)}>
-                              {expandedGroups.includes(groupId) ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )}
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {getTextValue(group.groupName) || (group.groupType === "individual" ? t("admin.teachers.types.individual") : t("admin.teachers.types.group"))}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {group.teacherId?.fullName && getTextValue(group.teacherId.fullName)}
-                                {group.teacherId?.email && (
-                                  <Badge variant="outline" className="text-[10px]">
-                                    {group.teacherId.email}
-                                  </Badge>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="h-10"></TableHead>
+                        <TableHead className="h-10">{t("admin.teachers.groupName")}</TableHead>
+                        <TableHead className="h-10">{t("admin.teachers.teacher")}</TableHead>
+                        <TableHead className="h-10">{t("admin.teachers.groupType")}</TableHead>
+                        <TableHead className="h-10">{t("admin.teachers.students")}</TableHead>
+                        <TableHead className="h-10">{t("admin.teachers.expectedRevenue")}</TableHead>
+                        <TableHead className="text-right h-10">{t("admin.teachers.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {teacherGroups.map((group) => {
+                        const groupId = (group.id || group._id)!;
+                        return (
+                          <>
+                            <TableRow key={groupId} className="cursor-pointer hover:bg-muted/50">
+                              <TableCell onClick={() => toggleGroupExpand(groupId)}>
+                                {expandedGroups.includes(groupId) ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
                                 )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={group.groupType === "group" ? "default" : "secondary"}>
-                                {t(`admin.teachers.types.${group.groupType}`)}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Users className="h-3 w-3 text-muted-foreground" />
-                                {group.stats.activeStudents} / {group.stats.totalStudents}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="font-bold text-genoun-green">
-                                {formatMoney(group.expectedRevenue || 0, group.pricing.currency)}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedGroup(group);
-                                    setIsAddStudentDialogOpen(true);
-                                  }}
-                                >
-                                  <UserPlus className="h-4 w-4" />
-                                </Button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>{t("admin.teachers.actions")}</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => openEditDialog(group)}>
-                                      <Edit className="h-4 w-4 mr-2" />
-                                      {t("admin.common.edit")}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      className="text-red-600"
-                                      onClick={() => handleDeleteGroup(groupId)}
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      {t("admin.common.delete")}
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                          {/* Expanded Students List */}
-                          {expandedGroups.includes(groupId) && (
-                            <TableRow className="bg-muted/30">
-                              <TableCell colSpan={7}>
-                                <div className="p-4 space-y-4">
-                                  <div className="flex items-center justify-between">
-                                    <h4 className="text-sm font-bold">{t("admin.teachers.students")}</h4>
-                                    <Badge variant="outline">{(group.students || []).length} {t("admin.teachers.totalStudents")}</Badge>
-                                  </div>
-                                  {group.students && group.students.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground text-center py-4">{t("admin.teachers.noStudents")}</p>
-                                  ) : (
-                                    <Table>
-                                      <TableHeader>
-                                        <TableRow className="hover:bg-transparent">
-                                          <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">{t("admin.teachers.selectStudent")}</TableHead>
-                                          <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">{t("admin.teachers.studentStatus")}</TableHead>
-                                          <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">{t("admin.teachers.assignedDate")}</TableHead>
-                                          <TableHead className="h-9 py-2 text-right text-[11px] font-semibold uppercase">{t("admin.teachers.actions")}</TableHead>
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        {(group.students || []).map((student) => {
-                                          if (!student || !student.studentId) return null;
-                                          const studentId = student.studentId?.id || student.studentId?._id;
-                                          if (!studentId) return null;
-                                          const mappingId = student.id || student._id || studentId;
-                                          return (
-                                            <TableRow key={mappingId}>
-                                              <TableCell className="py-2">
-                                                <div className="flex flex-col">
-                                                  <span className="font-medium text-sm">
-                                                    {getTextValue((student.studentId as any)?.name || student.studentId?.studentName)}
-                                                  </span>
-                                                  <span className="text-[10px] text-muted-foreground italic">
-                                                    {student.studentId?.whatsappNumber || (student.studentId as any)?.phone || '-'}
-                                                  </span>
-                                                </div>
-                                              </TableCell>
-                                              <TableCell className="py-2">
-                                                <Select
-                                                  value={student.status}
-                                                  onValueChange={(val: any) => handleStatusChange(groupId, studentId, val)}
-                                                >
-                                                  <SelectTrigger className="h-7 text-xs w-[100px]">
-                                                    <SelectValue />
-                                                  </SelectTrigger>
-                                                  <SelectContent>
-                                                    <SelectItem value="active">{t("admin.teachers.statuses.active")}</SelectItem>
-                                                    <SelectItem value="inactive">{t("admin.teachers.statuses.inactive")}</SelectItem>
-                                                    <SelectItem value="completed">{t("admin.teachers.statuses.completed")}</SelectItem>
-                                                  </SelectContent>
-                                                </Select>
-                                              </TableCell>
-                                              <TableCell className="py-2 text-xs text-muted-foreground">
-                                                {student.assignedDate ? new Date(student.assignedDate).toLocaleDateString() : '-'}
-                                              </TableCell>
-                                              <TableCell className="py-2 text-right">
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                                  onClick={() => handleRemoveStudent(groupId, studentId)}
-                                                >
-                                                  <UserMinus className="h-3.5 w-3.5" />
-                                                </Button>
-                                              </TableCell>
-                                            </TableRow>
-                                          );
-                                        })}
-                                      </TableBody>
-                                    </Table>
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {getTextValue(group.groupName) || (group.groupType === "individual" ? t("admin.teachers.types.individual") : t("admin.teachers.types.group"))}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {group.teacherId?.fullName && getTextValue(group.teacherId.fullName)}
+                                  {group.teacherId?.email && (
+                                    <Badge variant="outline" className="text-[10px]">
+                                      {group.teacherId.email}
+                                    </Badge>
                                   )}
                                 </div>
                               </TableCell>
+                              <TableCell>
+                                <Badge variant={group.groupType === "group" ? "default" : "secondary"}>
+                                  {t(`admin.teachers.types.${group.groupType}`)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Users className="h-3 w-3 text-muted-foreground" />
+                                  {group.stats.activeStudents} / {group.stats.totalStudents}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-bold text-genoun-green">
+                                  {formatMoney(group.expectedRevenue || 0, group.pricing.currency)}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedGroup(group);
+                                      setIsAddStudentDialogOpen(true);
+                                    }}
+                                  >
+                                    <UserPlus className="h-4 w-4" />
+                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuLabel>{t("admin.teachers.actions")}</DropdownMenuLabel>
+                                      <DropdownMenuItem onClick={() => openEditDialog(group)}>
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        {t("admin.common.edit")}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        className="text-red-600"
+                                        onClick={() => handleDeleteGroup(groupId)}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        {t("admin.common.delete")}
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </TableCell>
                             </TableRow>
-                          )}
-                        </>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                            {/* Expanded Students List */}
+                            {expandedGroups.includes(groupId) && (
+                              <TableRow className="bg-muted/30">
+                                <TableCell colSpan={7}>
+                                  <div className="p-4 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                      <h4 className="text-sm font-bold">{t("admin.teachers.students")}</h4>
+                                      <Badge variant="outline">{(group.students || []).length} {t("admin.teachers.totalStudents")}</Badge>
+                                    </div>
+                                    {group.students && group.students.length === 0 ? (
+                                      <p className="text-xs text-muted-foreground text-center py-4">{t("admin.teachers.noStudents")}</p>
+                                    ) : (
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow className="hover:bg-transparent">
+                                            <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">{t("admin.teachers.selectStudent")}</TableHead>
+                                            <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">{t("admin.teachers.studentStatus")}</TableHead>
+                                            <TableHead className="h-9 py-2 text-[11px] font-semibold uppercase">{t("admin.teachers.assignedDate")}</TableHead>
+                                            <TableHead className="h-9 py-2 text-right text-[11px] font-semibold uppercase">{t("admin.teachers.actions")}</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {(group.students || []).map((student) => {
+                                            if (!student || !student.studentId) return null;
+                                            const studentId = student.studentId?.id || student.studentId?._id;
+                                            if (!studentId) return null;
+                                            const mappingId = student.id || student._id || studentId;
+                                            return (
+                                              <TableRow key={mappingId}>
+                                                <TableCell className="py-2">
+                                                  <div className="flex flex-col">
+                                                    <span className="font-medium text-sm">
+                                                      {getTextValue((student.studentId as any)?.name || student.studentId?.studentName)}
+                                                    </span>
+                                                    <span className="text-[10px] text-muted-foreground italic">
+                                                      {student.studentId?.whatsappNumber || (student.studentId as any)?.phone || '-'}
+                                                    </span>
+                                                  </div>
+                                                </TableCell>
+                                                <TableCell className="py-2">
+                                                  <Select
+                                                    value={student.status}
+                                                    onValueChange={(val: any) => handleStatusChange(groupId, studentId, val)}
+                                                  >
+                                                    <SelectTrigger className="h-7 text-xs w-[100px]">
+                                                      <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                      <SelectItem value="active">{t("admin.teachers.statuses.active")}</SelectItem>
+                                                      <SelectItem value="inactive">{t("admin.teachers.statuses.inactive")}</SelectItem>
+                                                      <SelectItem value="completed">{t("admin.teachers.statuses.completed")}</SelectItem>
+                                                    </SelectContent>
+                                                  </Select>
+                                                </TableCell>
+                                                <TableCell className="py-2 text-xs text-muted-foreground">
+                                                  {student.assignedDate ? new Date(student.assignedDate).toLocaleDateString() : '-'}
+                                                </TableCell>
+                                                <TableCell className="py-2 text-right">
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                    onClick={() => handleRemoveStudent(groupId, studentId)}
+                                                  >
+                                                    <UserMinus className="h-3.5 w-3.5" />
+                                                  </Button>
+                                                </TableCell>
+                                              </TableRow>
+                                            );
+                                          })}
+                                        </TableBody>
+                                      </Table>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>}
 
-        {/* My Students Tab */}
-        {isTeacher() && (
+        {/* My Students Tab - Hidden */}
+        {false && isTeacher() && (
           <TabsContent value="my-students">
             <Card>
               <CardHeader>
@@ -647,44 +635,44 @@ export default function TeachersManagementPage() {
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="h-10">{t("admin.teachers.studentName")}</TableHead>
-                      <TableHead className="h-10">{t("admin.teachers.whatsapp")}</TableHead>
-                      <TableHead className="h-10">{t("admin.teachers.email")}</TableHead>
-                      <TableHead className="text-right h-10">{t("admin.teachers.actions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {teacherStudents.map((student) => {
-                      const studentId = student.id || student._id;
-                      return (
-                        <TableRow key={studentId}>
-                          <TableCell className="font-medium">{getTextValue(student.fullName)}</TableCell>
-                          <TableCell>{student.whatsappNumber || "-"}</TableCell>
-                          <TableCell>{student.email}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => handleRemoveStudentFromTeacher(studentId)}
-                            >
-                              <UserMinus className="h-4 w-4" />
-                            </Button>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="h-10">{t("admin.teachers.studentName")}</TableHead>
+                        <TableHead className="h-10">{t("admin.teachers.whatsapp")}</TableHead>
+                        <TableHead className="h-10">{t("admin.teachers.email")}</TableHead>
+                        <TableHead className="text-right h-10">{t("admin.teachers.actions")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {teacherStudents.map((student) => {
+                        const studentId = student.id || student._id;
+                        return (
+                          <TableRow key={studentId}>
+                            <TableCell className="font-medium">{getTextValue(student.fullName)}</TableCell>
+                            <TableCell>{student.whatsappNumber || "-"}</TableCell>
+                            <TableCell>{student.email}</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleRemoveStudentFromTeacher(studentId)}
+                              >
+                                <UserMinus className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {teacherStudents.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            {t("admin.teachers.noStudents")}
                           </TableCell>
                         </TableRow>
-                      );
-                    })}
-                    {teacherStudents.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          {t("admin.teachers.noStudents")}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      )}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>
@@ -974,8 +962,8 @@ export default function TeachersManagementPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Select 
-              value={selectedStudentId} 
+            <Select
+              value={selectedStudentId}
               onValueChange={(val) => {
                 console.log("Student selected:", val);
                 setSelectedStudentId(val);
@@ -990,9 +978,9 @@ export default function TeachersManagementPage() {
                     const availableStudents = studentMembers.filter((student) => {
                       const studentId = (student.id || student._id)!;
                       const isAlreadyInGroup = selectedGroup?.students?.some(s => {
-                                                            const sId = s?.studentId?.id || s?.studentId?._id;
-                                                            return sId === studentId;
-                                                          });
+                        const sId = s?.studentId?.id || s?.studentId?._id;
+                        return sId === studentId;
+                      });
                       return !isAlreadyInGroup;
                     });
 
@@ -1008,7 +996,7 @@ export default function TeachersManagementPage() {
                       const studentId = (student.id || student._id)!;
                       const studentName = getTextValue(student.studentName || student.name || { ar: "طالب", en: "Student" });
                       const phoneNumber = student.whatsappNumber || student.phone || "N/A";
-                      
+
                       return (
                         <SelectItem key={studentId} value={studentId}>
                           {studentName} ({phoneNumber})
@@ -1069,10 +1057,10 @@ export default function TeachersManagementPage() {
                         const studentId = student.id || student._id;
                         const isAssigned = teacherStudents.some(s => (s.id || s._id) === studentId);
                         if (isAssigned) return null;
-                        
+
                         const studentName = getTextValue(student.studentName || student.name || { ar: "طالب", en: "Student" });
                         const phoneNumber = student.whatsappNumber || student.phone || "N/A";
-                        
+
                         return (
                           <SelectItem key={studentId} value={studentId!}>
                             {studentName} ({phoneNumber})
@@ -1095,42 +1083,42 @@ export default function TeachersManagementPage() {
 
             <div className="overflow-x-auto">
               <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="h-10">{t("admin.teachers.studentName")}</TableHead>
-                  <TableHead className="h-10">{t("admin.teachers.whatsapp")}</TableHead>
-                  <TableHead className="text-right h-10">{t("admin.teachers.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {teacherStudents.map((student) => {
-                  const studentId = student.id || student._id;
-                  return (
-                    <TableRow key={studentId}>
-                      <TableCell className="font-medium">{getTextValue(student.fullName)}</TableCell>
-                      <TableCell>{student.whatsappNumber || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleRemoveStudentFromTeacher(studentId)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="h-10">{t("admin.teachers.studentName")}</TableHead>
+                    <TableHead className="h-10">{t("admin.teachers.whatsapp")}</TableHead>
+                    <TableHead className="text-right h-10">{t("admin.teachers.actions")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {teacherStudents.map((student) => {
+                    const studentId = student.id || student._id;
+                    return (
+                      <TableRow key={studentId}>
+                        <TableCell className="font-medium">{getTextValue(student.fullName)}</TableCell>
+                        <TableCell>{student.whatsappNumber || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleRemoveStudentFromTeacher(studentId)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                  {teacherStudents.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                        {t("admin.teachers.noStudents")}
                       </TableCell>
                     </TableRow>
-                  )
-                })}
-                {teacherStudents.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
-                      {t("admin.teachers.noStudents")}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </div>
         </DialogContent>
