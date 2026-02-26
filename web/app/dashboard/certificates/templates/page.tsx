@@ -15,6 +15,7 @@ import {
 import { getPackages } from "@/store/services/packageService";
 import { getCourses } from "@/store/services/courseService";
 import { getQuizzes } from "@/store/services/quizService";
+import { getStudentMembers } from "@/store/services/studentMemberService";
 import { useAdminLocale } from "@/hooks/dashboard/useAdminLocale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -220,12 +221,23 @@ export default function CertificateDesignerPage() {
   const { packages } = useAppSelector((state) => state.packages);
   const { courses } = useAppSelector((state) => state.courses);
   const { quizzes } = useAppSelector((state) => state.quizzes);
+  const { studentMembers } = useAppSelector((state) => state.studentMembers);
+
+  // Extract unique sheet names from student members
+  const availableSheets = Array.from(
+    new Set(
+      studentMembers
+        .map((s) => (s.sheetName || "").trim())
+        .filter((name) => name !== "")
+    )
+  ).sort();
 
   useEffect(() => {
     dispatch(getAllTemplates());
     dispatch(getPackages());
     dispatch(getCourses({}));
     dispatch(getQuizzes());
+    dispatch(getStudentMembers());
   }, [dispatch]);
 
   // Default placeholder values for fallback
@@ -565,7 +577,7 @@ export default function CertificateDesignerPage() {
 
     // Get the container and element positions
     const containerRect = containerRef.current.getBoundingClientRect();
-    
+
     // Calculate mouse position in unscaled coordinates (relative to the canvas)
     const mouseXInCanvas = (e.clientX - containerRect.left) / previewScale;
     const mouseYInCanvas = (e.clientY - containerRect.top) / previewScale;
@@ -573,7 +585,7 @@ export default function CertificateDesignerPage() {
     // Get the current element's position for calculating drag offset
     let elementX = 0;
     let elementY = 0;
-    
+
     if (type === "standard") {
       const k = indexOrKey as keyof typeof design.placeholders;
       const p = design.placeholders[k] as Placeholder | null;
@@ -594,9 +606,9 @@ export default function CertificateDesignerPage() {
 
     // The offset is the difference between where the mouse clicked and the element's stored position
     // This allows dragging from anywhere on the element
-    setDragOffset({ 
-      x: mouseXInCanvas - elementX, 
-      y: mouseYInCanvas - elementY 
+    setDragOffset({
+      x: mouseXInCanvas - elementX,
+      y: mouseYInCanvas - elementY
     });
     setIsDragging(true);
 
@@ -616,7 +628,7 @@ export default function CertificateDesignerPage() {
     if (!isDragging || !containerRef.current) return;
 
     const containerRect = containerRef.current.getBoundingClientRect();
-    
+
     // Calculate mouse position in unscaled coordinates (relative to canvas)
     const mouseXInCanvas = (e.clientX - containerRect.left) / previewScale;
     const mouseYInCanvas = (e.clientY - containerRect.top) / previewScale;
@@ -833,11 +845,27 @@ export default function CertificateDesignerPage() {
 
               <div className="space-y-2">
                 <Label>{isRtl ? "ربط باسم الشيت (اختياري)" : "Link to Sheet Name (Optional)"}</Label>
-                <Input
-                  value={design.sheetName || ""}
-                  onChange={(e) => setDesign({ ...design, sheetName: e.target.value })}
-                  placeholder={isRtl ? "مثال: شيت x" : "e.g. Sheet X"}
-                />
+                <Select
+                  value={design.sheetName || "none"}
+                  onValueChange={(val) => setDesign({ ...design, sheetName: val === "none" ? "" : val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={isRtl ? "اختر شيت..." : "Select sheet..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{isRtl ? "بدون ربط" : "No Link"}</SelectItem>
+                    {availableSheets.map((sheet) => (
+                      <SelectItem key={sheet} value={sheet}>
+                        {sheet}
+                      </SelectItem>
+                    ))}
+                    {availableSheets.length === 0 && (
+                      <SelectItem value="__empty__" disabled>
+                        {isRtl ? "لا توجد شيتات متاحة" : "No sheets available"}
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -945,7 +973,7 @@ export default function CertificateDesignerPage() {
                     {(() => {
                       const k = activePlaceholder as keyof typeof design.placeholders;
                       const p = design.placeholders[k] as Placeholder;
-                      
+
                       // If element is deleted (null), show restore option
                       if (!p) {
                         return (
@@ -953,9 +981,9 @@ export default function CertificateDesignerPage() {
                             <div className="text-muted-foreground">
                               {isRtl ? "هذا العنصر محذوف حالياً" : "This element is currently deleted"}
                             </div>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => {
                                 const defaultValues: any = {
                                   studentName: { x: 600, y: 400, fontSize: 40, fontFamily: "Cairo", color: "#000000", align: "center", fontWeight: "bold" },
@@ -968,16 +996,16 @@ export default function CertificateDesignerPage() {
                                   placeholders: { ...design.placeholders, [k]: defaultValues[k] }
                                 });
                                 toast.success(isRtl ? "تم استعادة العنصر بنجاح" : "Element restored successfully");
-                              }} 
+                              }}
                               className="w-full"
                             >
-                              <Plus className="h-4 w-4 mr-2" /> 
+                              <Plus className="h-4 w-4 mr-2" />
                               {isRtl ? "استعادة العنصر" : "Restore Element"}
                             </Button>
                           </div>
                         );
                       }
-                      
+
                       return (
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-2">
@@ -1068,13 +1096,13 @@ export default function CertificateDesignerPage() {
                             </Select>
                           </div>
                           <div className="border-t pt-4">
-                            <Button 
-                              variant="destructive" 
-                              size="sm" 
-                              onClick={() => removeElement("standard", k)} 
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => removeElement("standard", k)}
                               className="w-full"
                             >
-                              <Trash2 className="h-4 w-4 mr-2" /> 
+                              <Trash2 className="h-4 w-4 mr-2" />
                               {isRtl ? "حذف هذا العنصر" : "Remove This Element"}
                             </Button>
                             <p className="text-xs text-muted-foreground mt-2">
@@ -1221,18 +1249,18 @@ export default function CertificateDesignerPage() {
                             <div className="grid grid-cols-2 gap-2">
                               <div className="space-y-1">
                                 <Label className="text-xs">{isRtl ? "الموقع X" : "Position X"}</Label>
-                                <Input 
-                                  type="number" 
-                                  value={design.placeholders.images[activeIndex].x} 
-                                  onChange={(e) => updateImage(activeIndex, { x: parseInt(e.target.value) || 0 })} 
+                                <Input
+                                  type="number"
+                                  value={design.placeholders.images[activeIndex].x}
+                                  onChange={(e) => updateImage(activeIndex, { x: parseInt(e.target.value) || 0 })}
                                 />
                               </div>
                               <div className="space-y-1">
                                 <Label className="text-xs">{isRtl ? "الموقع Y" : "Position Y"}</Label>
-                                <Input 
-                                  type="number" 
-                                  value={design.placeholders.images[activeIndex].y} 
-                                  onChange={(e) => updateImage(activeIndex, { y: parseInt(e.target.value) || 0 })} 
+                                <Input
+                                  type="number"
+                                  value={design.placeholders.images[activeIndex].y}
+                                  onChange={(e) => updateImage(activeIndex, { y: parseInt(e.target.value) || 0 })}
                                 />
                               </div>
                             </div>
@@ -1246,16 +1274,16 @@ export default function CertificateDesignerPage() {
                                 <Input type="number" value={design.placeholders.images[activeIndex].height} onChange={(e) => updateImage(activeIndex, { height: parseInt(e.target.value) })} />
                               </div>
                             </div>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => {
                                 const img = design.placeholders.images[activeIndex];
-                                updateImage(activeIndex, { 
-                                  x: Math.round((design.width - img.width) / 2), 
-                                  y: Math.round((design.height - img.height) / 2) 
+                                updateImage(activeIndex, {
+                                  x: Math.round((design.width - img.width) / 2),
+                                  y: Math.round((design.height - img.height) / 2)
                                 });
-                              }} 
+                              }}
                               className="w-full"
                             >
                               {isRtl ? "توسيط في الصفحة" : "Center on Page"}
@@ -1322,17 +1350,17 @@ export default function CertificateDesignerPage() {
                 {Object.keys(design.placeholders).filter(k => !['customText', 'images', 'signature'].includes(k)).map((key) => {
                   const k = key as keyof typeof design.placeholders;
                   const p = design.placeholders[k] as Placeholder;
-                  
+
                   // Skip rendering if element is deleted (null)
                   if (!p) return null;
-                  
+
                   const isActive = activeType === "standard" && activePlaceholder === k;
 
                   // Get sample text for this placeholder
                   const sampleText = k === "studentName" ? (isRtl ? "اسم الطالب هنا" : "Student Name Here") :
                     k === "courseName" ? (isRtl ? "اسم الدورة القرآنية" : "Quran Course Name") :
-                    k === "issuedDate" ? "2026-01-25" :
-                    "CERT-2026-XXXX";
+                      k === "issuedDate" ? "2026-01-25" :
+                        "CERT-2026-XXXX";
 
                   return (
                     <div
@@ -1361,7 +1389,7 @@ export default function CertificateDesignerPage() {
                 {design.placeholders.customText.map((p, idx) => {
                   const isActive = activeType === "custom" && activeIndex === idx;
                   const text = p.text || "Custom Text";
-                  
+
                   return (
                     <div
                       key={`custom-${idx}`}
