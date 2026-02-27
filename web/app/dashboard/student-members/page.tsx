@@ -117,7 +117,7 @@ export default function StudentMembersPage() {
   const [showOverdueOnly, setShowOverdueOnly] = useState<boolean>(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [certificateLoading, setCertificateLoading] = useState<string | null>(null);
-  
+
   // Add Student Dialog State
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
@@ -196,36 +196,36 @@ export default function StudentMembersPage() {
       try {
         // Step 1: Issue certificates
         const result = await dispatch(bulkIssuePackageCertificates(selectedPackageId)).unwrap();
-        
+
         const successCount = result.data?.success?.length || 0;
         const failedCount = result.data?.failed?.length || 0;
-        
+
         if (successCount > 0) {
           toast.success(
             `تم إصدار ${successCount} شهادة بنجاح. جاري التحميل...`
           );
-          
+
           // Step 2: Refresh certificates list
           await dispatch(getCertificates()).unwrap();
-          
+
           // Step 3: Download each certificate
           const issuedCertificates = result.data?.success || [];
           let downloadedCount = 0;
-          
+
           for (const cert of issuedCertificates) {
             const certId = cert.certificateId || cert.certificate?.id || cert.certificate?._id;
             if (certId) {
               try {
                 // Wait a bit between downloads to avoid overwhelming the server
                 await new Promise(resolve => setTimeout(resolve, 500));
-                
+
                 const blob = await dispatch(downloadCertificate(certId)).unwrap();
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement("a");
                 link.href = url;
                 // Handle name as object or string
                 const nameValue = cert.name;
-                const studentName = typeof nameValue === 'object' 
+                const studentName = typeof nameValue === 'object'
                   ? (nameValue?.ar || nameValue?.en || `student_${downloadedCount + 1}`)
                   : (nameValue || cert.studentName || `student_${downloadedCount + 1}`);
                 link.download = `certificate-${String(studentName).replace(/\s+/g, "_")}.pdf`;
@@ -237,14 +237,14 @@ export default function StudentMembersPage() {
               }
             }
           }
-          
+
           if (downloadedCount > 0) {
             toast.success(
               `تم تحميل ${downloadedCount} شهادة بنجاح`
             );
           }
         }
-        
+
         if (failedCount > 0) {
           const failedNames = result.data.failed.map((f: any) => {
             const name = f.name;
@@ -262,6 +262,44 @@ export default function StudentMembersPage() {
         setGenerateLoading(false);
       }
     }
+  };
+
+  const downloadCertificatesSheet = () => {
+    // Get certificates for the selected package
+    const packageCerts = certificates.filter((cert: any) => {
+      const certPackageId = cert.packageId?.id || cert.packageId?._id || cert.packageId;
+      return certPackageId && String(certPackageId) === String(selectedPackageId);
+    });
+
+    if (packageCerts.length === 0) {
+      toast.error("لا توجد شهادات لهذه الباقة بعد. قم بإنشاء الشهادات أولاً.");
+      return;
+    }
+
+    // Build CSV with only certificate number and name
+    const rows = packageCerts.map((cert: any) => {
+      const certNumber = cert.certificateNumber || "";
+      const nameObj = cert.studentName;
+      const studentName = typeof nameObj === "object"
+        ? (nameObj?.ar || nameObj?.en || "")
+        : (nameObj || "");
+      // Escape commas/quotes in name
+      const safeName = `"${String(studentName).replace(/"/g, '""')}"`;
+      return `${certNumber},${safeName}`;
+    });
+
+    const csvContent = "رقم الشهادة,الاسم\n" + rows.join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `certificates_sheet_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    toast.success(`تم تحميل شيت يحتوي على ${packageCerts.length} شهادة`);
   };
 
   const handleImport = async () => {
@@ -418,7 +456,7 @@ export default function StudentMembersPage() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       toast.success("تم تصدير البيانات بنجاح");
     } catch (err: any) {
       console.error("Export failed:", err);
@@ -466,17 +504,17 @@ export default function StudentMembersPage() {
           return String(certStudentId) === String(studentId);
         }
       );
-      
+
       if (existingCert) {
         console.log("Found existing certificate in store, downloading:", existingCert.certificateNumber);
         const certId = existingCert.id || existingCert._id;
-        
+
         if (!certId) {
           toast.error("معرف الشهادة غير صالح");
           setCertificateLoading(null);
           return;
         }
-        
+
         // Download it directly
         const blob = await dispatch(downloadCertificate(certId)).unwrap();
         const url = window.URL.createObjectURL(blob);
@@ -486,15 +524,15 @@ export default function StudentMembersPage() {
         link.download = `certificate-${studentName.replace(/\s+/g, "_")}.pdf`;
         link.click();
         window.URL.revokeObjectURL(url);
-        
+
         toast.success("تم تحميل الشهادة بنجاح");
         setCertificateLoading(null);
         return;
       }
-      
+
       // If no existing certificate in store, try to issue a new one
       console.log("No existing certificate found, issuing new one");
-      
+
       // IMPORTANT: Only send studentMemberId and packageId for package students
       // Do NOT send userId to avoid unique constraint conflicts
       const certificate = await dispatch(
@@ -531,21 +569,21 @@ export default function StudentMembersPage() {
     } catch (err: any) {
       console.error("Certificate generation failed:", err);
       const errorMessage = err?.message || String(err);
-      
+
       console.log('Error details:', {
         message: errorMessage,
         isConflict: errorMessage.includes("Conflict") || errorMessage.includes("409") || errorMessage.includes("already exists"),
         studentId,
         packageId
       });
-      
+
       // If conflict error OR "already exists" error, refresh certificates and try to find it
       if (errorMessage.includes("Conflict") || errorMessage.includes("409") || errorMessage.includes("already exists")) {
         console.log("Got conflict, refreshing certificates and trying again");
         try {
           // Refresh certificates list
           await dispatch(getCertificates()).unwrap();
-          
+
           // Try to find the certificate again
           const existingCert = certificates.find(
             (cert: any) => {
@@ -553,16 +591,16 @@ export default function StudentMembersPage() {
               return String(certStudentId) === String(studentId);
             }
           );
-          
+
           if (existingCert) {
             const certId = existingCert.id || existingCert._id;
-            
+
             if (!certId) {
               toast.error("معرف الشهادة غير صالح");
               setCertificateLoading(null);
               return;
             }
-            
+
             const blob = await dispatch(downloadCertificate(certId)).unwrap();
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
@@ -571,12 +609,12 @@ export default function StudentMembersPage() {
             link.download = `certificate-${studentName.replace(/\s+/g, "_")}.pdf`;
             link.click();
             window.URL.revokeObjectURL(url);
-            
+
             toast.success("تم تحميل الشهادة الموجودة بنجاح");
             setCertificateLoading(null);
             return;
           }
-          
+
           toast.error(
             isRtl
               ? "الشهادة موجودة ولكن فشل تحميلها. يرجى تحديث الصفحة والمحاولة مرة أخرى."
@@ -762,17 +800,28 @@ export default function StudentMembersPage() {
                   </p>
                 </div>
               </div>
-              <Button
-                onClick={handleGenerateCertificates}
-                disabled={generateLoading || studentMembers.filter(s => s.status === "active" && (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).length === 0}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-                size="lg"
-              >
-                <Award className={`h-5 w-5 ${isRtl ? "ml-2" : "mr-2"}`} />
-                {generateLoading
-                  ? "جاري الإصدار..."
-                  : "إنشاء جميع الشهادات"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={downloadCertificatesSheet}
+                  variant="outline"
+                  className="border-purple-400 text-purple-700 hover:bg-purple-100"
+                  size="lg"
+                >
+                  <Download className={`h-5 w-5 ${isRtl ? "ml-2" : "mr-2"}`} />
+                  {"تحميل شيت الشهادات"}
+                </Button>
+                <Button
+                  onClick={handleGenerateCertificates}
+                  disabled={generateLoading || studentMembers.filter(s => s.status === "active" && (s.packageId?.id === selectedPackageId || s.packageId?._id === selectedPackageId)).length === 0}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  size="lg"
+                >
+                  <Award className={`h-5 w-5 ${isRtl ? "ml-2" : "mr-2"}`} />
+                  {generateLoading
+                    ? "جاري الإصدار..."
+                    : "إنشاء جميع الشهادات"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -902,32 +951,32 @@ export default function StudentMembersPage() {
                             <span className="text-sm text-muted-foreground">{student.governorate || "-"}</span>
                           </TableCell>
                           <TableCell>
-                              {(() => {
-                                const studentKey = String(student.id || student._id || "");
-                                const group = groupByStudentId.get(studentKey);
-                                const groupName = group
-                                  ? getTextValue(group.groupName) || (isRtl ? "جروب" : "Group")
-                                  : "";
-                                const label = student.packageId
-                                  ? getTextValue(student.packageId.name)
-                                  : groupName || (isRtl ? "??? ????" : "N/A");
-                                const badgeClass = student.packageId
-                                  ? "bg-blue-50 text-blue-700 border-blue-200"
-                                  : group
-                                    ? "bg-purple-50 text-purple-700 border-purple-200"
-                                    : "bg-gray-50 text-gray-600 border-gray-200";
-                                return (
-                                  <Badge variant="outline" className={badgeClass}>
-                                    {label}
-                                  </Badge>
-                                );
-                              })()}
-                            </TableCell>
+                            {(() => {
+                              const studentKey = String(student.id || student._id || "");
+                              const group = groupByStudentId.get(studentKey);
+                              const groupName = group
+                                ? getTextValue(group.groupName) || (isRtl ? "جروب" : "Group")
+                                : "";
+                              const label = student.packageId
+                                ? getTextValue(student.packageId.name)
+                                : groupName || (isRtl ? "??? ????" : "N/A");
+                              const badgeClass = student.packageId
+                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : group
+                                  ? "bg-purple-50 text-purple-700 border-purple-200"
+                                  : "bg-gray-50 text-gray-600 border-gray-200";
+                              return (
+                                <Badge variant="outline" className={badgeClass}>
+                                  {label}
+                                </Badge>
+                              );
+                            })()}
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <UserCircle className="h-4 w-4 text-muted-foreground" />
                               <span className="text-sm">
-                                {student.assignedTeacherId 
+                                {student.assignedTeacherId
                                   ? getTextValue(student.assignedTeacherId.fullName)
                                   : (student.assignedTeacherName || (isRtl ? "غير محدد" : "-"))}
                               </span>
@@ -971,8 +1020,8 @@ export default function StudentMembersPage() {
                                       ? "جاري الإنشاء..."
                                       : "Generating..."
                                     : isRtl
-                                    ? "شهادة PDF"
-                                    : "PDF Certificate"}
+                                      ? "شهادة PDF"
+                                      : "PDF Certificate"}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
@@ -999,12 +1048,12 @@ export default function StudentMembersPage() {
                         return s.assignedTeacherId?.id === selectedTeacherId || s.assignedTeacherId?._id === selectedTeacherId;
                       })
                       .filter(s => !showOverdueOnly || s.status === "overdue").length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={9} className="h-24 text-center">
-                          {isRtl ? "لا يوجد طلاب يطابقون الفلاتر المحددة" : "No students match the selected filters"}
-                        </TableCell>
-                      </TableRow>
-                    )}
+                        <TableRow>
+                          <TableCell colSpan={9} className="h-24 text-center">
+                            {isRtl ? "لا يوجد طلاب يطابقون الفلاتر المحددة" : "No students match the selected filters"}
+                          </TableCell>
+                        </TableRow>
+                      )}
                   </TableBody>
                 </Table>
               </div>
@@ -1268,7 +1317,7 @@ export default function StudentMembersPage() {
                 </Select>
               </div>
             )}
-              <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="student-start-date">{isRtl ? "تاريخ البداية" : "Start Date"}</Label>
                 <Input
