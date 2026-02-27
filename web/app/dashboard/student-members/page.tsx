@@ -288,7 +288,7 @@ export default function StudentMembersPage() {
       return `${certNumber},${safeName}`;
     });
 
-    const csvContent = "رقم الشهادة,الاسم\n" + rows.join("\n");
+    const csvContent = rows.join("\n");
     const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
