@@ -8,6 +8,99 @@ import crypto from "crypto";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const RESERVED_TOP_LEVEL_FIELDS = new Set([
+  "_id",
+  "id",
+  "__v",
+  "createdAt",
+  "updatedAt",
+  "updatedBy",
+]);
+
+const RESERVED_NESTED_FIELDS = new Set(["__v", "createdAt", "updatedAt"]);
+
+const ALLOWED_SETTINGS_FIELDS = new Set([
+  "siteName",
+  "siteName_ar",
+  "siteDescription",
+  "siteDescription_ar",
+  "logo",
+  "logo_ar",
+  "favicon",
+  "socialLinks",
+  "contactEmail",
+  "contactPhone",
+  "whatsappNumber",
+  "floatingWhatsAppEnabled",
+  "address",
+  "address_ar",
+  "theme",
+  "notifications",
+  "paymentGateways",
+  "whatsappConnected",
+  "whatsappQrCode",
+  "headerDisplay",
+  "marketingBanners",
+  "navbarLinks",
+  "homepageSections",
+  "promoModal",
+  "homepageBanner",
+  "homepageCourses",
+  "coursesPageHero",
+  "booksPageHero",
+  "productsPageHero",
+  "articlesPageHero",
+  "homepageArticlesSection",
+  "authorityBar",
+  "reviewsSettings",
+  "whyGenounSettings",
+  "emailSettings",
+  "authSettings",
+  "financeSettings",
+  "apiKeys",
+  "teacherProfitSettings",
+  "subscriptionStudentProfitSettings",
+  "subscriptionTeachers",
+  "heroStats",
+]);
+
+const isPlainObject = (value) =>
+  value !== null &&
+  typeof value === "object" &&
+  !Array.isArray(value) &&
+  !(value instanceof Date) &&
+  !(value instanceof Buffer);
+
+const isValidObjectIdString = (value) =>
+  typeof value === "string" && /^[a-f\d]{24}$/i.test(value);
+
+const sanitizeSettingsValue = (value, isTopLevel = false) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeSettingsValue(item));
+  }
+
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  return Object.entries(value).reduce((sanitized, [key, nestedValue]) => {
+    if (isTopLevel && RESERVED_TOP_LEVEL_FIELDS.has(key)) {
+      return sanitized;
+    }
+
+    if (!isTopLevel && RESERVED_NESTED_FIELDS.has(key)) {
+      return sanitized;
+    }
+
+    if (key === "_id" && !isTopLevel && !isValidObjectIdString(nestedValue)) {
+      return sanitized;
+    }
+
+    sanitized[key] = sanitizeSettingsValue(nestedValue);
+    return sanitized;
+  }, {});
+};
+
 export class SettingsService {
   constructor() {
     this.settingsRepository = new SettingsRepository();
@@ -114,6 +207,16 @@ export class SettingsService {
     // Ensure uploads directory exists
     this.ensureUploadsDirectory();
 
+    settingsData = Object.entries(sanitizeSettingsValue(settingsData || {}, true)).reduce(
+      (sanitized, [key, value]) => {
+        if (ALLOWED_SETTINGS_FIELDS.has(key)) {
+          sanitized[key] = value;
+        }
+        return sanitized;
+      },
+      {}
+    );
+
     const jsonFields = [
       "socialLinks",
       "notifications",
@@ -138,6 +241,7 @@ export class SettingsService {
       "whyGenounSettings",
       "financeSettings",
       "apiKeys",
+      "teacherProfitSettings",
       "subscriptionTeachers",
       "subscriptionStudentProfitSettings",
       "heroStats",

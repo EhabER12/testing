@@ -92,6 +92,17 @@ export const errorHandler = (err, req, res, next) => {
     });
   }
 
+  // Handle other Mongoose cast errors, such as invalid numbers or dates
+  if (err.name === "CastError") {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({
+      success: false,
+      error: {
+        code: ERROR_CODES.INVALID_FORMAT,
+        message: `Invalid ${err.path}: ${err.value}`,
+      },
+    });
+  }
+
   // Handle JWT errors
   if (err.name === "JsonWebTokenError") {
     return res.status(HTTP_STATUS.UNAUTHORIZED).json({

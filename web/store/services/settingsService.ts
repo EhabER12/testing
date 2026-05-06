@@ -424,7 +424,8 @@ export const getPublicWebsiteSettingsThunk = createAsyncThunk<
   } catch (error: any) {
     console.error("Error fetching public website settings:", error);
     const message =
-      (error.response && error.response.data && error.response.data.message) ||
+      error.response?.data?.message ||
+      error.response?.data?.error?.message ||
       error.message ||
       error.toString();
     return thunkAPI.rejectWithValue(message);
@@ -443,7 +444,8 @@ export const getWebsiteSettingsThunk = createAsyncThunk<
   } catch (error: any) {
     console.error("Error fetching website settings:", error);
     const message =
-      (error.response && error.response.data && error.response.data.message) ||
+      error.response?.data?.message ||
+      error.response?.data?.error?.message ||
       error.message ||
       error.toString();
     return thunkAPI.rejectWithValue(message);
@@ -467,7 +469,8 @@ export const updateWebsiteSettingsThunk = createAsyncThunk<
     return response.data as GetWebsiteSettingsResponse;
   } catch (error: any) {
     const message =
-      (error.response && error.response.data && error.response.data.message) ||
+      error.response?.data?.message ||
+      error.response?.data?.error?.message ||
       error.message ||
       error.toString();
     return thunkAPI.rejectWithValue(message);
@@ -511,7 +514,8 @@ export const connectWhatsAppThunk = createAsyncThunk<
     return response.data as WhatsAppConnectResponse;
   } catch (error: any) {
     const message =
-      (error.response && error.response.data && error.response.data.message) ||
+      error.response?.data?.message ||
+      error.response?.data?.error?.message ||
       error.message ||
       error.toString();
     return thunkAPI.rejectWithValue(message);
@@ -532,7 +536,8 @@ export const disconnectWhatsAppThunk = createAsyncThunk<
     return response.data as WhatsAppDisconnectResponse;
   } catch (error: any) {
     const message =
-      (error.response && error.response.data && error.response.data.message) ||
+      error.response?.data?.message ||
+      error.response?.data?.error?.message ||
       error.message ||
       error.toString();
     return thunkAPI.rejectWithValue(message);
@@ -553,7 +558,8 @@ export const sendWhatsAppTestMessageThunk = createAsyncThunk<
     return response.data as WhatsAppTestMessageResponse;
   } catch (error: any) {
     const message =
-      (error.response && error.response.data && error.response.data.message) ||
+      error.response?.data?.message ||
+      error.response?.data?.error?.message ||
       error.message ||
       error.toString();
     return thunkAPI.rejectWithValue(message);
@@ -607,7 +613,8 @@ export const getManualPaymentMethodsThunk = createAsyncThunk<
     return response.data;
   } catch (error: any) {
     const message =
-      (error.response && error.response.data && error.response.data.message) ||
+      error.response?.data?.message ||
+      error.response?.data?.error?.message ||
       error.message ||
       error.toString();
     return thunkAPI.rejectWithValue(message);
@@ -699,9 +706,8 @@ export const createManualPaymentMethodThunk = createAsyncThunk<
       return response.data;
     } catch (error: any) {
       const message =
-        (error.response &&
-          error.response.data &&
-          error.response.data.message) ||
+        error.response?.data?.message ||
+        error.response?.data?.error?.message ||
         error.message ||
         error.toString();
       return thunkAPI.rejectWithValue(message);
@@ -767,9 +773,8 @@ export const updateManualPaymentMethodThunk = createAsyncThunk<
       return response.data;
     } catch (error: any) {
       const message =
-        (error.response &&
-          error.response.data &&
-          error.response.data.message) ||
+        error.response?.data?.message ||
+        error.response?.data?.error?.message ||
         error.message ||
         error.toString();
       return thunkAPI.rejectWithValue(message);
@@ -793,9 +798,8 @@ export const toggleManualPaymentMethodThunk = createAsyncThunk<
       return response.data;
     } catch (error: any) {
       const message =
-        (error.response &&
-          error.response.data &&
-          error.response.data.message) ||
+        error.response?.data?.message ||
+        error.response?.data?.error?.message ||
         error.message ||
         error.toString();
       return thunkAPI.rejectWithValue(message);
@@ -816,7 +820,8 @@ export const deleteManualPaymentMethodThunk = createAsyncThunk<
     return response.data;
   } catch (error: any) {
     const message =
-      (error.response && error.response.data && error.response.data.message) ||
+      error.response?.data?.message ||
+      error.response?.data?.error?.message ||
       error.message ||
       error.toString();
     return thunkAPI.rejectWithValue(message);

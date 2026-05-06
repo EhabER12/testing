@@ -1,6 +1,15 @@
 import { BaseRepository } from "./baseRepository.js";
 import Settings from "../models/settingsModel.js";
 
+const RESERVED_SETTINGS_FIELDS = new Set([
+  "_id",
+  "id",
+  "__v",
+  "createdAt",
+  "updatedAt",
+  "updatedBy",
+]);
+
 export class SettingsRepository extends BaseRepository {
   constructor() {
     super(Settings);
@@ -24,8 +33,13 @@ export class SettingsRepository extends BaseRepository {
 
   async updateSettings(data, userId) {
     const settings = await this.getSettings();
+    const updateData = { ...data };
 
-    Object.assign(settings, data);
+    for (const field of RESERVED_SETTINGS_FIELDS) {
+      delete updateData[field];
+    }
+
+    settings.set(updateData);
     settings.updatedBy = userId;
 
     return settings.save();
