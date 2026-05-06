@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getQuizBySlug } from "@/store/services/quizService";
+import { clearCurrentQuiz } from "@/store/slices/quizSlice";
 import QuizPlayer from "@/components/courses/QuizPlayer";
 import { BookOpen, ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ export default function PublicQuizPage() {
   const locale = params.locale as string;
   const slug = params.slug as string;
   const isRtl = locale === "ar";
+  const [quizRequestFinished, setQuizRequestFinished] = useState(false);
 
   const { currentQuiz, isLoading } = useAppSelector((state) => state.quizzes);
 
@@ -26,11 +28,15 @@ export default function PublicQuizPage() {
 
   useEffect(() => {
     if (slug) {
-      dispatch(getQuizBySlug(slug));
+      setQuizRequestFinished(false);
+      dispatch(clearCurrentQuiz());
+      dispatch(getQuizBySlug(slug)).finally(() => {
+        setQuizRequestFinished(true);
+      });
     }
   }, [dispatch, slug]);
 
-  if (isLoading && !currentQuiz) {
+  if (!quizRequestFinished || (isLoading && !currentQuiz)) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-16 w-16 animate-spin rounded-full border-4 border-genoun-green border-t-transparent"></div>
@@ -38,7 +44,7 @@ export default function PublicQuizPage() {
     );
   }
 
-  if (!currentQuiz) {
+  if (quizRequestFinished && !currentQuiz) {
     return (
       <div className="flex flex-col items-center justify-center h-screen space-y-4">
         <h1 className="text-2xl font-bold">{isRtl ? "الاختبار غير موجود" : "Quiz Not Found"}</h1>
