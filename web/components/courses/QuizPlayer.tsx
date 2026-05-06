@@ -61,10 +61,17 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
 
   useEffect(() => {
     if (quizId) {
+      setGameState("start");
+      setCurrentIndex(0);
+      setAnswers({});
+      setTimeLeft(null);
       dispatch(getQuiz(quizId));
-      if (user) {
-        dispatch(getUserBestAttempt(quizId));
-      }
+    }
+  }, [dispatch, quizId]);
+
+  useEffect(() => {
+    if (quizId && user) {
+      dispatch(getUserBestAttempt(quizId));
     }
   }, [dispatch, quizId, user]);
 
@@ -97,6 +104,19 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
     }
   };
 
+  const getQuestionId = (question: any, fallbackIndex: number) =>
+    String(question?.id || question?._id || `question-${fallbackIndex}`);
+
+  const handleAnswerChange = (questionId: string, value: string) => {
+    const selectedIndex = Number(value);
+    if (!Number.isInteger(selectedIndex) || selectedIndex < 0) return;
+
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: selectedIndex,
+    }));
+  };
+
   const handleSubmit = async () => {
     if (!currentQuiz) return;
     if (!user && currentQuiz.requiresRegistration) {
@@ -104,8 +124,8 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
       return;
     }
 
-    const formattedAnswers = currentQuiz.questions.map((q) => {
-      const qId = (q as any).id || q._id;
+    const formattedAnswers = currentQuiz.questions.map((q, index) => {
+      const qId = getQuestionId(q, index);
       return {
         questionId: qId,
         chosenAnswer: answers[qId] ?? -1,
@@ -265,7 +285,8 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
 
   if (gameState === "playing") {
     const question = currentQuiz.questions[currentQuestionIndex];
-    const questionId = (question as any).id || question._id;
+    const questionId = getQuestionId(question, currentQuestionIndex);
+    const selectedAnswer = answers[questionId];
     const progress = ((currentQuestionIndex + 1) / currentQuiz.questionsCount) * 100;
 
     return (
@@ -294,18 +315,28 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
           </CardHeader>
           <CardContent>
             <RadioGroup
-              value={answers[questionId]?.toString()}
-              onValueChange={(val) => setAnswers({ ...answers, [questionId]: parseInt(val) })}
+              key={questionId}
+              value={selectedAnswer === undefined ? "" : String(selectedAnswer)}
+              onValueChange={(val) => handleAnswerChange(questionId, val)}
               className="space-y-3"
             >
               {question.choices.map((choice, idx) => (
                 <div
                   key={idx}
-                  className={`flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer ${answers[questionId] === idx ? 'border-genoun-green bg-genoun-green/5' : ''}`}
-                  onClick={() => setAnswers({ ...answers, [questionId]: idx })}
+                  className={`flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer ${selectedAnswer === idx ? 'border-genoun-green bg-genoun-green/5' : ''}`}
+                  onClick={() => handleAnswerChange(questionId, String(idx))}
                 >
-                  <RadioGroupItem value={idx.toString()} id={`q-${idx}`} className={isRtl ? "ml-3" : "mr-3"} />
-                  <Label htmlFor={`q-${idx}`} className="flex-1 cursor-pointer text-lg">{getTextValue(choice)}</Label>
+                  <RadioGroupItem
+                    value={idx.toString()}
+                    id={`q-${questionId}-${idx}`}
+                    className={isRtl ? "ml-3" : "mr-3"}
+                  />
+                  <Label
+                    htmlFor={`q-${questionId}-${idx}`}
+                    className="flex-1 cursor-pointer text-lg"
+                  >
+                    {getTextValue(choice)}
+                  </Label>
                 </div>
               ))}
             </RadioGroup>
@@ -394,7 +425,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
               <div className="space-y-4 text-left border-t pt-6" dir={isRtl ? "rtl" : "ltr"}>
                 <h3 className="font-bold text-lg mb-4">{isRtl ? "مراجعة الإجابات" : "Review Answers"}</h3>
                 {currentQuiz.questions.map((q, idx) => {
-                  const qId = (q as any).id || q._id;
+                  const qId = getQuestionId(q, idx);
                   const userAnswer = lastAttempt.answers.find(
                     (a) => String(a.questionId) === String(qId)
                   );
