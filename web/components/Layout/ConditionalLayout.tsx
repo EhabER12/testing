@@ -20,16 +20,10 @@ export default function ConditionalLayout({
   const pathname = usePathname();
   const locale = useLocale();
   const isDashboard = pathname?.startsWith("/dashboard");
-  const isCoursesPage =
-    pathname === "/courses" ||
-    pathname?.startsWith("/courses/") ||
-    pathname === `/${locale}/courses` ||
-    pathname?.startsWith(`/${locale}/courses/`);
   const isRtl = locale === "ar";
   const [bannerHeight, setBannerHeight] = useState(0);
 
   const shouldHideLayout = isDashboard;
-  const shouldHideHeader = shouldHideLayout || isCoursesPage;
 
   // Check if banners are enabled and exist for current locale
   const hasBanners =
@@ -66,11 +60,11 @@ export default function ConditionalLayout({
 
   // Base header height (h-20 = 5rem = 80px on desktop, h-16 = 4rem = 64px on mobile)
   // Banner adds 40px (h-10) when visible
-  const paddingTop = !shouldHideHeader ? `calc(5rem + ${bannerHeight}px)` : "0";
+  const paddingTop = !shouldHideLayout ? `calc(5rem + ${bannerHeight}px)` : "0";
 
   return (
     <>
-      {!shouldHideHeader && <Header settings={settings} />}
+      {!shouldHideLayout && <Header settings={settings} />}
       {!shouldHideLayout && <CartDrawer />}
       {!shouldHideLayout && <SocialSidebar settings={settings} />}
       <div style={{ paddingTop }} className="-mt-4 transition-all duration-300">

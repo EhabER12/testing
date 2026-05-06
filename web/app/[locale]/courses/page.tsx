@@ -46,7 +46,7 @@ export default function CoursesPage() {
 
   // Get courses page hero settings
   const heroSettings = publicSettings?.coursesPageHero;
-  const isHeroEnabled = heroSettings?.isEnabled !== false;
+  const isHeroEnabled = false;
   const heroBadge = heroSettings?.badge?.[isRtl ? "ar" : "en"] || (isRtl ? "دوراتنا التعليمية" : "Our Educational Courses");
   const heroTitle = heroSettings?.title?.[isRtl ? "ar" : "en"] || (isRtl ? "ابدأ رحلتك في تحفيظ القرآن الكريم" : "Start Your Quran Memorization Journey");
   const heroSubtitle = heroSettings?.subtitle?.[isRtl ? "ar" : "en"] || (isRtl ? "مع دوراتنا المتخصصة" : "With Our Specialized Courses");
