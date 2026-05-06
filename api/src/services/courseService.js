@@ -23,6 +23,7 @@ export class CourseService {
       accessType,
       isPublished,
       isFeatured,
+      level,
       search,
     } = filters;
 
@@ -31,6 +32,7 @@ export class CourseService {
     if (categoryId) query.categoryId = categoryId;
     if (instructorId) query.instructorId = instructorId;
     if (accessType) query.accessType = accessType;
+    if (level) query.level = level;
     if (typeof isPublished !== "undefined") query.isPublished = isPublished;
     if (typeof isFeatured !== "undefined") query.isFeatured = isFeatured;
 
@@ -44,15 +46,28 @@ export class CourseService {
       ];
     }
 
-    const { page = 1, limit = 10, sort = "-createdAt" } = options;
+    const { page = 1, limit = 10, sort = "-createdAt", summary = false } = options;
     const skip = (page - 1) * limit;
 
-    const courses = await Course.find(query)
+    const coursesQuery = Course.find(query)
       .populate("categoryId", "name")
-      .populate("instructorId", "fullName email teacherInfo")
+      .populate(
+        "instructorId",
+        summary ? "fullName" : "fullName email teacherInfo"
+      )
       .sort(sort)
       .skip(skip)
       .limit(limit);
+
+    if (summary) {
+      coursesQuery
+        .select(
+          "title slug description thumbnail instructorId categoryId accessType price compareAtPrice currency duration level stats contentStats isPublished createdAt updatedAt"
+        )
+        .lean();
+    }
+
+    const courses = await coursesQuery;
 
     const total = await Course.countDocuments(query);
 

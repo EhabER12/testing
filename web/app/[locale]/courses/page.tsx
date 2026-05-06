@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getCourses, getEnrolledCourses } from "@/store/services/courseService";
 import { addCourseToCart, openCart } from "@/store/slices/cartSlice";
 import { getCategories } from "@/store/slices/categorySlice";
-import { getPublicWebsiteSettingsThunk } from "@/store/services/settingsService";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,26 +28,18 @@ export default function CoursesPage() {
   const params = useParams();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const t = useTranslations();
   const locale = params.locale as string;
   const isRtl = locale === "ar";
 
-  const { courses, enrolledCourses, isLoading } = useAppSelector((state) => state.courses);
+  const { courses, enrolledCourses } = useAppSelector((state) => state.courses);
   const { categories } = useAppSelector((state) => state.categories);
-  const { publicSettings } = useAppSelector((state) => state.settings);
   const { user } = useAppSelector((state) => state.auth);
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedAccess, setSelectedAccess] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  // Get courses page hero settings
-  const heroSettings = publicSettings?.coursesPageHero;
-  const isHeroEnabled = false;
-  const heroBadge = heroSettings?.badge?.[isRtl ? "ar" : "en"] || (isRtl ? "دوراتنا التعليمية" : "Our Educational Courses");
-  const heroTitle = heroSettings?.title?.[isRtl ? "ar" : "en"] || (isRtl ? "ابدأ رحلتك في تحفيظ القرآن الكريم" : "Start Your Quran Memorization Journey");
-  const heroSubtitle = heroSettings?.subtitle?.[isRtl ? "ar" : "en"] || (isRtl ? "مع دوراتنا المتخصصة" : "With Our Specialized Courses");
+  const [coursesPending, setCoursesPending] = useState(true);
 
   // Debounce search
   useEffect(() => {
@@ -60,16 +50,27 @@ export default function CoursesPage() {
   }, [search]);
 
   useEffect(() => {
-    const filters: any = { isPublished: true };
+    let isActive = true;
+    const filters: any = { isPublished: true, summary: true, limit: 48 };
     if (debouncedSearch) filters.search = debouncedSearch;
     if (selectedCategory !== "all") filters.categoryId = selectedCategory;
     if (selectedLevel !== "all") filters.level = selectedLevel;
     if (selectedAccess !== "all") filters.accessType = selectedAccess;
 
-    dispatch(getCourses(filters));
-    dispatch(getCategories({ active: true }));
-    dispatch(getPublicWebsiteSettingsThunk());
+    setCoursesPending(true);
+    dispatch(getCourses(filters)).finally(() => {
+      if (isActive) {
+        setCoursesPending(false);
+      }
+    });
+    return () => {
+      isActive = false;
+    };
   }, [dispatch, debouncedSearch, selectedCategory, selectedLevel, selectedAccess]);
+
+  useEffect(() => {
+    dispatch(getCategories({ active: true }));
+  }, [dispatch]);
 
   useEffect(() => {
     if (user) {
@@ -118,54 +119,8 @@ export default function CoursesPage() {
     }
   };
 
-  if (isLoading && courses.length === 0) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-16 w-16 animate-spin rounded-full border-4 border-genoun-green border-t-transparent"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50" dir={isRtl ? "rtl" : "ltr"}>
-      {/* Hero Section - Conditional */}
-      {isHeroEnabled && (
-        <div
-          className="bg-gradient-to-r from-genoun-green to-green-600 text-white py-16"
-          style={
-            heroSettings?.backgroundImage
-              ? {
-                backgroundImage: `linear-gradient(rgba(26, 71, 42, 0.9), rgba(26, 71, 42, 0.9)), url(${heroSettings.backgroundImage})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }
-              : undefined
-          }
-        >
-          <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto text-center">
-              {/* Badge */}
-              {heroBadge && (
-                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
-                  <BookOpen className="w-5 h-5" />
-                  <span className="text-sm font-medium">{heroBadge}</span>
-                </div>
-              )}
-
-              {/* Title */}
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                {heroTitle}
-              </h1>
-
-              {/* Subtitle */}
-              <p className="text-xl text-white/90">
-                {heroSubtitle}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Filters */}
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -225,7 +180,24 @@ export default function CoursesPage() {
         </div>
 
         {/* Courses Grid */}
-        {filteredCourses.length === 0 ? (
+        {coursesPending && filteredCourses.length === 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
+              >
+                <div className="aspect-[4/3] bg-gray-200 animate-pulse" />
+                <div className="p-4 space-y-3">
+                  <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-4 w-4/5 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
+                  <div className="h-10 w-full bg-gray-200 rounded animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredCourses.length === 0 ? (
           <div className="text-center py-16">
             <BookOpen className="h-16 w-16 mx-auto mb-4 text-gray-400" />
             <h3 className="text-xl font-semibold mb-2">

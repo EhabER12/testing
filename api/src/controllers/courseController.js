@@ -14,6 +14,7 @@ export const getCourses = async (req, res, next) => {
       accessType: req.query.accessType,
       isPublished: req.query.isPublished,
       isFeatured: req.query.isFeatured,
+      level: req.query.level,
       search: req.query.search,
     };
 
@@ -21,6 +22,7 @@ export const getCourses = async (req, res, next) => {
       page: req.query.page || 1,
       limit: req.query.limit || 10,
       sort: req.query.sort || "-createdAt",
+      summary: req.query.summary === "true",
     };
 
     const result = await courseService.getAllCourses(filters, options);
