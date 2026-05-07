@@ -58,6 +58,10 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [isClaimingCertificate, setIsClaimingCertificate] = useState(false);
+  const loadedQuizId = currentQuiz?.id || currentQuiz?._id;
+
+  const getQuizQuestions = () =>
+    Array.isArray(currentQuiz?.questions) ? currentQuiz.questions : [];
 
   useEffect(() => {
     if (quizId) {
@@ -65,9 +69,11 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
       setCurrentIndex(0);
       setAnswers({});
       setTimeLeft(null);
-      dispatch(getQuiz(quizId));
+      if (String(loadedQuizId || "") !== String(quizId)) {
+        dispatch(getQuiz(quizId));
+      }
     }
-  }, [dispatch, quizId]);
+  }, [dispatch, quizId, loadedQuizId]);
 
   useEffect(() => {
     if (quizId && user) {
@@ -124,7 +130,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
       return;
     }
 
-    const formattedAnswers = currentQuiz.questions.map((q, index) => {
+    const formattedAnswers = getQuizQuestions().map((q, index) => {
       const qId = getQuestionId(q, index);
       return {
         questionId: qId,
@@ -139,10 +145,13 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
       setGameState("results");
       if (onComplete) onComplete(attempt);
     } catch (error: any) {
-      if (error.includes("Maximum attempts")) {
+      const errorMessage =
+        typeof error === "string" ? error : error?.message || "Failed to submit quiz";
+
+      if (errorMessage.includes("Maximum attempts")) {
         toast.error(isRtl ? "لقد تخطيت الحد المسموح للمحاولات لهذا الاختبار" : "You have reached the maximum number of attempts for this quiz");
       } else {
-        toast.error(error || "Failed to submit quiz");
+        toast.error(errorMessage);
       }
     }
   };
@@ -189,6 +198,28 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
   }
 
   if (!currentQuiz) return null;
+
+  const questions = getQuizQuestions();
+  const questionsCount = questions.length;
+
+  if (questionsCount === 0) {
+    return (
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader className="text-center">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-amber-500" />
+          <CardTitle className="text-2xl">
+            {isRtl ? "لا توجد أسئلة في هذا الاختبار" : "This quiz has no questions"}
+          </CardTitle>
+          <CardDescription>
+            {isRtl
+              ? "يرجى المحاولة لاحقًا أو الرجوع إلى صفحة الدورة."
+              : "Please try again later or return to the course page."}
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   const directTemplate = (currentQuiz as any).certificateTemplateId;
   const directTemplateIsActive =
     !!directTemplate &&
@@ -213,7 +244,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-gray-50 rounded-lg text-center">
               <p className="text-sm text-gray-500">{isRtl ? "الأسئلة" : "Questions"}</p>
-              <p className="text-xl font-bold">{currentQuiz.questionsCount}</p>
+              <p className="text-xl font-bold">{questionsCount}</p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg text-center">
               <p className="text-sm text-gray-500">{isRtl ? "درجة النجاح" : "Passing Score"}</p>
@@ -284,17 +315,19 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
   }
 
   if (gameState === "playing") {
-    const question = currentQuiz.questions[currentQuestionIndex];
+    const question = questions[currentQuestionIndex];
+    if (!question) return null;
+
     const questionId = getQuestionId(question, currentQuestionIndex);
     const selectedAnswer = answers[questionId];
-    const progress = ((currentQuestionIndex + 1) / currentQuiz.questionsCount) * 100;
+    const progress = ((currentQuestionIndex + 1) / questionsCount) * 100;
 
     return (
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
             <div className="flex justify-between text-sm mb-2">
-              <span>{isRtl ? "السؤال" : "Question"} {currentQuestionIndex + 1} / {currentQuiz.questionsCount}</span>
+              <span>{isRtl ? "السؤال" : "Question"} {currentQuestionIndex + 1} / {questionsCount}</span>
               <span>{Math.round(progress)}%</span>
             </div>
             <Progress value={progress} className="h-2" />
@@ -320,7 +353,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
               onValueChange={(val) => handleAnswerChange(questionId, val)}
               className="space-y-3"
             >
-              {question.choices.map((choice, idx) => (
+              {(Array.isArray(question.choices) ? question.choices : []).map((choice, idx) => (
                 <div
                   key={idx}
                   className={`flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer ${selectedAnswer === idx ? 'border-genoun-green bg-genoun-green/5' : ''}`}
@@ -352,7 +385,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
             {isRtl ? <><ChevronRight className="h-4 w-4 ml-2" /> السابق</> : <><ChevronLeft className="h-4 w-4 mr-2" /> Previous</>}
           </Button>
 
-          {currentQuestionIndex === currentQuiz.questionsCount - 1 ? (
+          {currentQuestionIndex === questionsCount - 1 ? (
             <Button
               className="bg-genoun-green hover:bg-genoun-green/90 px-8"
               onClick={handleSubmit}
@@ -380,6 +413,8 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
 
   if (gameState === "results" && lastAttempt) {
     const passed = lastAttempt.passed;
+    const attemptAnswers = Array.isArray(lastAttempt.answers) ? lastAttempt.answers : [];
+
     return (
       <Card className="max-w-2xl mx-auto">
         <CardHeader className="text-center">
@@ -409,7 +444,7 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
             <div className="p-4 border rounded-lg text-center">
               <p className="text-sm text-gray-500">{isRtl ? "الإجابات الصحيحة" : "Correct Answers"}</p>
               <p className="text-2xl font-bold text-green-600">
-                {lastAttempt.answers.filter(a => a.isCorrect).length} / {currentQuiz.questionsCount}
+                {attemptAnswers.filter(a => a.isCorrect).length} / {questionsCount}
               </p>
             </div>
             <div className="p-4 border rounded-lg text-center">
@@ -424,9 +459,10 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
             {currentQuiz.showCorrectAnswers && (
               <div className="space-y-4 text-left border-t pt-6" dir={isRtl ? "rtl" : "ltr"}>
                 <h3 className="font-bold text-lg mb-4">{isRtl ? "مراجعة الإجابات" : "Review Answers"}</h3>
-                {currentQuiz.questions.map((q, idx) => {
+                {questions.map((q, idx) => {
                   const qId = getQuestionId(q, idx);
-                  const userAnswer = lastAttempt.answers.find(
+                  const choices = Array.isArray(q.choices) ? q.choices : [];
+                  const userAnswer = attemptAnswers.find(
                     (a) => String(a.questionId) === String(qId)
                   );
                   const isCorrect = userAnswer?.isCorrect;
@@ -439,7 +475,11 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
                   const hasCorrectAnswer =
                     typeof correctAnswerIndex === "number" &&
                     correctAnswerIndex >= 0 &&
-                    correctAnswerIndex < q.choices.length;
+                    correctAnswerIndex < choices.length;
+                  const hasChosenAnswer =
+                    typeof userAnswer?.chosenAnswer === "number" &&
+                    userAnswer.chosenAnswer >= 0 &&
+                    userAnswer.chosenAnswer < choices.length;
                   return (
                     <div key={idx} className={`p-4 rounded-lg border-2 ${isCorrect ? 'border-green-100 bg-green-50/30' : 'border-red-100 bg-red-50/30'}`}>
                       <div className="flex items-start gap-3">
@@ -448,13 +488,13 @@ export default function QuizPlayer({ quizId, onComplete, locale }: QuizPlayerPro
                           <p className="font-medium mb-2">{getTextValue(q.questionText)}</p>
                           <p className="text-sm">
                             <span className="font-bold">{isRtl ? "إجابتك:" : "Your answer:"}</span>{" "}
-                            {userAnswer?.chosenAnswer !== -1 ? getTextValue(q.choices[userAnswer?.chosenAnswer || 0]) : (isRtl ? "لم تتم الإجابة" : "No answer")}
+                            {hasChosenAnswer ? getTextValue(choices[userAnswer?.chosenAnswer ?? -1]) : (isRtl ? "لم تتم الإجابة" : "No answer")}
                           </p>
                           {!isCorrect && (
                             <p className="text-sm text-green-700 font-medium mt-1">
                               <span className="font-bold">{isRtl ? "الإجابة الصحيحة:" : "Correct answer:"}</span>{" "}
                               {hasCorrectAnswer
-                                ? getTextValue(q.choices[correctAnswerIndex])
+                                ? getTextValue(choices[correctAnswerIndex])
                                 : (isRtl ? "غير متاحة" : "Not available")}
                             </p>
                           )}

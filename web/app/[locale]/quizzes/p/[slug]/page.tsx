@@ -27,13 +27,23 @@ export default function PublicQuizPage() {
   };
 
   useEffect(() => {
+    let isActive = true;
+
     if (slug) {
       setQuizRequestFinished(false);
       dispatch(clearCurrentQuiz());
-      dispatch(getQuizBySlug(slug)).finally(() => {
-        setQuizRequestFinished(true);
-      });
+
+      (async () => {
+        await dispatch(getQuizBySlug(slug));
+        if (isActive) {
+          setQuizRequestFinished(true);
+        }
+      })();
     }
+
+    return () => {
+      isActive = false;
+    };
   }, [dispatch, slug]);
 
   if (!quizRequestFinished || (isLoading && !currentQuiz)) {
@@ -55,6 +65,9 @@ export default function PublicQuizPage() {
     );
   }
 
+  const quiz = currentQuiz;
+  if (!quiz) return null;
+
   return (
     <div className="min-h-screen bg-gray-50" dir={isRtl ? "rtl" : "ltr"}>
       {/* Header */}
@@ -69,7 +82,7 @@ export default function PublicQuizPage() {
           </Button>
           <div className="flex items-center gap-2 font-bold text-lg">
             <BookOpen className="h-5 w-5 text-orange-500" />
-            <span>{getTextValue(currentQuiz.title) || (isRtl ? "اختبار عام" : "General Quiz")}</span>
+            <span>{getTextValue(quiz.title) || (isRtl ? "اختبار عام" : "General Quiz")}</span>
           </div>
           <div className="w-24"></div> {/* Spacer */}
         </div>
@@ -78,7 +91,7 @@ export default function PublicQuizPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <QuizPlayer 
-            quizId={(currentQuiz.id || currentQuiz._id) as string} 
+            quizId={(quiz.id || quiz._id) as string}
             locale={locale} 
           />
         </div>
